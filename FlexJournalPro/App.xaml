@@ -3,18 +3,78 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:conv="clr-namespace:FlexJournalPro.Converters"
+             xmlns:services="clr-namespace:FlexJournalPro.Services"
+             xmlns:views="clr-namespace:FlexJournalPro.Views"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <!-- Конвертер доступний глобально, щоб StaticResource в згенерованих DataTemplate міг його знайти під час парсингу -->
-            <conv:TimeSpanToNullableDateTimeConverter x:Key="TimeSpanToNullableDateTimeConverter" />
-            <conv:SafeBoolConverter x:Key="SafeBoolConverter" />
-
             <ResourceDictionary.MergedDictionaries>
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
-
+                <materialDesign:BundledTheme BaseTheme="Light"/>
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Глобальні конвертери -->
+            <conv:TimeSpanToNullableDateTimeConverter x:Key="TimeSpanToNullableDateTimeConverter" />
+            <conv:SafeBoolConverter x:Key="SafeBoolConverter" />
+            <conv:EqualToVisibilityConverter x:Key="EqualToVisibilityConverter" />
+            
+            <!-- DataTemplate для DialogViewModel -->
+            <DataTemplate DataType="{x:Type services:DialogViewModel}">
+                <views:DialogView/>
+            </DataTemplate>
+            
+            <!-- Кольорова палітра -->
+            <Color x:Key="Primary">#0061A4</Color>
+            <Color x:Key="PrimaryLight">#4D8EC4</Color>
+            <Color x:Key="PrimaryDark">#004A7F</Color>
+            
+            <Color x:Key="Secondary">#535F70</Color>
+            <Color x:Key="SecondaryLight">#7D8794</Color>
+            <Color x:Key="SecondaryDark">#3C4859</Color>
+            
+            <Color x:Key="Tertiary">#6B5778</Color>
+            <Color x:Key="TertiaryLight">#917F9B</Color>
+            <Color x:Key="TertiaryDark">#544060</Color>
+            
+            <Color x:Key="Background">#FDFCFF</Color>
+            <Color x:Key="Error">#BA1A1A</Color>
+            
+            <!-- Кастомні кисті -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
+            <SolidColorBrush x:Key="PrimaryLightBrush" Color="{StaticResource PrimaryLight}"/>
+            <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDark}"/>
+            
+            <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
+            <SolidColorBrush x:Key="SecondaryLightBrush" Color="{StaticResource SecondaryLight}"/>
+            <SolidColorBrush x:Key="SecondaryDarkBrush" Color="{StaticResource SecondaryDark}"/>
+            
+            <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
+            <SolidColorBrush x:Key="TertiaryLightBrush" Color="{StaticResource TertiaryLight}"/>
+            <SolidColorBrush x:Key="TertiaryDarkBrush" Color="{StaticResource TertiaryDark}"/>
+            
+            <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource Background}"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Error}"/>
+            
+            <!-- Перевизначення кольорів Material Design -->
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Primary" Color="{StaticResource Primary}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Primary.Light" Color="{StaticResource PrimaryLight}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Primary.Dark" Color="{StaticResource PrimaryDark}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Primary.Foreground" Color="White"/>
+            
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Secondary" Color="{StaticResource Secondary}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Secondary.Light" Color="{StaticResource SecondaryLight}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Secondary.Dark" Color="{StaticResource SecondaryDark}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Secondary.Foreground" Color="White"/>
+            
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Background" Color="{StaticResource Background}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Card.Background" Color="{StaticResource Background}"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Paper" Color="{StaticResource Background}"/>
+            
+            <SolidColorBrush x:Key="MaterialDesign.Brush.ValidationError" Color="{StaticResource Error}"/>
+            
+            <!-- Додаткові перевизначення -->
+            <SolidColorBrush x:Key="MaterialDesign.Brush.Foreground" Color="#1C1B1F"/>
+            <SolidColorBrush x:Key="MaterialDesign.Brush.TextBox.HoverBackground" Color="#808080"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

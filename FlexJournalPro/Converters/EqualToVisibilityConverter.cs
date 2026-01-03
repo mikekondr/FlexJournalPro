@@ -1,0 +1,28 @@
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace FlexJournalPro.Converters
+{
+    /// <summary>
+    /// Конвертер для показу/приховування елементів на основі порівняння значень
+    /// </summary>
+    public class EqualToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null || parameter == null)
+                return Visibility.Collapsed;
+
+            // Порівнюємо значення з параметром
+            bool isEqual = value.ToString() == parameter.ToString();
+            return isEqual ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

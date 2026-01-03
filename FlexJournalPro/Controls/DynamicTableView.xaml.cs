@@ -1324,11 +1324,11 @@ namespace FlexJournalPro.Controls
             return false;
         }
 
-        private void CancelRowEdit(DataGridRowEditEndingEventArgs e, List<string> errors)
+        private async void CancelRowEdit(DataGridRowEditEndingEventArgs e, List<string> errors)
         {
             e.Cancel = true;
             string message = "Неможливо зберегти рядок:\n" + string.Join("\n", errors);
-            MessageBox.Show(message, "Помилка валідації", MessageBoxButton.OK, MessageBoxImage.Warning);
+            await DialogService.ShowWarningAsync(message, "Помилка валідації");
             Dispatcher.BeginInvoke(new Action(() => e.Row.Focus()));
         }
 

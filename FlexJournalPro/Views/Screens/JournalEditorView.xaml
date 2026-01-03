@@ -1,0 +1,82 @@
+<UserControl x:Class="FlexJournalPro.Views.Screens.JournalEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:controls="clr-namespace:FlexJournalPro.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" x:Name="ConstantsColumn"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Main table area -->
+        <materialDesign:Card Grid.Column="0" Margin="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Toolbar -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16">
+                    <TextBlock Text="{Binding Title}" 
+                               Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,16,0"/>
+                    
+                    <ToggleButton x:Name="ToggleConstantsButton"
+                                  Style="{StaticResource MaterialDesignActionToggleButton}"
+                                  ToolTip="Сховати/Показати Константи"
+                                  Checked="ToggleConstantsButton_CheckedChanged"
+                                  Unchecked="ToggleConstantsButton_CheckedChanged">
+                        <materialDesign:PackIcon Kind="Settings"/>
+                    </ToggleButton>
+                </StackPanel>
+
+                <!-- Table -->
+                <controls:DynamicTableView x:Name="SmartTable" 
+                                           Grid.Row="1"
+                                           Margin="8,0,8,8"/>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Constants panel -->
+        <materialDesign:Card x:Name="ConstantsCard"
+                             Grid.Column="1" 
+                             Margin="0,16,16,16"
+                             Width="300"
+                             Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <TextBlock Grid.Row="0" 
+                           Text="Константи" 
+                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                           Margin="16"/>
+
+                <!-- Constants form -->
+                <ScrollViewer Grid.Row="1" 
+                              VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ConstantsPanel" 
+                                Margin="16,0,16,16"/>
+                </ScrollViewer>
+
+                <!-- Save button -->
+                <Button Grid.Row="2" 
+                        Content="Зберегти Константи"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="16"
+                        Click="BtnSaveConstants_Click"/>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>
