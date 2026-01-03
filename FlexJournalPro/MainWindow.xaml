@@ -1,0 +1,60 @@
+﻿<Window x:Class="FlexJournalPro.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:FlexJournalPro"
+        Title="ЖурналПро - Менеджер журналів" Height="600" Width="1000"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        FontFamily="{DynamicResource MaterialDesignFont}"
+        Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Мої журнали" Style="{StaticResource MaterialDesignHeadline4TextBlock}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Grid.Column="1">
+                <Button Content="УПРАВЛІННЯ ШАБЛОНАМИ" 
+                        Click="BtnManageTemplates_Click" 
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,10,0">
+                    <Button.ToolTip>
+                        <ToolTip>Відкрити менеджер шаблонів</ToolTip>
+                    </Button.ToolTip>
+                </Button>
+                <Button Content="+ СТВОРИТИ НОВИЙ" 
+                        Click="BtnCreateNew_Click" 
+                        Style="{StaticResource MaterialDesignRaisedButton}">
+                    <Button.ToolTip>
+                        <ToolTip>Створити новий журнал</ToolTip>
+                    </Button.ToolTip>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <DataGrid x:Name="GridJournals" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" 
+                  SelectionMode="Single" MouseDoubleClick="GridJournals_MouseDoubleClick"
+                  Style="{StaticResource MaterialDesignDataGrid}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="Назва" Binding="{Binding Title}" Width="*"/>
+                <DataGridTextColumn Header="Створено" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
+                <DataGridTextColumn Header="Шаблон" Binding="{Binding PresetId}" Width="150"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
