@@ -116,12 +116,20 @@ namespace FlexJournalPro.Services
                         meta.TableName = tableName;
                         meta.CreatedAt = DateTime.Now;
 
-                        // 2. Додаємо запис у реєстр
+                        // 2. Спочатку створюємо фізичну таблицю для даних
+                        // (Якщо це не вдасться, немає сенсу додавати запис у реєстр)
+                        string createTableSql = BuildCreateTableSql(tableName, columns);
+                        using (var cmd = new SQLiteCommand(createTableSql, conn, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 3. Тільки після успішного створення таблиці додаємо запис у реєстр
                         string insertSql = @"
                             INSERT INTO App_Journals (Title, PresetId, TableName, CreatedAt, NumberStart, SessionConstantsJson)
                             VALUES (@Title, @PresetId, @TableName, @CreatedAt, @NumberStart, @Json)";
 
-                        using (var cmd = new SQLiteCommand(insertSql, conn))
+                        using (var cmd = new SQLiteCommand(insertSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Title", meta.Title);
                             cmd.Parameters.AddWithValue("@PresetId", meta.PresetId);
@@ -130,13 +138,9 @@ namespace FlexJournalPro.Services
                             cmd.Parameters.AddWithValue("@NumberStart", meta.NumberStart);
                             cmd.Parameters.AddWithValue("@Json", meta.SessionConstantsJson ?? "{}");
                             cmd.ExecuteNonQuery();
-                        }
-
-                        // 3. Створюємо фізичну таблицю для даних
-                        string createTableSql = BuildCreateTableSql(tableName, columns);
-                        using (var cmd = new SQLiteCommand(createTableSql, conn))
-                        {
-                            cmd.ExecuteNonQuery();
+                            
+                            // Отримуємо згенерований ID для meta
+                            meta.Id = conn.LastInsertRowId;
                         }
 
                         transaction.Commit();
@@ -708,6 +712,66 @@ namespace FlexJournalPro.Services
                     cmd.Parameters.AddWithValue("@Id", journalId);
                     cmd.Parameters.AddWithValue("@Json", sessionConstantsJson ?? "{}");
                     cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Видаляє журнал з реєстру та його фізичну таблицю з бази даних
+        /// </summary>
+        /// <param name="journalId">ID журналу для видалення</param>
+        public void DeleteJournal(long journalId)
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Отримуємо назву таблиці журналу
+                        string tableName = null;
+                        using (var cmd = new SQLiteCommand("SELECT TableName FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", journalId);
+                            var result = cmd.ExecuteScalar();
+                            if (result != null)
+                            {
+                                tableName = result.ToString();
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(tableName))
+                        {
+                            throw new InvalidOperationException($"Журнал з ID {journalId} не знайдено");
+                        }
+
+                        // 2. Видаляємо запис з реєстру журналів
+                        // (Робимо це спочатку, щоб уникнути ситуації, коли таблиця видалена, а запис залишився)
+                        using (var cmd = new SQLiteCommand("DELETE FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", journalId);
+                            int rowsAffected = cmd.ExecuteNonQuery();
+                            
+                            if (rowsAffected == 0)
+                            {
+                                throw new InvalidOperationException($"Не вдалося видалити запис журналу з ID {journalId}");
+                            }
+                        }
+
+                        // 3. Видаляємо фізичну таблицю з даними
+                        using (var cmd = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableName}]", conn, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }

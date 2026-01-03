@@ -136,10 +136,25 @@ namespace FlexJournalPro.ViewModels.Screens
             {
                 try
                 {
-                    // TODO: Додати метод видалення журналу у DatabaseService
-                    await DialogService.ShowInformationAsync(
-                        "Функція видалення журналу буде додана у наступній версії",
-                        "У розробці");
+                    // Закриваємо редактор журналу, якщо він відкритий
+                    var openEditorScreen = _mainViewModel.OpenScreens
+                        .OfType<JournalEditorScreen>()
+                        .FirstOrDefault(s => s.Journal?.Id == SelectedJournal.Id);
+
+                    if (openEditorScreen != null)
+                    {
+                        _mainViewModel.OpenScreens.Remove(openEditorScreen);
+                    }
+
+                    // Видаляємо журнал з бази даних
+                    _dbService.DeleteJournal(SelectedJournal.Id);
+
+                    // Видаляємо з локального списку
+                    Journals.Remove(SelectedJournal);
+
+                    // Очищаємо вибір
+                    SelectedJournal = null;
+
                 }
                 catch (System.Exception ex)
                 {

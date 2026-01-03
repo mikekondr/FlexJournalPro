@@ -17,19 +17,19 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <StackPanel Margin="0,0,0,20">
-                        <TextBlock Text="Template Selection" 
+                        <TextBlock Text="Шаблон журналу" 
                                    Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
                                    Margin="0,0,0,12"/>
                         <ComboBox ItemsSource="{Binding Templates}"
                                   SelectedItem="{Binding SelectedTemplate}"
-                                  materialDesign:HintAssist.Hint="Journal Template"
+                                  materialDesign:HintAssist.Hint="Оберіть шаблон"
                                   Style="{StaticResource MaterialDesignFloatingHintComboBox}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,5">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                            <TextBlock Text="Version: " FontSize="11" Foreground="Gray"/>
+                                            <TextBlock Text="Версія: " FontSize="11" Foreground="Gray"/>
                                             <TextBlock Text="{Binding Version}" FontSize="11" Foreground="Gray"/>
                                             <TextBlock Text=" | " FontSize="11" Foreground="Gray" Margin="5,0"/>
                                             <TextBlock Text="ID: " FontSize="11" Foreground="Gray"/>
@@ -41,25 +41,23 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <Separator Margin="0,0,0,20"/>
-
                     <StackPanel Margin="0,0,0,20">
-                        <TextBlock Text="Journal Settings" 
+                        <TextBlock Text="Налаштування журналу" 
                                    Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
                                    Margin="0,0,0,12"/>
                         <TextBox Text="{Binding JournalTitle, UpdateSourceTrigger=PropertyChanged}" 
-                                 materialDesign:HintAssist.Hint="Journal Title" 
+                                 materialDesign:HintAssist.Hint="Назва" 
                                  Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                  Margin="0,0,0,16"/>
                         <TextBox Text="{Binding StartNumber, UpdateSourceTrigger=PropertyChanged}" 
-                                 materialDesign:HintAssist.Hint="Start Number" 
+                                 materialDesign:HintAssist.Hint="Почтаковий номер" 
                                  Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
                     </StackPanel>
 
                     <Separator Margin="0,0,0,20"/>
 
                     <StackPanel>
-                        <TextBlock Text="Session Constants" 
+                        <TextBlock Text="Константи" 
                                    Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
                                    Margin="0,0,0,12"/>
                         
@@ -96,11 +94,11 @@
 
         <materialDesign:Card Grid.Row="2" Padding="16" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="CANCEL" 
+                <Button Content="Скасувати" 
                         Command="{Binding CancelCommand}"
                         Style="{StaticResource MaterialDesignFlatButton}" 
                         Margin="0,0,16,0"/>
-                <Button Content="CREATE" 
+                <Button Content="СТВОРИТИ" 
                         Command="{Binding CreateJournalCommand}"
                         Style="{StaticResource MaterialDesignRaisedButton}"/>
             </StackPanel>

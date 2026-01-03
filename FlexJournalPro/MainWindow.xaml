@@ -8,7 +8,7 @@
         xmlns:behaviors="clr-namespace:FlexJournalPro.Behaviors"
         xmlns:views="clr-namespace:FlexJournalPro.Views"
         mc:Ignorable="d"
-        Title="ZhurnalPro - System upravlinnia zhurnalamy" 
+        Title="ЖурналПро - Система управління журналами" 
         Height="700" 
         Width="1200"
         WindowStartupLocation="CenterScreen"

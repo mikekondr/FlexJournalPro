@@ -246,8 +246,6 @@ namespace FlexJournalPro.ViewModels.Screens
                 // Зберігаємо в БД
                 _dbService.CreateNewJournal(metadata, template.Columns);
 
-                await DialogService.ShowSuccessAsync($"Журнал '{metadata.Title}' успішно створено!");
-
                 // Оновлюємо список журналів, якщо він відкритий
                 var journalsListScreen = _mainViewModel.OpenScreens
                     .OfType<JournalsListScreen>()
