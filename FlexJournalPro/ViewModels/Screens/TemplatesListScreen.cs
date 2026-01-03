@@ -123,8 +123,6 @@ namespace FlexJournalPro.ViewModels.Screens
                 {
                     _dbService.DeactivateTemplate(SelectedTemplate.Id);
                     LoadTemplates();
-
-                    await DialogService.ShowSuccessAsync("Шаблон успішно видалено!");
                 }
                 catch (System.Exception ex)
                 {
@@ -154,8 +152,6 @@ namespace FlexJournalPro.ViewModels.Screens
                     {
                         _dbService.SaveTemplate(template);
                         LoadTemplates();
-
-                        await DialogService.ShowSuccessAsync("Шаблон успішно імпортовано!");
                     }
                 }
                 catch (System.Exception ex)

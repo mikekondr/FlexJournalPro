@@ -49,21 +49,21 @@
                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="150"/>
                         <DataGridTextColumn Header="Назва" Binding="{Binding Name}" Width="*"/>
                         <DataGridTextColumn Header="Опис" Binding="{Binding Description}" Width="300"/>
-                        <DataGridTextColumn Header="Версія" Binding="{Binding Version}" Width="80"/>
-                        <DataGridTextColumn Header="Оновлено" Binding="{Binding UpdatedAt, StringFormat='dd.MM.yyyy'}" Width="120"/>
-                        <DataGridTemplateColumn Header="Дії" Width="100">
+                        <DataGridTextColumn Header="Версія" Binding="{Binding Version}" Width="100"/>
+                        <DataGridTextColumn Header="Оновлено" Binding="{Binding UpdatedAt, StringFormat='dd.MM.yyyy'}" Width="150"/>
+                        <DataGridTemplateColumn Header="Дії" Width="150">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Редагувати">
-                                            <materialDesign:PackIcon Kind="Edit"/>
+                                                ToolTip="Редагувати" Width="24" Height="24" Padding="4">
+                                            <materialDesign:PackIcon Kind="Edit" Width="16" Height="16"/>
                                         </Button>
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Видалити">
-                                            <materialDesign:PackIcon Kind="Delete"/>
+                                                ToolTip="Видалити" Width="24" Height="24" Padding="4">
+                                            <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
                                 </DataTemplate>
@@ -82,15 +82,6 @@
                                              HorizontalAlignment="Center"
                                              Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"
                                              Opacity="0.3"/>
-                    <TextBlock Text="Нічого не відкрито"
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                               HorizontalAlignment="Center"
-                               Margin="0,16,0,8"
-                               Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"/>
-                    <TextBlock Text="Завантажте шаблони з файлів JSON"
-                               Style="{StaticResource MaterialDesignBody2TextBlock}"
-                               HorizontalAlignment="Center"
-                               Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"/>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>

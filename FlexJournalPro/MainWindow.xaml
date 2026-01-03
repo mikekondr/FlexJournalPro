@@ -21,7 +21,7 @@
         <WindowChrome CaptionHeight="48"
                       ResizeBorderThickness="5"
                       GlassFrameThickness="0"
-                      CornerRadius="0"
+                      CornerRadius="3"
                       UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
     
@@ -150,7 +150,7 @@
                                             Command="{Binding OpenJournalsListCommand}" HorizontalContentAlignment="Left" Padding="16,8"
                                             Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
                                         <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="Book" Width="24" Height="24" VerticalAlignment="Center"/>
+                                            <materialDesign:PackIcon Kind="BookOpen" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="Весь список" Margin="12,0,0,0" VerticalAlignment="Center"
                                                        Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </StackPanel>
@@ -193,7 +193,7 @@
                                 Margin="8"
                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"
                                 ToolTip="Показати/приховати меню"
-                                HorizontalAlignment="Left">
+                                HorizontalAlignment="Right">
                             <materialDesign:PackIcon Kind="{Binding IsSidebarExpanded, Converter={StaticResource SidebarIconConverter}}" 
                                                      Width="24" Height="24"/>
                         </Button>

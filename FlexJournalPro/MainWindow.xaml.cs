@@ -35,6 +35,9 @@ namespace FlexJournalPro
         {
             if (WindowState == WindowState.Maximized)
             {
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                WindowStyle = WindowStyle.None;
+
                 MaximizeIcon.Kind = PackIconKind.WindowRestore;
                 MaximizeButton.ToolTip = "Відновити";
             }

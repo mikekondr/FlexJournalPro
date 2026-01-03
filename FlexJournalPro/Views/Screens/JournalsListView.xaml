@@ -50,19 +50,19 @@
                         <DataGridTextColumn Header="Назва" Binding="{Binding Title}" Width="*"/>
                         <DataGridTextColumn Header="Ідентифікатор шаблону" Binding="{Binding PresetId}" Width="200"/>
                         <DataGridTextColumn Header="Дата створення" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
-                        <DataGridTemplateColumn Header="Команди" Width="150">
+                        <DataGridTemplateColumn Header="Дії" Width="150">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.OpenJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Відкрити">
-                                            <materialDesign:PackIcon Kind="FolderOpen"/>
+                                                ToolTip="Відкрити" Width="24" Height="24" Padding="4">
+                                            <materialDesign:PackIcon Kind="FolderOpen" Width="16" Height="16"/>
                                         </Button>
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.DeleteJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Видалити">
-                                            <materialDesign:PackIcon Kind="Delete"/>
+                                                ToolTip="Видалити" Width="24" Height="24" Padding="4">
+                                            <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
                                 </DataTemplate>
@@ -85,15 +85,6 @@
                                              HorizontalAlignment="Center"
                                              Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"
                                              Opacity="0.3"/>
-                    <TextBlock Text="Нічого не відкрито"
-                               Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                               HorizontalAlignment="Center"
-                               Margin="0,16,0,8"
-                               Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"/>
-                    <TextBlock Text="Відприйте журнал або шо..."
-                               Style="{StaticResource MaterialDesignBody2TextBlock}"
-                               HorizontalAlignment="Center"
-                               Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"/>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>

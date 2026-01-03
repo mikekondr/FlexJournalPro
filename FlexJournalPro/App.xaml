@@ -75,6 +75,9 @@
             <!-- Додаткові перевизначення -->
             <SolidColorBrush x:Key="MaterialDesign.Brush.Foreground" Color="#1C1B1F"/>
             <SolidColorBrush x:Key="MaterialDesign.Brush.TextBox.HoverBackground" Color="#808080"/>
+
+            <SolidColorBrush x:Key="MaterialDesign.Brush.ToolTip.Background" Color="{StaticResource PrimaryLight}"/>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
