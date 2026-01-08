@@ -6,7 +6,7 @@ using System.Windows.Controls;
 namespace FlexJournalPro.Views
 {
     /// <summary>
-    /// Вибирає відповідний DataTemplate для екрану
+    /// Р’РёР±РёСЂР°С” РІС–РґРїРѕРІС–РґРЅРёР№ DataTemplate РґР»СЏ РµРєСЂР°РЅСѓ
     /// </summary>
     public class ScreenDataTemplateSelector : DataTemplateSelector
     {

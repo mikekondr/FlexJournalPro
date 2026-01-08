@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using FlexJournalPro.Models;
-using FlexJournalPro.Controls;
+using FlexJournalPro.Views;
 
 namespace FlexJournalPro.Services
 {
     /// <summary>
-    /// Сервіс для роботи з шаблонами (фасад для DatabaseService)
+    /// РЎРµСЂРІС–СЃ РґР»СЏ СЂРѕР±РѕС‚Рё Р· С€Р°Р±Р»РѕРЅР°РјРё (С„Р°СЃР°Рґ РґР»СЏ DatabaseService)
     /// </summary>
     public class TemplateService
     {
@@ -19,7 +19,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Створити та зберегти новий шаблон
+        /// РЎС‚РІРѕСЂРёС‚Рё С‚Р° Р·Р±РµСЂРµРіС‚Рё РЅРѕРІРёР№ С€Р°Р±Р»РѕРЅ
         /// </summary>
         public void CreateTemplate(TableTemplate template)
         {
@@ -30,23 +30,23 @@ namespace FlexJournalPro.Services
 
             _dbService.SaveTemplate(template);
 
-            // Очищаємо кеш для цього шаблону (на випадок оновлення)
+            // РћС‡РёС‰Р°С”РјРѕ РєРµС€ РґР»СЏ С†СЊРѕРіРѕ С€Р°Р±Р»РѕРЅСѓ (РЅР° РІРёРїР°РґРѕРє РѕРЅРѕРІР»РµРЅРЅСЏ)
             DynamicTableView.ClearTemplateCache(template.Id);
         }
 
         /// <summary>
-        /// Оновити існуючий шаблон (створить нову версію)
+        /// РћРЅРѕРІРёС‚Рё С–СЃРЅСѓСЋС‡РёР№ С€Р°Р±Р»РѕРЅ (СЃС‚РІРѕСЂРёС‚СЊ РЅРѕРІСѓ РІРµСЂСЃС–СЋ)
         /// </summary>
         public void UpdateTemplate(TableTemplate template)
         {
             _dbService.SaveTemplate(template);
 
-            // Очищаємо кеш, щоб застосувати зміни
+            // РћС‡РёС‰Р°С”РјРѕ РєРµС€, С‰РѕР± Р·Р°СЃС‚РѕСЃСѓРІР°С‚Рё Р·РјС–РЅРё
             DynamicTableView.ClearTemplateCache(template.Id);
         }
 
         /// <summary>
-        /// Отримати шаблон за ID
+        /// РћС‚СЂРёРјР°С‚Рё С€Р°Р±Р»РѕРЅ Р·Р° ID
         /// </summary>
         public TableTemplate GetTemplate(string templateId)
         {
@@ -54,7 +54,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Отримати список усіх шаблонів
+        /// РћС‚СЂРёРјР°С‚Рё СЃРїРёСЃРѕРє СѓСЃС–С… С€Р°Р±Р»РѕРЅС–РІ
         /// </summary>
         public List<TemplateMetadata> GetAllTemplates()
         {
@@ -62,25 +62,25 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Видалити шаблон (soft delete)
+        /// Р’РёРґР°Р»РёС‚Рё С€Р°Р±Р»РѕРЅ (soft delete)
         /// </summary>
         public void DeleteTemplate(string templateId)
         {
             _dbService.DeactivateTemplate(templateId);
 
-            // Очищаємо кеш
+            // РћС‡РёС‰Р°С”РјРѕ РєРµС€
             DynamicTableView.ClearTemplateCache(templateId);
         }
 
         /// <summary>
-        /// Створити журнал на основі шаблону
+        /// РЎС‚РІРѕСЂРёС‚Рё Р¶СѓСЂРЅР°Р» РЅР° РѕСЃРЅРѕРІС– С€Р°Р±Р»РѕРЅСѓ
         /// </summary>
         public JournalMetadata CreateJournalFromTemplate(string templateId, string journalTitle)
         {
             var template = _dbService.GetTemplate(templateId);
             if (template == null)
             {
-                throw new InvalidOperationException($"Шаблон '{templateId}' не знайдено");
+                throw new InvalidOperationException($"РЁР°Р±Р»РѕРЅ '{templateId}' РЅРµ Р·РЅР°Р№РґРµРЅРѕ");
             }
 
             var journal = new JournalMetadata
@@ -97,14 +97,14 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Генерує унікальний ID для шаблону
+        /// Р“РµРЅРµСЂСѓС” СѓРЅС–РєР°Р»СЊРЅРёР№ ID РґР»СЏ С€Р°Р±Р»РѕРЅСѓ
         /// </summary>
         private string GenerateTemplateId(string title)
         {
-            // Прибираємо спецсимволи та робимо lowercase
+            // РџСЂРёР±РёСЂР°С”РјРѕ СЃРїРµС†СЃРёРјРІРѕР»Рё С‚Р° СЂРѕР±РёРјРѕ lowercase
             string cleanTitle = System.Text.RegularExpressions.Regex.Replace(title, @"[^a-zA-Z0-9_]", "").ToLower();
             
-            // Додаємо timestamp для унікальності
+            // Р”РѕРґР°С”РјРѕ timestamp РґР»СЏ СѓРЅС–РєР°Р»СЊРЅРѕСЃС‚С–
             string timestamp = DateTime.Now.Ticks.ToString().Substring(8);
             
             return $"{cleanTitle}_{timestamp}";

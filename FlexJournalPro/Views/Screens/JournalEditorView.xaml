@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:controls="clr-namespace:FlexJournalPro.Controls"
+             xmlns:controls="clr-namespace:FlexJournalPro.Views"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
     <Grid>
@@ -14,7 +14,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Main table area -->
-        <materialDesign:Card Grid.Column="0" Margin="16">
+        <materialDesign:Card Grid.Column="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -22,32 +22,41 @@
                 </Grid.RowDefinitions>
 
                 <!-- Toolbar -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16">
-                    <TextBlock Text="{Binding Title}" 
-                               Style="{StaticResource MaterialDesignHeadline5TextBlock}"
-                               VerticalAlignment="Center"
-                               Margin="0,0,16,0"/>
-                    
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="8">
                     <ToggleButton x:Name="ToggleConstantsButton"
                                   Style="{StaticResource MaterialDesignActionToggleButton}"
-                                  ToolTip="Сховати/Показати Константи"
+                                  ToolTip="Сховати/показати константи"
                                   Checked="ToggleConstantsButton_CheckedChanged"
                                   Unchecked="ToggleConstantsButton_CheckedChanged">
                         <materialDesign:PackIcon Kind="Settings"/>
                     </ToggleButton>
                 </StackPanel>
 
-                <!-- Table -->
-                <controls:DynamicTableView x:Name="SmartTable" 
-                                           Grid.Row="1"
-                                           Margin="8,0,8,8"/>
+                <!-- Table with Floating Action Button -->
+                <Grid Grid.Row="1">
+                    <controls:DynamicTableView x:Name="SmartTable" 
+                                               Margin="8,0,8,8"/>
+
+                    <!-- Floating Action Button (FAB) -->
+                    <Button x:Name="BtnAddRow"
+                            Style="{StaticResource MaterialDesignFloatingActionButton}"
+                            Click="BtnAddRow_Click"
+                            ToolTip="Додати новий рядок"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,24,24">
+                        <materialDesign:PackIcon Kind="PlaylistPlus" 
+                                                 Width="32" 
+                                                 Height="32"/>
+                    </Button>
+                </Grid>
             </Grid>
         </materialDesign:Card>
 
         <!-- Constants panel -->
         <materialDesign:Card x:Name="ConstantsCard"
                              Grid.Column="1" 
-                             Margin="0,16,16,16"
+                             Margin="8,0,0,0"
                              Width="300"
                              Visibility="Collapsed">
             <Grid>
@@ -72,7 +81,7 @@
 
                 <!-- Save button -->
                 <Button Grid.Row="2" 
-                        Content="Зберегти Константи"
+                        Content="Зберегти константи"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Margin="16"
                         Click="BtnSaveConstants_Click"/>

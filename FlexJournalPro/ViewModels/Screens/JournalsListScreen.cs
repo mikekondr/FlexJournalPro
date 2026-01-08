@@ -8,7 +8,7 @@ using System.Windows.Input;
 namespace FlexJournalPro.ViewModels.Screens
 {
     /// <summary>
-    /// Screen для відображення списку журналів
+    /// Screen РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ СЃРїРёСЃРєСѓ Р¶СѓСЂРЅР°Р»С–РІ
     /// </summary>
     public class JournalsListScreen : ScreenBase
     {
@@ -21,30 +21,30 @@ namespace FlexJournalPro.ViewModels.Screens
             _dbService = dbService;
             _mainViewModel = mainViewModel;
 
-            Title = "Журнали";
-            Icon = PackIconKind.Book;
+            Title = "Р’СЃС– Р¶СѓСЂРЅР°Р»Рё";
+            Icon = PackIconKind.BookOpen;
 
             Journals = new ObservableCollection<JournalMetadata>();
 
-            // Команди
+            // РљРѕРјР°РЅРґРё
             CreateNewJournalCommand = new RelayCommand(CreateNewJournal);
             OpenJournalCommand = new RelayCommand(OpenJournal, () => SelectedJournal != null);
             DeleteJournalCommand = new RelayCommand(DeleteJournal, () => SelectedJournal != null);
             RefreshCommand = new RelayCommand(LoadJournals);
 
-            // Завантажити журнали
+            // Р—Р°РІР°РЅС‚Р°Р¶РёС‚Рё Р¶СѓСЂРЅР°Р»Рё
             LoadJournals();
         }
 
         #region Properties
 
         /// <summary>
-        /// Колекція журналів
+        /// РљРѕР»РµРєС†С–СЏ Р¶СѓСЂРЅР°Р»С–РІ
         /// </summary>
         public ObservableCollection<JournalMetadata> Journals { get; }
 
         /// <summary>
-        /// Вибраний журнал
+        /// Р’РёР±СЂР°РЅРёР№ Р¶СѓСЂРЅР°Р»
         /// </summary>
         public JournalMetadata? SelectedJournal
         {
@@ -88,13 +88,13 @@ namespace FlexJournalPro.ViewModels.Screens
             catch (System.Exception ex)
             {
                 await DialogService.ShowErrorAsync(
-                    $"Помилка завантаження журналів: {ex.Message}");
+                    $"РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ Р¶СѓСЂРЅР°Р»С–РІ: {ex.Message}");
             }
         }
 
         private void CreateNewJournal()
         {
-            // Відкриваємо екран створення нового журналу
+            // Р’С–РґРєСЂРёРІР°С”РјРѕ РµРєСЂР°РЅ СЃС‚РІРѕСЂРµРЅРЅСЏ РЅРѕРІРѕРіРѕ Р¶СѓСЂРЅР°Р»Сѓ
             var newJournalScreen = new NewJournalScreen(_dbService, _mainViewModel);
             
             _mainViewModel.OpenScreens.Add(newJournalScreen);
@@ -105,10 +105,10 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             if (SelectedJournal == null) return;
 
-            // Відкриваємо екран редагування журналу
+            // Р’С–РґРєСЂРёРІР°С”РјРѕ РµРєСЂР°РЅ СЂРµРґР°РіСѓРІР°РЅРЅСЏ Р¶СѓСЂРЅР°Р»Сѓ
             var editorScreen = new JournalEditorScreen(SelectedJournal, _dbService, _mainViewModel);
             
-            // Перевіряємо, чи не відкритий вже цей журнал
+            // РџРµСЂРµРІС–СЂСЏС”РјРѕ, С‡Рё РЅРµ РІС–РґРєСЂРёС‚РёР№ РІР¶Рµ С†РµР№ Р¶СѓСЂРЅР°Р»
             var existingScreen = _mainViewModel.OpenScreens
                 .OfType<JournalEditorScreen>()
                 .FirstOrDefault(s => s.ScreenId == editorScreen.ScreenId);
@@ -129,14 +129,14 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedJournal == null) return;
 
             var result = await DialogService.ShowConfirmationAsync(
-                $"Ви впевнені, що хочете видалити журнал '{SelectedJournal.Title}'?\n\nВСІ ДАНІ БУДУТЬ ВТРАЧЕНІ!",
-                "Підтвердження видалення");
+                $"Р’Рё РІРїРµРІРЅРµРЅС–, С‰Рѕ С…РѕС‡РµС‚Рµ РІРёРґР°Р»РёС‚Рё Р¶СѓСЂРЅР°Р» '{SelectedJournal.Title}'?\n\nР’РЎР† Р”РђРќР† Р‘РЈР”РЈРўР¬ Р’РўР РђР§Р•РќР†!",
+                "РџС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ РІРёРґР°Р»РµРЅРЅСЏ");
 
             if (result == DialogResult.Yes)
             {
                 try
                 {
-                    // Закриваємо редактор журналу, якщо він відкритий
+                    // Р—Р°РєСЂРёРІР°С”РјРѕ СЂРµРґР°РєС‚РѕСЂ Р¶СѓСЂРЅР°Р»Сѓ, СЏРєС‰Рѕ РІС–РЅ РІС–РґРєСЂРёС‚РёР№
                     var openEditorScreen = _mainViewModel.OpenScreens
                         .OfType<JournalEditorScreen>()
                         .FirstOrDefault(s => s.Journal?.Id == SelectedJournal.Id);
@@ -146,20 +146,20 @@ namespace FlexJournalPro.ViewModels.Screens
                         _mainViewModel.OpenScreens.Remove(openEditorScreen);
                     }
 
-                    // Видаляємо журнал з бази даних
+                    // Р’РёРґР°Р»СЏС”РјРѕ Р¶СѓСЂРЅР°Р» Р· Р±Р°Р·Рё РґР°РЅРёС…
                     _dbService.DeleteJournal(SelectedJournal.Id);
 
-                    // Видаляємо з локального списку
+                    // Р’РёРґР°Р»СЏС”РјРѕ Р· Р»РѕРєР°Р»СЊРЅРѕРіРѕ СЃРїРёСЃРєСѓ
                     Journals.Remove(SelectedJournal);
 
-                    // Очищаємо вибір
+                    // РћС‡РёС‰Р°С”РјРѕ РІРёР±С–СЂ
                     SelectedJournal = null;
 
                 }
                 catch (System.Exception ex)
                 {
                     await DialogService.ShowErrorAsync(
-                        $"Помилка видалення журналу: {ex.Message}");
+                        $"РџРѕРјРёР»РєР° РІРёРґР°Р»РµРЅРЅСЏ Р¶СѓСЂРЅР°Р»Сѓ: {ex.Message}");
                 }
             }
         }

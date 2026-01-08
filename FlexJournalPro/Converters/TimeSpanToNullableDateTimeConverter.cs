@@ -9,7 +9,7 @@ namespace FlexJournalPro.Converters
         // Convert TimeSpan -> DateTime? (for SelectedTime)
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // TimeSpan (ç ÁÄ) -> DateTime (äëÿ TimePicker)
+            // TimeSpan (Ð· Ð‘Ð”) -> DateTime (Ð´Ð»Ñ TimePicker)
             if (value is TimeSpan ts)
             {
                 return DateTime.Today.Add(ts);
@@ -21,7 +21,7 @@ namespace FlexJournalPro.Converters
         // ConvertBack DateTime? -> TimeSpan
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // DateTime (ç TimePicker) -> TimeSpan (ó ÁÄ)
+            // DateTime (Ð· TimePicker) -> TimeSpan (Ñƒ Ð‘Ð”)
             if (value is DateTime dt)
             {
                 return dt.TimeOfDay;

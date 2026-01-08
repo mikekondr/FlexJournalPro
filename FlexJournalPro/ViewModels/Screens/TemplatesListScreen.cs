@@ -7,7 +7,7 @@ using System.Windows.Input;
 namespace FlexJournalPro.ViewModels.Screens
 {
     /// <summary>
-    /// Screen для керування шаблонами журналів
+    /// Screen РґР»СЏ РєРµСЂСѓРІР°РЅРЅСЏ С€Р°Р±Р»РѕРЅР°РјРё Р¶СѓСЂРЅР°Р»С–РІ
     /// </summary>
     public class TemplatesListScreen : ScreenBase
     {
@@ -20,31 +20,31 @@ namespace FlexJournalPro.ViewModels.Screens
             _dbService = dbService;
             _mainViewModel = mainViewModel;
 
-            Title = "Шаблони";
+            Title = "РЁР°Р±Р»РѕРЅРё";
             Icon = PackIconKind.FileDocument;
 
             Templates = new ObservableCollection<TemplateMetadata>();
 
-            // Команди
+            // РљРѕРјР°РЅРґРё
             CreateTemplateCommand = new RelayCommand(CreateTemplate);
             EditTemplateCommand = new RelayCommand(EditTemplate, () => SelectedTemplate != null);
             DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => SelectedTemplate != null);
             RefreshCommand = new RelayCommand(LoadTemplates);
             ImportTemplateCommand = new RelayCommand(ImportTemplate);
 
-            // Завантажити шаблони
+            // Р—Р°РІР°РЅС‚Р°Р¶РёС‚Рё С€Р°Р±Р»РѕРЅРё
             LoadTemplates();
         }
 
         #region Properties
 
         /// <summary>
-        /// Колекція шаблонів
+        /// РљРѕР»РµРєС†С–СЏ С€Р°Р±Р»РѕРЅС–РІ
         /// </summary>
         public ObservableCollection<TemplateMetadata> Templates { get; }
 
         /// <summary>
-        /// Вибраний шаблон
+        /// Р’РёР±СЂР°РЅРёР№ С€Р°Р±Р»РѕРЅ
         /// </summary>
         public TemplateMetadata? SelectedTemplate
         {
@@ -89,15 +89,15 @@ namespace FlexJournalPro.ViewModels.Screens
             catch (System.Exception ex)
             {
                 await DialogService.ShowErrorAsync(
-                    $"Помилка завантаження шаблонів: {ex.Message}");
+                    $"РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ С€Р°Р±Р»РѕРЅС–РІ: {ex.Message}");
             }
         }
 
         private async void CreateTemplate()
         {
             await DialogService.ShowInformationAsync(
-                "Створення шаблону буде додано у наступній версії",
-                "У розробці");
+                "РЎС‚РІРѕСЂРµРЅРЅСЏ С€Р°Р±Р»РѕРЅСѓ Р±СѓРґРµ РґРѕРґР°РЅРѕ Сѓ РЅР°СЃС‚СѓРїРЅС–Р№ РІРµСЂСЃС–С—",
+                "РЈ СЂРѕР·СЂРѕР±С†С–");
         }
 
         private async void EditTemplate()
@@ -105,8 +105,8 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedTemplate == null) return;
 
             await DialogService.ShowInformationAsync(
-                $"Редагування шаблону '{SelectedTemplate.Name}' буде додано у наступній версії",
-                "У розробці");
+                $"Р РµРґР°РіСѓРІР°РЅРЅСЏ С€Р°Р±Р»РѕРЅСѓ '{SelectedTemplate.Name}' Р±СѓРґРµ РґРѕРґР°РЅРѕ Сѓ РЅР°СЃС‚СѓРїРЅС–Р№ РІРµСЂСЃС–С—",
+                "РЈ СЂРѕР·СЂРѕР±С†С–");
         }
 
         private async void DeleteTemplate()
@@ -114,8 +114,8 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedTemplate == null) return;
 
             var result = await DialogService.ShowConfirmationAsync(
-                $"Ви впевнені, що хочете видалити шаблон '{SelectedTemplate.Name}'?",
-                "Підтвердження видалення");
+                $"Р’Рё РІРїРµРІРЅРµРЅС–, С‰Рѕ С…РѕС‡РµС‚Рµ РІРёРґР°Р»РёС‚Рё С€Р°Р±Р»РѕРЅ '{SelectedTemplate.Name}'?",
+                "РџС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ РІРёРґР°Р»РµРЅРЅСЏ");
 
             if (result == DialogResult.Yes)
             {
@@ -127,18 +127,18 @@ namespace FlexJournalPro.ViewModels.Screens
                 catch (System.Exception ex)
                 {
                     await DialogService.ShowErrorAsync(
-                        $"Помилка видалення шаблону: {ex.Message}");
+                        $"РџРѕРјРёР»РєР° РІРёРґР°Р»РµРЅРЅСЏ С€Р°Р±Р»РѕРЅСѓ: {ex.Message}");
                 }
             }
         }
 
         private async void ImportTemplate()
         {
-            // Імпорт шаблону з JSON файлу
+            // Р†РјРїРѕСЂС‚ С€Р°Р±Р»РѕРЅСѓ Р· JSON С„Р°Р№Р»Сѓ
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
-                Title = "Виберіть файл шаблону"
+                Title = "Р’РёР±РµСЂС–С‚СЊ С„Р°Р№Р» С€Р°Р±Р»РѕРЅСѓ"
             };
 
             if (dialog.ShowDialog() == true)
@@ -157,7 +157,7 @@ namespace FlexJournalPro.ViewModels.Screens
                 catch (System.Exception ex)
                 {
                     await DialogService.ShowErrorAsync(
-                        $"Помилка імпорту шаблону: {ex.Message}");
+                        $"РџРѕРјРёР»РєР° С–РјРїРѕСЂС‚Сѓ С€Р°Р±Р»РѕРЅСѓ: {ex.Message}");
                 }
             }
         }

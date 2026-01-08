@@ -44,7 +44,7 @@ namespace FlexJournalPro.Helpers
             var dp = sender as DatePicker;
             if (dp == null) return;
 
-            // Знаходимо внутрішній TextBox шаблону DatePicker
+            // Р—РЅР°С…РѕРґРёРјРѕ РІРЅСѓС‚СЂС–С€РЅС–Р№ TextBox С€Р°Р±Р»РѕРЅСѓ DatePicker
             var tb = FindVisualChild<DatePickerTextBox>(dp);
             if (tb != null)
             {
@@ -76,7 +76,7 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // Дозволяємо вводити лише цифри
+            // Р”РѕР·РІРѕР»СЏС”РјРѕ РІРІРѕРґРёС‚Рё Р»РёС€Рµ С†РёС„СЂРё
             if (!e.Text.All(char.IsDigit))
             {
                 e.Handled = true;
@@ -85,7 +85,7 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Блокуємо пробіл
+            // Р‘Р»РѕРєСѓС”РјРѕ РїСЂРѕР±С–Р»
             if (e.Key == Key.Space)
             {
                 e.Handled = true;
@@ -106,41 +106,41 @@ namespace FlexJournalPro.Helpers
             {
                 string originalText = tb.Text;
 
-                // Витягуємо лише цифри з поточного тексту
+                // Р’РёС‚СЏРіСѓС”РјРѕ Р»РёС€Рµ С†РёС„СЂРё Р· РїРѕС‚РѕС‡РЅРѕРіРѕ С‚РµРєСЃС‚Сѓ
                 string digits = new string(originalText.Where(char.IsDigit).ToArray());
 
-                // Обмежуємо довжину (ddMMyyyy = 8 цифр)
+                // РћР±РјРµР¶СѓС”РјРѕ РґРѕРІР¶РёРЅСѓ (ddMMyyyy = 8 С†РёС„СЂ)
                 if (digits.Length > 8) digits = digits.Substring(0, 8);
 
                 string newText = "";
 
                 if (digits.Length > 0)
                 {
-                    // День (перші 2 цифри)
+                    // Р”РµРЅСЊ (РїРµСЂС€С– 2 С†РёС„СЂРё)
                     newText += digits.Substring(0, Math.Min(2, digits.Length));
                 }
 
                 if (digits.Length > 2)
                 {
-                    // Додаємо крапку після дня
+                    // Р”РѕРґР°С”РјРѕ РєСЂР°РїРєСѓ РїС–СЃР»СЏ РґРЅСЏ
                     newText += ".";
-                    // Місяць (наступні 2 цифри)
+                    // РњС–СЃСЏС†СЊ (РЅР°СЃС‚СѓРїРЅС– 2 С†РёС„СЂРё)
                     newText += digits.Substring(2, Math.Min(2, digits.Length - 2));
                 }
 
                 if (digits.Length > 4)
                 {
-                    // Додаємо крапку після місяця
+                    // Р”РѕРґР°С”РјРѕ РєСЂР°РїРєСѓ РїС–СЃР»СЏ РјС–СЃСЏС†СЏ
                     newText += ".";
-                    // Рік (решта цифр)
+                    // Р С–Рє (СЂРµС€С‚Р° С†РёС„СЂ)
                     newText += digits.Substring(4, digits.Length - 4);
                 }
 
-                // Оновлюємо текст тільки якщо він змінився (щоб уникнути зациклення)
+                // РћРЅРѕРІР»СЋС”РјРѕ С‚РµРєСЃС‚ С‚С–Р»СЊРєРё СЏРєС‰Рѕ РІС–РЅ Р·РјС–РЅРёРІСЃСЏ (С‰РѕР± СѓРЅРёРєРЅСѓС‚Рё Р·Р°С†РёРєР»РµРЅРЅСЏ)
                 if (newText != originalText)
                 {
                     tb.Text = newText;
-                    // Переміщуємо курсор в кінець для зручного послідовного вводу
+                    // РџРµСЂРµРјС–С‰СѓС”РјРѕ РєСѓСЂСЃРѕСЂ РІ РєС–РЅРµС†СЊ РґР»СЏ Р·СЂСѓС‡РЅРѕРіРѕ РїРѕСЃР»С–РґРѕРІРЅРѕРіРѕ РІРІРѕРґСѓ
                     tb.CaretIndex = newText.Length;
                 }
             }

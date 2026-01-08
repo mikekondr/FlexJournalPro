@@ -6,13 +6,22 @@ using System.Windows.Data;
 namespace FlexJournalPro.Converters
 {
     /// <summary>
-    /// Конвертер для показу/приховування елементів в залежності від null значення
+    /// РљРѕРЅРІРµСЂС‚РµСЂ РґР»СЏ РїРѕРєР°Р·Сѓ/РїСЂРёС…РѕРІСѓРІР°РЅРЅСЏ РµР»РµРјРµРЅС‚С–РІ РІ Р·Р°Р»РµР¶РЅРѕСЃС‚С– РІС–Рґ null Р·РЅР°С‡РµРЅРЅСЏ
     /// </summary>
     public class NullToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value == null ? Visibility.Visible : Visibility.Collapsed;
+            if (parameter == null || (parameter is string && string.Equals((string)parameter, "false", StringComparison.OrdinalIgnoreCase)))
+            {
+                return value == null ? Visibility.Visible : Visibility.Collapsed;
+            }
+            else if (parameter is string && string.Equals((string)parameter, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return value == null ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            return Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -6,21 +6,23 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+     <materialDesign:Card>
 
-        <!-- Toolbar -->
-        <materialDesign:Card Grid.Row="0" Margin="16,16,16,8" Padding="16">
-            <StackPanel Orientation="Horizontal">
+        <Grid>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8">
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
                         Command="{Binding ImportTemplateCommand}"
                         Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="Import" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Імпорт шаблону" VerticalAlignment="Center"/>
+                        <TextBlock Text="Імпортувати шаблони" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -33,57 +35,54 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
-        </materialDesign:Card>
 
-        <!-- Templates List -->
-        <materialDesign:Card Grid.Row="1" Margin="16,8,16,16">
-            <Grid>
-                <DataGrid ItemsSource="{Binding Templates}"
+            <DataGrid Grid.Row="1" Margin="8,0,8,8"
+                            ItemsSource="{Binding Templates}"
                           SelectedItem="{Binding SelectedTemplate}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
                           IsReadOnly="True"
                           SelectionMode="Single">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="150"/>
-                        <DataGridTextColumn Header="Назва" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="Опис" Binding="{Binding Description}" Width="300"/>
-                        <DataGridTextColumn Header="Версія" Binding="{Binding Version}" Width="100"/>
-                        <DataGridTextColumn Header="Оновлено" Binding="{Binding UpdatedAt, StringFormat='dd.MM.yyyy'}" Width="150"/>
-                        <DataGridTemplateColumn Header="Дії" Width="150">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="150"/>
+                    <DataGridTextColumn Header="Навза" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="Опис" Binding="{Binding Description}" Width="300"/>
+                    <DataGridTextColumn Header="Версія" Binding="{Binding Version}" Width="100"/>
+                    <DataGridTextColumn Header="Оновлено" Binding="{Binding UpdatedAt, StringFormat='dd.MM.yyyy'}" Width="150"/>
+                    <DataGridTemplateColumn Header="Дії" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 ToolTip="Редагувати" Width="24" Height="24" Padding="4">
-                                            <materialDesign:PackIcon Kind="Edit" Width="16" Height="16"/>
-                                        </Button>
-                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        <materialDesign:PackIcon Kind="Edit" Width="16" Height="16"/>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 ToolTip="Видалити" Width="24" Height="24" Padding="4">
-                                            <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
-                                        </Button>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
+                                        <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
 
-                <!-- Empty state -->
-                <StackPanel VerticalAlignment="Center" 
+            <!-- Empty state -->
+            <StackPanel Grid.Row="1"
+                    VerticalAlignment="Center" 
                             HorizontalAlignment="Center"
                             Visibility="{Binding Templates.Count, Converter={StaticResource EqualToVisibilityConverter}, ConverterParameter=0}">
-                    <materialDesign:PackIcon Kind="FileDocumentOutline" 
+                <materialDesign:PackIcon Kind="FileDocumentOutline" 
                                              Width="80" 
                                              Height="80" 
                                              HorizontalAlignment="Center"
                                              Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"
                                              Opacity="0.3"/>
-                </StackPanel>
-            </Grid>
-        </materialDesign:Card>
-    </Grid>
+            </StackPanel>
+        </Grid>
+    </materialDesign:Card>
 </UserControl>

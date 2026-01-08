@@ -4,7 +4,7 @@ using System.Windows.Input;
 namespace FlexJournalPro.ViewModels
 {
     /// <summary>
-    /// Реалізація ICommand для використання в MVVM
+    /// Р РµР°Р»С–Р·Р°С†С–СЏ ICommand РґР»СЏ РІРёРєРѕСЂРёСЃС‚Р°РЅРЅСЏ РІ MVVM
     /// </summary>
     public class RelayCommand : ICommand
     {

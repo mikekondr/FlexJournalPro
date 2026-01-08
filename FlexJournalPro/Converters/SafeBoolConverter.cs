@@ -5,9 +5,9 @@ using System.Windows.Data;
 namespace FlexJournalPro.Converters
 {
     /// <summary>
-    /// Універсальний конвертер для Boolean.
-    /// Приймає: bool, int (0/1), long (0/1), string ("true"/"false", "1"/"0").
-    /// Повертає: bool? для CheckBox.IsChecked.
+    /// РЈРЅС–РІРµСЂСЃР°Р»СЊРЅРёР№ РєРѕРЅРІРµСЂС‚РµСЂ РґР»СЏ Boolean.
+    /// РџСЂРёР№РјР°С”: bool, int (0/1), long (0/1), string ("true"/"false", "1"/"0").
+    /// РџРѕРІРµСЂС‚Р°С”: bool? РґР»СЏ CheckBox.IsChecked.
     /// </summary>
     public class SafeBoolConverter : IValueConverter
     {

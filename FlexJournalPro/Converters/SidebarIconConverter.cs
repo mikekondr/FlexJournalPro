@@ -6,7 +6,7 @@ using System.Windows.Data;
 namespace FlexJournalPro.Converters
 {
     /// <summary>
-    /// Конвертер для зміни іконки sidebar (Menu/MenuOpen)
+    /// РљРѕРЅРІРµСЂС‚РµСЂ РґР»СЏ Р·РјС–РЅРё С–РєРѕРЅРєРё sidebar (Menu/MenuOpen)
     /// </summary>
     public class SidebarIconConverter : IValueConverter
     {

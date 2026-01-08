@@ -11,7 +11,7 @@ using System.Windows.Input;
 namespace FlexJournalPro.ViewModels.Screens
 {
     /// <summary>
-    /// Screen для створення нового журналу
+    /// Screen РґР»СЏ СЃС‚РІРѕСЂРµРЅРЅСЏ РЅРѕРІРѕРіРѕ Р¶СѓСЂРЅР°Р»Сѓ
     /// </summary>
     public class NewJournalScreen : ScreenBase
     {
@@ -26,30 +26,30 @@ namespace FlexJournalPro.ViewModels.Screens
             _dbService = dbService;
             _mainViewModel = mainViewModel;
 
-            Title = "Новий журнал";
+            Title = "РќРѕРІРёР№ Р¶СѓСЂРЅР°Р»";
             Icon = PackIconKind.BookPlus;
 
             Templates = new ObservableCollection<TemplateMetadata>();
             ConstantFields = new ObservableCollection<ConstantFieldViewModel>();
             SessionValues = new Dictionary<string, object>();
 
-            // Команди
+            // РљРѕРјР°РЅРґРё
             CreateJournalCommand = new RelayCommand(CreateJournal, CanCreateJournal);
             CancelCommand = new RelayCommand(Cancel);
 
-            // Завантажуємо шаблони
+            // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ С€Р°Р±Р»РѕРЅРё
             LoadTemplates();
         }
 
         #region Properties
 
         /// <summary>
-        /// Доступні шаблони
+        /// Р”РѕСЃС‚СѓРїРЅС– С€Р°Р±Р»РѕРЅРё
         /// </summary>
         public ObservableCollection<TemplateMetadata> Templates { get; }
 
         /// <summary>
-        /// Обраний шаблон
+        /// РћР±СЂР°РЅРёР№ С€Р°Р±Р»РѕРЅ
         /// </summary>
         public TemplateMetadata? SelectedTemplate
         {
@@ -65,7 +65,7 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Назва журналу
+        /// РќР°Р·РІР° Р¶СѓСЂРЅР°Р»Сѓ
         /// </summary>
         public string JournalTitle
         {
@@ -80,7 +80,7 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Початковий номер
+        /// РџРѕС‡Р°С‚РєРѕРІРёР№ РЅРѕРјРµСЂ
         /// </summary>
         public long StartNumber
         {
@@ -89,17 +89,17 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Поля констант для відображення
+        /// РџРѕР»СЏ РєРѕРЅСЃС‚Р°РЅС‚ РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ
         /// </summary>
         public ObservableCollection<ConstantFieldViewModel> ConstantFields { get; }
 
         /// <summary>
-        /// Значення сеансових констант
+        /// Р—РЅР°С‡РµРЅРЅСЏ СЃРµР°РЅСЃРѕРІРёС… РєРѕРЅСЃС‚Р°РЅС‚
         /// </summary>
         public Dictionary<string, object> SessionValues { get; }
 
         /// <summary>
-        /// Чи є константи для відображення
+        /// Р§Рё С” РєРѕРЅСЃС‚Р°РЅС‚Рё РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ
         /// </summary>
         public bool HasConstants => ConstantFields.Any();
 
@@ -130,13 +130,13 @@ namespace FlexJournalPro.ViewModels.Screens
                 if (templates.Count == 0)
                 {
                     _ = DialogService.ShowInformationAsync(
-                        "В базі даних немає доступних шаблонів.\nСпочатку створіть або імпортуйте шаблони.",
-                        "Немає шаблонів");
+                        "Р’ Р±Р°Р·С– РґР°РЅРёС… РЅРµРјР°С” РґРѕСЃС‚СѓРїРЅРёС… С€Р°Р±Р»РѕРЅС–РІ.\nРЎРїРѕС‡Р°С‚РєСѓ СЃС‚РІРѕСЂС–С‚СЊ Р°Р±Рѕ С–РјРїРѕСЂС‚СѓР№С‚Рµ С€Р°Р±Р»РѕРЅРё.",
+                        "РќРµРјР°С” С€Р°Р±Р»РѕРЅС–РІ");
                 }
             }
             catch (Exception ex)
             {
-                _ = DialogService.ShowErrorAsync($"Помилка завантаження шаблонів: {ex.Message}");
+                _ = DialogService.ShowErrorAsync($"РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ С€Р°Р±Р»РѕРЅС–РІ: {ex.Message}");
             }
         }
 
@@ -152,21 +152,21 @@ namespace FlexJournalPro.ViewModels.Screens
 
             try
             {
-                // Завантажуємо повний шаблон з БД
+                // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ РїРѕРІРЅРёР№ С€Р°Р±Р»РѕРЅ Р· Р‘Р”
                 var template = _dbService.GetTemplate(SelectedTemplate.Id);
 
                 if (template != null)
                 {
-                    // Генеруємо назву за замовчуванням
+                    // Р“РµРЅРµСЂСѓС”РјРѕ РЅР°Р·РІСѓ Р·Р° Р·Р°РјРѕРІС‡СѓРІР°РЅРЅСЏРј
                     JournalTitle = template.Title + " " + DateTime.Now.ToString("yyyy-MM");
 
-                    // Будуємо форму констант
+                    // Р‘СѓРґСѓС”РјРѕ С„РѕСЂРјСѓ РєРѕРЅСЃС‚Р°РЅС‚
                     BuildConstantsForm(template.Constants);
                 }
             }
             catch (Exception ex)
             {
-                _ = DialogService.ShowErrorAsync($"Помилка завантаження шаблону: {ex.Message}");
+                _ = DialogService.ShowErrorAsync($"РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ С€Р°Р±Р»РѕРЅСѓ: {ex.Message}");
             }
         }
 
@@ -218,21 +218,21 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             if (SelectedTemplate == null || string.IsNullOrWhiteSpace(JournalTitle))
             {
-                await DialogService.ShowWarningAsync("Заповніть всі поля!", "Помилка");
+                await DialogService.ShowWarningAsync("Р—Р°РїРѕРІРЅС–С‚СЊ РІСЃС– РїРѕР»СЏ!", "РџРѕРјРёР»РєР°");
                 return;
             }
 
             try
             {
-                // Завантажуємо повний шаблон
+                // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ РїРѕРІРЅРёР№ С€Р°Р±Р»РѕРЅ
                 var template = _dbService.GetTemplate(SelectedTemplate.Id);
                 if (template == null)
                 {
-                    await DialogService.ShowErrorAsync("Не вдалося завантажити шаблон!");
+                    await DialogService.ShowErrorAsync("РќРµ РІРґР°Р»РѕСЃСЏ Р·Р°РІР°РЅС‚Р°Р¶РёС‚Рё С€Р°Р±Р»РѕРЅ!");
                     return;
                 }
 
-                // Створюємо метадані журналу
+                // РЎС‚РІРѕСЂСЋС”РјРѕ РјРµС‚Р°РґР°РЅС– Р¶СѓСЂРЅР°Р»Сѓ
                 var metadata = new JournalMetadata
                 {
                     Title = JournalTitle.Trim(),
@@ -243,10 +243,10 @@ namespace FlexJournalPro.ViewModels.Screens
                         : "{}"
                 };
 
-                // Зберігаємо в БД
+                // Р—Р±РµСЂС–РіР°С”РјРѕ РІ Р‘Р”
                 _dbService.CreateNewJournal(metadata, template.Columns);
 
-                // Оновлюємо список журналів, якщо він відкритий
+                // РћРЅРѕРІР»СЋС”РјРѕ СЃРїРёСЃРѕРє Р¶СѓСЂРЅР°Р»С–РІ, СЏРєС‰Рѕ РІС–РЅ РІС–РґРєСЂРёС‚РёР№
                 var journalsListScreen = _mainViewModel.OpenScreens
                     .OfType<JournalsListScreen>()
                     .FirstOrDefault();
@@ -256,12 +256,12 @@ namespace FlexJournalPro.ViewModels.Screens
                     journalsListScreen.RefreshCommand.Execute(null);
                 }
 
-                // Закриваємо цей екран
+                // Р—Р°РєСЂРёРІР°С”РјРѕ С†РµР№ РµРєСЂР°РЅ
                 _mainViewModel.CloseScreenCommand.Execute(this);
             }
             catch (Exception ex)
             {
-                await DialogService.ShowErrorAsync($"Помилка створення журналу: {ex.Message}");
+                await DialogService.ShowErrorAsync($"РџРѕРјРёР»РєР° СЃС‚РІРѕСЂРµРЅРЅСЏ Р¶СѓСЂРЅР°Р»Сѓ: {ex.Message}");
             }
         }
 
@@ -274,7 +274,7 @@ namespace FlexJournalPro.ViewModels.Screens
     }
 
     /// <summary>
-    /// ViewModel для поля константи
+    /// ViewModel РґР»СЏ РїРѕР»СЏ РєРѕРЅСЃС‚Р°РЅС‚Рё
     /// </summary>
     public class ConstantFieldViewModel : ViewModelBase
     {

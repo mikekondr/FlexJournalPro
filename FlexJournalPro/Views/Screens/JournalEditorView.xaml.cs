@@ -1,6 +1,6 @@
-using FlexJournalPro.Controls;
 using FlexJournalPro.Helpers;
 using FlexJournalPro.ViewModels.Screens;
+using FlexJournalPro.Views;
 using System;
 using System.Text.Json;
 using System.Windows;
@@ -32,16 +32,16 @@ namespace FlexJournalPro.Views.Screens
         {
             if (viewModel.Template == null) return;
 
-            // Завантажуємо шаблон
+            // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ С€Р°Р±Р»РѕРЅ
             SmartTable.LoadTemplate(viewModel.Template);
 
-            // Будуємо панель констант
+            // Р‘СѓРґСѓС”РјРѕ РїР°РЅРµР»СЊ РєРѕРЅСЃС‚Р°РЅС‚
             BuildConstantsPanel(viewModel);
 
-            // Застосовуємо сеансові значення
+            // Р—Р°СЃС‚РѕСЃРѕРІСѓС”РјРѕ СЃРµР°РЅСЃРѕРІС– Р·РЅР°С‡РµРЅРЅСЏ
             SmartTable.ApplySessionValues(viewModel.SessionValues);
 
-            // Завантажуємо дані
+            // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ РґР°РЅС–
             SmartTable.SetVirtualDataSource(
                 new Services.DatabaseService(), 
                 viewModel.Journal.TableName);
@@ -87,14 +87,19 @@ namespace FlexJournalPro.Views.Screens
                 var dbService = new Services.DatabaseService();
                 dbService.UpdateJournalConstants(viewModel.Journal.Id, json);
 
-                MessageBox.Show("Налаштування збережено!", "Успіх",
+                MessageBox.Show("РљРѕРЅСЃС‚Р°РЅС‚Рё Р·Р±РµСЂРµР¶РµРЅРѕ!", "РЈСЃРїС–С…",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Помилка збереження налаштувань: {ex.Message}",
-                    "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"РџРѕРјРёР»РєР° Р·Р±РµСЂРµР¶РµРЅРЅСЏ РєРѕРЅСЃС‚Р°РЅС‚: {ex.Message}",
+                    "РџРѕРјРёР»РєР°", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnAddRow_Click(object sender, RoutedEventArgs e)
+        {
+            SmartTable.AddNewRow();
         }
 
         private void SmartTable_RowSaved(object sender, RowSavedEventArgs e)
@@ -111,8 +116,8 @@ namespace FlexJournalPro.Views.Screens
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Помилка збереження: {ex.Message}",
-                    "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"РџРѕРјРёР»РєР° Р·Р±РµСЂРµР¶РµРЅРЅСЏ: {ex.Message}",
+                    "РџРѕРјРёР»РєР°", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

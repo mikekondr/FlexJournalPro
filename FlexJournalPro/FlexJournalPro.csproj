@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
+	<UseUtf8>true</UseUtf8>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x86;x64</Platforms>

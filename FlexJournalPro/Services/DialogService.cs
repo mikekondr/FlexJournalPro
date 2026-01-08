@@ -6,7 +6,7 @@ using System.Windows;
 namespace FlexJournalPro.Services
 {
     /// <summary>
-    /// Тип діалогового вікна
+    /// РўРёРї РґС–Р°Р»РѕРіРѕРІРѕРіРѕ РІС–РєРЅР°
     /// </summary>
     public enum DialogType
     {
@@ -18,7 +18,7 @@ namespace FlexJournalPro.Services
     }
 
     /// <summary>
-    /// Результат діалогу
+    /// Р РµР·СѓР»СЊС‚Р°С‚ РґС–Р°Р»РѕРіСѓ
     /// </summary>
     public enum DialogResult
     {
@@ -30,7 +30,7 @@ namespace FlexJournalPro.Services
     }
 
     /// <summary>
-    /// Кнопки діалогу
+    /// РљРЅРѕРїРєРё РґС–Р°Р»РѕРіСѓ
     /// </summary>
     public enum DialogButtons
     {
@@ -41,14 +41,14 @@ namespace FlexJournalPro.Services
     }
 
     /// <summary>
-    /// Сервіс для відображення модальних повідомлень
+    /// РЎРµСЂРІС–СЃ РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ РјРѕРґР°Р»СЊРЅРёС… РїРѕРІС–РґРѕРјР»РµРЅСЊ
     /// </summary>
     public class DialogService
     {
         private static string _dialogHostIdentifier = "RootDialogHost";
 
         /// <summary>
-        /// Встановлює ідентифікатор DialogHost для відображення діалогів
+        /// Р’СЃС‚Р°РЅРѕРІР»СЋС” С–РґРµРЅС‚РёС„С–РєР°С‚РѕСЂ DialogHost РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ РґС–Р°Р»РѕРіС–РІ
         /// </summary>
         public static void SetDialogHostIdentifier(string identifier)
         {
@@ -56,55 +56,55 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Показує інформаційне повідомлення
+        /// РџРѕРєР°Р·СѓС” С–РЅС„РѕСЂРјР°С†С–Р№РЅРµ РїРѕРІС–РґРѕРјР»РµРЅРЅСЏ
         /// </summary>
-        public static async Task<DialogResult> ShowInformationAsync(string message, string title = "Інформація")
+        public static async Task<DialogResult> ShowInformationAsync(string message, string title = "Р†РЅС„РѕСЂРјР°С†С–СЏ")
         {
             return await ShowDialogAsync(title, message, DialogType.Information, DialogButtons.OK);
         }
 
         /// <summary>
-        /// Показує повідомлення про помилку
+        /// РџРѕРєР°Р·СѓС” РїРѕРІС–РґРѕРјР»РµРЅРЅСЏ РїСЂРѕ РїРѕРјРёР»РєСѓ
         /// </summary>
-        public static async Task<DialogResult> ShowErrorAsync(string message, string title = "Помилка")
+        public static async Task<DialogResult> ShowErrorAsync(string message, string title = "РџРѕРјРёР»РєР°")
         {
             return await ShowDialogAsync(title, message, DialogType.Error, DialogButtons.OK);
         }
 
         /// <summary>
-        /// Показує попередження
+        /// РџРѕРєР°Р·СѓС” РїРѕРїРµСЂРµРґР¶РµРЅРЅСЏ
         /// </summary>
-        public static async Task<DialogResult> ShowWarningAsync(string message, string title = "Попередження")
+        public static async Task<DialogResult> ShowWarningAsync(string message, string title = "РџРѕРїРµСЂРµРґР¶РµРЅРЅСЏ")
         {
             return await ShowDialogAsync(title, message, DialogType.Warning, DialogButtons.OK);
         }
 
         /// <summary>
-        /// Показує повідомлення про успіх
+        /// РџРѕРєР°Р·СѓС” РїРѕРІС–РґРѕРјР»РµРЅРЅСЏ РїСЂРѕ СѓСЃРїС–С…
         /// </summary>
-        public static async Task<DialogResult> ShowSuccessAsync(string message, string title = "Успіх")
+        public static async Task<DialogResult> ShowSuccessAsync(string message, string title = "РЈСЃРїС–С…")
         {
             return await ShowDialogAsync(title, message, DialogType.Success, DialogButtons.OK);
         }
 
         /// <summary>
-        /// Показує діалог підтвердження (Так/Ні)
+        /// РџРѕРєР°Р·СѓС” РґС–Р°Р»РѕРі РїС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ (РўР°Рє/РќС–)
         /// </summary>
-        public static async Task<DialogResult> ShowConfirmationAsync(string message, string title = "Підтвердження")
+        public static async Task<DialogResult> ShowConfirmationAsync(string message, string title = "РџС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ")
         {
             return await ShowDialogAsync(title, message, DialogType.Question, DialogButtons.YesNo);
         }
 
         /// <summary>
-        /// Показує діалог підтвердження з можливістю скасування
+        /// РџРѕРєР°Р·СѓС” РґС–Р°Р»РѕРі РїС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ Р· РјРѕР¶Р»РёРІС–СЃС‚СЋ СЃРєР°СЃСѓРІР°РЅРЅСЏ
         /// </summary>
-        public static async Task<DialogResult> ShowConfirmationWithCancelAsync(string message, string title = "Підтвердження")
+        public static async Task<DialogResult> ShowConfirmationWithCancelAsync(string message, string title = "РџС–РґС‚РІРµСЂРґР¶РµРЅРЅСЏ")
         {
             return await ShowDialogAsync(title, message, DialogType.Question, DialogButtons.YesNoCancel);
         }
 
         /// <summary>
-        /// Показує діалог з кастомним вмістом
+        /// РџРѕРєР°Р·СѓС” РґС–Р°Р»РѕРі Р· РєР°СЃС‚РѕРјРЅРёРј РІРјС–СЃС‚РѕРј
         /// </summary>
         public static async Task<object> ShowCustomDialogAsync(object content)
         {
@@ -115,15 +115,15 @@ namespace FlexJournalPro.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Dialog error: {ex.Message}");
-                // Fallback до MessageBox при помилці
-                MessageBox.Show(content?.ToString() ?? "Помилка відображення діалогу", 
-                    "Діалог", MessageBoxButton.OK);
+                // Fallback РґРѕ MessageBox РїСЂРё РїРѕРјРёР»С†С–
+                MessageBox.Show(content?.ToString() ?? "РџРѕРјРёР»РєР° РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ РґС–Р°Р»РѕРіСѓ", 
+                    "Р”С–Р°Р»РѕРі", MessageBoxButton.OK);
                 return null;
             }
         }
 
         /// <summary>
-        /// Основний метод показу діалогу
+        /// РћСЃРЅРѕРІРЅРёР№ РјРµС‚РѕРґ РїРѕРєР°Р·Сѓ РґС–Р°Р»РѕРіСѓ
         /// </summary>
         private static async Task<DialogResult> ShowDialogAsync(
             string title, 
@@ -152,7 +152,7 @@ namespace FlexJournalPro.Services
             }
             catch (InvalidOperationException)
             {
-                // DialogHost не знайдено - використовуємо MessageBox як fallback
+                // DialogHost РЅРµ Р·РЅР°Р№РґРµРЅРѕ - РІРёРєРѕСЂРёСЃС‚РѕРІСѓС”РјРѕ MessageBox СЏРє fallback
                 return ShowMessageBoxFallback(message, title, type, buttons);
             }
             catch (Exception ex)
@@ -163,7 +163,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Fallback до стандартного MessageBox
+        /// Fallback РґРѕ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ MessageBox
         /// </summary>
         private static DialogResult ShowMessageBoxFallback(
             string message, 
@@ -203,7 +203,7 @@ namespace FlexJournalPro.Services
     }
 
     /// <summary>
-    /// ViewModel для діалогового вікна
+    /// ViewModel РґР»СЏ РґС–Р°Р»РѕРіРѕРІРѕРіРѕ РІС–РєРЅР°
     /// </summary>
     public class DialogViewModel
     {

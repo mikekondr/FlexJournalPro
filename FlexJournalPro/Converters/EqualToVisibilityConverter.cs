@@ -6,7 +6,7 @@ using System.Windows.Data;
 namespace FlexJournalPro.Converters
 {
     /// <summary>
-    /// Конвертер для показу/приховування елементів на основі порівняння значень
+    /// РљРѕРЅРІРµСЂС‚РµСЂ РґР»СЏ РїРѕРєР°Р·Сѓ/РїСЂРёС…РѕРІСѓРІР°РЅРЅСЏ РµР»РµРјРµРЅС‚С–РІ РЅР° РѕСЃРЅРѕРІС– РїРѕСЂС–РІРЅСЏРЅРЅСЏ Р·РЅР°С‡РµРЅСЊ
     /// </summary>
     public class EqualToVisibilityConverter : IValueConverter
     {
@@ -15,7 +15,7 @@ namespace FlexJournalPro.Converters
             if (value == null || parameter == null)
                 return Visibility.Collapsed;
 
-            // Порівнюємо значення з параметром
+            // РџРѕСЂС–РІРЅСЋС”РјРѕ Р·РЅР°С‡РµРЅРЅСЏ Р· РїР°СЂР°РјРµС‚СЂРѕРј
             bool isEqual = value.ToString() == parameter.ToString();
             return isEqual ? Visibility.Visible : Visibility.Collapsed;
         }

@@ -25,13 +25,13 @@ namespace FlexJournalPro.Views
 
         private void ConfigureButtons(DialogButtons buttons)
         {
-            // Ñõîâàòè âñ³ êíîïêè çà çàìîâ÷óâàííÿì
+            // Ð¡Ñ…Ð¾Ð²Ð°Ñ‚Ð¸ Ð²ÑÑ– ÐºÐ½Ð¾Ð¿ÐºÐ¸ Ð·Ð° Ð·Ð°Ð¼Ð¾Ð²Ñ‡ÑƒÐ²Ð°Ð½Ð½ÑÐ¼
             BtnOK.Visibility = Visibility.Collapsed;
             BtnCancel.Visibility = Visibility.Collapsed;
             BtnYes.Visibility = Visibility.Collapsed;
             BtnNo.Visibility = Visibility.Collapsed;
 
-            // Ïîêàçàòè ïîòð³áí³ êíîïêè
+            // ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚Ð¸ Ð¿Ð¾Ñ‚Ñ€Ñ–Ð±Ð½Ñ– ÐºÐ½Ð¾Ð¿ÐºÐ¸
             switch (buttons)
             {
                 case DialogButtons.OK:
@@ -55,7 +55,7 @@ namespace FlexJournalPro.Views
                     break;
             }
 
-            // Âñòàíîâèòè ôîêóñ íà ïåðøó âèäèìó êíîïêó
+            // Ð’ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚Ð¸ Ñ„Ð¾ÐºÑƒÑ Ð½Ð° Ð¿ÐµÑ€ÑˆÑƒ Ð²Ð¸Ð´Ð¸Ð¼Ñƒ ÐºÐ½Ð¾Ð¿ÐºÑƒ
             Dispatcher.BeginInvoke(new System.Action(() =>
             {
                 if (BtnYes.Visibility == Visibility.Visible)

@@ -6,7 +6,7 @@ using System.Windows.Media;
 namespace FlexJournalPro.Converters
 {
     /// <summary>
-    /// Конвертер для підсвічування вибраного екрану
+    /// РљРѕРЅРІРµСЂС‚РµСЂ РґР»СЏ РїС–РґСЃРІС–С‡СѓРІР°РЅРЅСЏ РІРёР±СЂР°РЅРѕРіРѕ РµРєСЂР°РЅСѓ
     /// </summary>
     public class SelectedScreenBackgroundConverter : IValueConverter
     {

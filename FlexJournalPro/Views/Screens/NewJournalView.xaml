@@ -22,7 +22,7 @@
                                    Margin="0,0,0,12"/>
                         <ComboBox ItemsSource="{Binding Templates}"
                                   SelectedItem="{Binding SelectedTemplate}"
-                                  materialDesign:HintAssist.Hint="Оберіть шаблон"
+                                  materialDesign:HintAssist.Hint="Оберіть шаблон..."
                                   Style="{StaticResource MaterialDesignFloatingHintComboBox}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -50,7 +50,7 @@
                                  Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                  Margin="0,0,0,16"/>
                         <TextBox Text="{Binding StartNumber, UpdateSourceTrigger=PropertyChanged}" 
-                                 materialDesign:HintAssist.Hint="Почтаковий номер" 
+                                 materialDesign:HintAssist.Hint="Початковий номер" 
                                  Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
                     </StackPanel>
 
@@ -98,7 +98,7 @@
                         Command="{Binding CancelCommand}"
                         Style="{StaticResource MaterialDesignFlatButton}" 
                         Margin="0,0,16,0"/>
-                <Button Content="СТВОРИТИ" 
+                <Button Content="Створити" 
                         Command="{Binding CreateJournalCommand}"
                         Style="{StaticResource MaterialDesignRaisedButton}"/>
             </StackPanel>

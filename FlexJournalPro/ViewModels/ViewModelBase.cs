@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace FlexJournalPro.ViewModels
 {
     /// <summary>
-    /// Базовий клас для всіх ViewModel з підтримкою INotifyPropertyChanged
+    /// Р‘Р°Р·РѕРІРёР№ РєР»Р°СЃ РґР»СЏ РІСЃС–С… ViewModel Р· РїС–РґС‚СЂРёРјРєРѕСЋ INotifyPropertyChanged
     /// </summary>
     public abstract class ViewModelBase : INotifyPropertyChanged
     {

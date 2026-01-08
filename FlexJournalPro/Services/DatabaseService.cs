@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
@@ -161,13 +161,13 @@ namespace FlexJournalPro.Services
             var sb = new StringBuilder();
             sb.Append($"CREATE TABLE [{tableName}] (");
 
-            // Системне поле ID
+            // Системне поле ID (завжди створюється автоматично)
             sb.Append("Id INTEGER PRIMARY KEY AUTOINCREMENT");
 
             foreach (var col in columns)
             {
-                // Пропускаємо поле id (воно вже додано)
-                if (col.FieldName == "id") continue;
+                // Пропускаємо поле Id з шаблону (воно системне і створюється автоматично)
+                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
                 // Пропускаємо заголовки секцій (вони тільки для краси)
                 if (col.Type == ColumnType.SectionHeader) continue;
@@ -272,8 +272,8 @@ namespace FlexJournalPro.Services
                         while (reader.Read())
                         {
                             var row = new BindableRow();
-                            
-                            // Пряме читання ID через типізований метод
+                        
+                            // Завжди читаємо системне поле Id (незалежно від шаблону)
                             if (columnIndexMap.TryGetValue("Id", out int idIndex))
                             {
                                 row["Id"] = reader.GetInt64(idIndex);
@@ -283,6 +283,9 @@ namespace FlexJournalPro.Services
                             foreach (var col in columns)
                             {
                                 if (col.Type == ColumnType.SectionHeader) continue;
+                                
+                                // Пропускаємо конфігурацію поля Id з шаблону (системне поле вже додано)
+                                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
                                 if (!columnIndexMap.TryGetValue(col.FieldName, out int columnIndex))
                                     continue;
@@ -306,6 +309,9 @@ namespace FlexJournalPro.Services
                                     row[col.FieldName] = reader.GetValue(columnIndex);
                                 }
                             }
+
+                            // Позначаємо рядок як збережений (без змін)
+                            row.MarkAsSaved();
 
                             list.Add(row);
                         }
@@ -414,6 +420,9 @@ namespace FlexJournalPro.Services
                 {
                     ExecuteInsert(conn, tableName, rowData, columns);
                 }
+
+                // Позначаємо рядок як збережений після успішного запису в БД
+                rowData.MarkAsSaved();
             }
         }
 
@@ -431,7 +440,9 @@ namespace FlexJournalPro.Services
             foreach (var col in columns)
             {
                 if (col.Type == ColumnType.SectionHeader) continue;
-                if (col.FieldName == "Id") continue;
+                
+                // Пропускаємо системне поле Id (його не можна змінювати)
+                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
                 if (!first) sb.Append(", ");
                 sb.Append($"[{col.FieldName}] = @{col.FieldName}");
@@ -467,7 +478,9 @@ namespace FlexJournalPro.Services
             foreach (var col in columns)
             {
                 if (col.Type == ColumnType.SectionHeader) continue;
-                if (col.FieldName == "Id") continue;
+                
+                // Пропускаємо системне поле Id (воно генерується автоматично)
+                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
                 colNames.Add($"[{col.FieldName}]");
                 paramNames.Add($"@{col.FieldName}");

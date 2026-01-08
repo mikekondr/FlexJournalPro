@@ -9,12 +9,12 @@ using FlexJournalPro.Models;
 namespace FlexJournalPro.Helpers
 {
     /// <summary>
-    /// Допоміжний клас для програмного створення DataTemplate без парсингу XAML
+    /// Р”РѕРїРѕРјС–Р¶РЅРёР№ РєР»Р°СЃ РґР»СЏ РїСЂРѕРіСЂР°РјРЅРѕРіРѕ СЃС‚РІРѕСЂРµРЅРЅСЏ DataTemplate Р±РµР· РїР°СЂСЃРёРЅРіСѓ XAML
     /// </summary>
     public static class DataTemplateBuilder
     {
         /// <summary>
-        /// Створює DataTemplate для перегляду простого текстового поля
+        /// РЎС‚РІРѕСЂСЋС” DataTemplate РґР»СЏ РїРµСЂРµРіР»СЏРґСѓ РїСЂРѕСЃС‚РѕРіРѕ С‚РµРєСЃС‚РѕРІРѕРіРѕ РїРѕР»СЏ
         /// </summary>
         public static DataTemplate CreateTextViewTemplate(string fieldName, string format = null, bool isCalculated = false)
         {
@@ -37,7 +37,7 @@ namespace FlexJournalPro.Helpers
             
             factory.SetBinding(TextBlock.TextProperty, binding);
             
-            // Властивості
+            // Р’Р»Р°СЃС‚РёРІРѕСЃС‚С–
             factory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
             factory.SetValue(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
             factory.SetValue(TextBlock.PaddingProperty, new Thickness(4, 2, 4, 2));
@@ -57,7 +57,7 @@ namespace FlexJournalPro.Helpers
         }
 
         /// <summary>
-        /// Створює DataTemplate для редагування текстового поля
+        /// РЎС‚РІРѕСЂСЋС” DataTemplate РґР»СЏ СЂРµРґР°РіСѓРІР°РЅРЅСЏ С‚РµРєСЃС‚РѕРІРѕРіРѕ РїРѕР»СЏ
         /// </summary>
         public static DataTemplate CreateTextEditTemplate(string fieldName, string format = null, bool isCalculated = false)
         {
@@ -65,10 +65,10 @@ namespace FlexJournalPro.Helpers
             
             var factory = new FrameworkElementFactory(typeof(TextBox));
             
-            // ОПТИМІЗАЦІЯ: Використовуємо LostFocus для звичайних полів, PropertyChanged для обчислюваних
+            // РћРџРўРРњР†Р—РђР¦Р†РЇ: Р’РёРєРѕСЂРёСЃС‚РѕРІСѓС”РјРѕ LostFocus РґР»СЏ Р·РІРёС‡Р°Р№РЅРёС… РїРѕР»С–РІ, PropertyChanged РґР»СЏ РѕР±С‡РёСЃР»СЋРІР°РЅРёС…
             var updateTrigger = isCalculated ? UpdateSourceTrigger.PropertyChanged : UpdateSourceTrigger.LostFocus;
             
-            // Binding - НЕ застосовуємо StringFormat під час редагування
+            // Binding - РќР• Р·Р°СЃС‚РѕСЃРѕРІСѓС”РјРѕ StringFormat РїС–Рґ С‡Р°СЃ СЂРµРґР°РіСѓРІР°РЅРЅСЏ
             var binding = new Binding($"[{fieldName}]")
             {
                 Mode = isCalculated ? BindingMode.OneWay : BindingMode.TwoWay,
@@ -78,11 +78,11 @@ namespace FlexJournalPro.Helpers
                 FallbackValue = ""
             };
             
-            // StringFormat НЕ додаємо - це заважає введенню для валюти та інших форматів
+            // StringFormat РќР• РґРѕРґР°С”РјРѕ - С†Рµ Р·Р°РІР°Р¶Р°С” РІРІРµРґРµРЅРЅСЋ РґР»СЏ РІР°Р»СЋС‚Рё С‚Р° С–РЅС€РёС… С„РѕСЂРјР°С‚С–РІ
             
             factory.SetBinding(TextBox.TextProperty, binding);
             
-            // Властивості
+            // Р’Р»Р°СЃС‚РёРІРѕСЃС‚С–
             factory.SetValue(TextBox.BorderThicknessProperty, new Thickness(0));
             factory.SetValue(TextBox.BackgroundProperty, Brushes.Transparent);
             factory.SetValue(TextBox.PaddingProperty, new Thickness(4, 2, 4, 2));
@@ -99,7 +99,7 @@ namespace FlexJournalPro.Helpers
             }
             else
             {
-                // Для звичайних полів дозволяємо фокус та навігацію Tab
+                // Р”Р»СЏ Р·РІРёС‡Р°Р№РЅРёС… РїРѕР»С–РІ РґРѕР·РІРѕР»СЏС”РјРѕ С„РѕРєСѓСЃ С‚Р° РЅР°РІС–РіР°С†С–СЋ Tab
                 factory.SetValue(TextBox.FocusableProperty, true);
                 factory.SetValue(TextBox.IsTabStopProperty, true);
             }
@@ -111,7 +111,7 @@ namespace FlexJournalPro.Helpers
         }
 
         /// <summary>
-        /// Створює DataTemplate для перегляду Boolean (CheckBox)
+        /// РЎС‚РІРѕСЂСЋС” DataTemplate РґР»СЏ РїРµСЂРµРіР»СЏРґСѓ Boolean (CheckBox)
         /// </summary>
         public static DataTemplate CreateBooleanViewTemplate(string fieldName)
         {
@@ -138,7 +138,7 @@ namespace FlexJournalPro.Helpers
         }
 
         /// <summary>
-        /// Створює DataTemplate для редагування Boolean (CheckBox)
+        /// РЎС‚РІРѕСЂСЋС” DataTemplate РґР»СЏ СЂРµРґР°РіСѓРІР°РЅРЅСЏ Boolean (CheckBox)
         /// </summary>
         public static DataTemplate CreateBooleanEditTemplate(string fieldName)
         {
@@ -157,7 +157,7 @@ namespace FlexJournalPro.Helpers
             factory.SetValue(CheckBox.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             factory.SetValue(CheckBox.VerticalAlignmentProperty, VerticalAlignment.Center);
             
-            // Дозволяємо фокус та навігацію Tab
+            // Р”РѕР·РІРѕР»СЏС”РјРѕ С„РѕРєСѓСЃ С‚Р° РЅР°РІС–РіР°С†С–СЋ Tab
             factory.SetValue(CheckBox.FocusableProperty, true);
             factory.SetValue(CheckBox.IsTabStopProperty, true);
             
@@ -168,23 +168,23 @@ namespace FlexJournalPro.Helpers
         }
 
         /// <summary>
-        /// Перевіряє, чи можна використати compiled template для даної конфігурації
+        /// РџРµСЂРµРІС–СЂСЏС”, С‡Рё РјРѕР¶РЅР° РІРёРєРѕСЂРёСЃС‚Р°С‚Рё compiled template РґР»СЏ РґР°РЅРѕС— РєРѕРЅС„С–РіСѓСЂР°С†С–С—
         /// </summary>
         public static bool CanUseCompiledTemplate(ColumnConfig config)
         {
-            // Compiled templates підходять для простих типів без складного лейауту
+            // Compiled templates РїС–РґС…РѕРґСЏС‚СЊ РґР»СЏ РїСЂРѕСЃС‚РёС… С‚РёРїС–РІ Р±РµР· СЃРєР»Р°РґРЅРѕРіРѕ Р»РµР№Р°СѓС‚Сѓ
             return config.Type switch
             {
                 ColumnType.Text => true,
                 ColumnType.Number => true,
                 ColumnType.Currency => true,
                 ColumnType.Boolean => true,
-                ColumnType.Date => string.IsNullOrEmpty(config.Format), // Тільки якщо немає кастомного форматування
+                ColumnType.Date => string.IsNullOrEmpty(config.Format), // РўС–Р»СЊРєРё СЏРєС‰Рѕ РЅРµРјР°С” РєР°СЃС‚РѕРјРЅРѕРіРѕ С„РѕСЂРјР°С‚СѓРІР°РЅРЅСЏ
                 ColumnType.SectionHeader => false,
-                ColumnType.Dropdown => false, // Потребує Options
+                ColumnType.Dropdown => false, // РџРѕС‚СЂРµР±СѓС” Options
                 ColumnType.DropdownEditable => false,
-                ColumnType.DateTime => false, // Складний (DatePicker + TimePicker)
-                ColumnType.Time => false, // Потребує конвертера
+                ColumnType.DateTime => false, // РЎРєР»Р°РґРЅРёР№ (DatePicker + TimePicker)
+                ColumnType.Time => false, // РџРѕС‚СЂРµР±СѓС” РєРѕРЅРІРµСЂС‚РµСЂР°
                 _ => false
             };
         }

@@ -1,4 +1,4 @@
-﻿using FlexJournalPro.ViewModels;
+using FlexJournalPro.ViewModels;
 using System.Windows;
 using System.Windows.Input;
 using MaterialDesignThemes.Wpf;

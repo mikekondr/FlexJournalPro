@@ -3,7 +3,7 @@ using MaterialDesignThemes.Wpf;
 namespace FlexJournalPro.ViewModels
 {
     /// <summary>
-    /// Базовий клас для всіх екранів (Screens)
+    /// Р‘Р°Р·РѕРІРёР№ РєР»Р°СЃ РґР»СЏ РІСЃС–С… РµРєСЂР°РЅС–РІ (Screens)
     /// </summary>
     public abstract class ScreenBase : ViewModelBase
     {
@@ -11,7 +11,7 @@ namespace FlexJournalPro.ViewModels
         private PackIconKind _icon = PackIconKind.FileDocument;
 
         /// <summary>
-        /// Заголовок екрану (відображається у вкладці)
+        /// Р—Р°РіРѕР»РѕРІРѕРє РµРєСЂР°РЅСѓ (РІС–РґРѕР±СЂР°Р¶Р°С”С‚СЊСЃСЏ Сѓ РІРєР»Р°РґС†С–)
         /// </summary>
         public string Title
         {
@@ -20,7 +20,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Іконка екрану
+        /// Р†РєРѕРЅРєР° РµРєСЂР°РЅСѓ
         /// </summary>
         public PackIconKind Icon
         {
@@ -29,16 +29,16 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Унікальний ідентифікатор екрану для запобігання дублюванню
+        /// РЈРЅС–РєР°Р»СЊРЅРёР№ С–РґРµРЅС‚РёС„С–РєР°С‚РѕСЂ РµРєСЂР°РЅСѓ РґР»СЏ Р·Р°РїРѕР±С–РіР°РЅРЅСЏ РґСѓР±Р»СЋРІР°РЅРЅСЋ
         /// </summary>
         public abstract string ScreenId { get; }
 
         /// <summary>
-        /// Викликається при закритті екрану
+        /// Р’РёРєР»РёРєР°С”С‚СЊСЃСЏ РїСЂРё Р·Р°РєСЂРёС‚С‚С– РµРєСЂР°РЅСѓ
         /// </summary>
         public virtual void OnClosing()
         {
-            // Можна додати логіку збереження даних перед закриттям
+            // РњРѕР¶РЅР° РґРѕРґР°С‚Рё Р»РѕРіС–РєСѓ Р·Р±РµСЂРµР¶РµРЅРЅСЏ РґР°РЅРёС… РїРµСЂРµРґ Р·Р°РєСЂРёС‚С‚СЏРј
         }
     }
 }

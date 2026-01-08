@@ -28,7 +28,7 @@ namespace FlexJournalPro.Helpers
 
         private static void OnEnableFastInputChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            // Використовуємо FrameworkElement, щоб підтримати різні реалізації TimePicker (наприклад, MaterialDesign)
+            // Р’РёРєРѕСЂРёСЃС‚РѕРІСѓС”РјРѕ FrameworkElement, С‰РѕР± РїС–РґС‚СЂРёРјР°С‚Рё СЂС–Р·РЅС– СЂРµР°Р»С–Р·Р°С†С–С— TimePicker (РЅР°РїСЂРёРєР»Р°Рґ, MaterialDesign)
             if (d is FrameworkElement element)
             {
                 element.Loaded -= Element_Loaded;
@@ -44,7 +44,7 @@ namespace FlexJournalPro.Helpers
             var element = sender as FrameworkElement;
             if (element == null) return;
 
-            // Шукаємо TextBox всередині контролу TimePicker
+            // РЁСѓРєР°С”РјРѕ TextBox РІСЃРµСЂРµРґРёРЅС– РєРѕРЅС‚СЂРѕР»Сѓ TimePicker
             var tb = FindVisualChild<TextBox>(element);
             if (tb != null)
             {
@@ -76,7 +76,7 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // Дозволяємо лише цифри
+            // Р”РѕР·РІРѕР»СЏС”РјРѕ Р»РёС€Рµ С†РёС„СЂРё
             if (!e.Text.All(char.IsDigit))
             {
                 e.Handled = true;
@@ -85,7 +85,7 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Блокуємо пробіл
+            // Р‘Р»РѕРєСѓС”РјРѕ РїСЂРѕР±С–Р»
             if (e.Key == Key.Space)
             {
                 e.Handled = true;
@@ -106,33 +106,33 @@ namespace FlexJournalPro.Helpers
             {
                 string originalText = tb.Text;
                 
-                // Залишаємо тільки цифри
+                // Р—Р°Р»РёС€Р°С”РјРѕ С‚С–Р»СЊРєРё С†РёС„СЂРё
                 string digits = new string(originalText.Where(char.IsDigit).ToArray());
 
-                // Обмежуємо довжину (HHmm = 4 цифри)
+                // РћР±РјРµР¶СѓС”РјРѕ РґРѕРІР¶РёРЅСѓ (HHmm = 4 С†РёС„СЂРё)
                 if (digits.Length > 4) digits = digits.Substring(0, 4);
 
                 string newText = "";
 
                 if (digits.Length > 0)
                 {
-                    // Години (перші 2 цифри)
+                    // Р“РѕРґРёРЅРё (РїРµСЂС€С– 2 С†РёС„СЂРё)
                     newText += digits.Substring(0, Math.Min(2, digits.Length));
                 }
 
                 if (digits.Length > 2)
                 {
-                    // Додаємо двокрапку
+                    // Р”РѕРґР°С”РјРѕ РґРІРѕРєСЂР°РїРєСѓ
                     newText += ":";
-                    // Хвилини (наступні 2 цифри)
+                    // РҐРІРёР»РёРЅРё (РЅР°СЃС‚СѓРїРЅС– 2 С†РёС„СЂРё)
                     newText += digits.Substring(2, Math.Min(2, digits.Length - 2));
                 }
 
-                // Оновлюємо текст тільки якщо він змінився
+                // РћРЅРѕРІР»СЋС”РјРѕ С‚РµРєСЃС‚ С‚С–Р»СЊРєРё СЏРєС‰Рѕ РІС–РЅ Р·РјС–РЅРёРІСЃСЏ
                 if (newText != originalText)
                 {
                     tb.Text = newText;
-                    tb.CaretIndex = newText.Length; // Курсор в кінець
+                    tb.CaretIndex = newText.Length; // РљСѓСЂСЃРѕСЂ РІ РєС–РЅРµС†СЊ
                 }
             }
             finally

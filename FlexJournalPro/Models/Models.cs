@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 using System.Windows.Data;
@@ -143,6 +143,37 @@ namespace FlexJournalPro.Models
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
+        private bool _isDirty = false;
+
+        /// <summary>
+        /// Визначає, чи є цей рядок рядком-заглушкою для нового запису
+        /// </summary>
+        public virtual bool IsNewRowPlaceholder => false;
+
+        /// <summary>
+        /// Визначає, чи є цей рядок тимчасовою заглушкою під час завантаження
+        /// </summary>
+        public virtual bool IsPlaceholder => false;
+
+        /// <summary>
+        /// Визначає, чи рядок був змінений але не збережений
+        /// </summary>
+        public bool IsDirty
+        {
+            get => _isDirty;
+            set
+            {
+                if (_isDirty != value)
+                {
+                    _isDirty = value;
+                    OnPropertyChanged(nameof(IsDirty));
+                    
+                    // Сповіщаємо про зміну самого об'єкта для оновлення Row Header
+                    OnPropertyChanged(string.Empty);
+                }
+            }
+        }
+
         // Перевизначаємо індексатор, щоб додати сповіщення
         public new object this[string key]
         {
@@ -172,10 +203,24 @@ namespace FlexJournalPro.Models
 
                 base[key] = value;
 
+                // Позначаємо рядок як змінений (крім системних полів)
+                if (!key.StartsWith("__") && key != "Id")
+                {
+                    IsDirty = true;
+                }
+
                 // Сповіщаємо WPF про зміну індексатора та конкретної властивості
                 OnPropertyChanged(Binding.IndexerName);
                 OnPropertyChanged(key);
             }
+        }
+
+        /// <summary>
+        /// Скидає прапорець "змінено" після збереження
+        /// </summary>
+        public void MarkAsSaved()
+        {
+            IsDirty = false;
         }
 
         protected void OnPropertyChanged(string propertyName)
@@ -187,12 +232,27 @@ namespace FlexJournalPro.Models
     // Specialized placeholder row used by virtualizing collection while loading
     public class PlaceholderRow : BindableRow
     {
-        public bool IsPlaceholder { get; } = true;
+        public override bool IsPlaceholder => true;
 
         public PlaceholderRow()
         {
             // Optionally set a marker value to make inspection easier
             base["__isPlaceholder"] = true;
+        }
+    }
+
+    /// <summary>
+    /// Спеціальний рядок-заглушка для введення нових даних.
+    /// Завжди знаходиться в кінці таблиці і служить місцем для додавання нових рядків.
+    /// </summary>
+    public class NewRowPlaceholder : BindableRow
+    {
+        public override bool IsNewRowPlaceholder => true;
+
+        public NewRowPlaceholder()
+        {
+            // Маркер для ідентифікації рядка-заглушки
+            base["__isNewRowPlaceholder"] = true;
         }
     }
 }

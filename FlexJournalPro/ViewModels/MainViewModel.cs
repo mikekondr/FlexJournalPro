@@ -9,7 +9,7 @@ using System.Windows.Input;
 namespace FlexJournalPro.ViewModels
 {
     /// <summary>
-    /// ViewModel головного вікна з sidebar та керуванням екранами
+    /// ViewModel РіРѕР»РѕРІРЅРѕРіРѕ РІС–РєРЅР° Р· sidebar С‚Р° РєРµСЂСѓРІР°РЅРЅСЏРј РµРєСЂР°РЅР°РјРё
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
@@ -26,10 +26,10 @@ namespace FlexJournalPro.ViewModels
             _dbService = new DatabaseService();
             OpenScreens = new ObservableCollection<ScreenBase>();
 
-            // Імпортуємо шаблони з JSON файлів
+            // Р†РјРїРѕСЂС‚СѓС”РјРѕ С€Р°Р±Р»РѕРЅРё Р· JSON С„Р°Р№Р»С–РІ
             ImportTemplatesFromJsonFiles();
 
-            // Команди
+            // РљРѕРјР°РЅРґРё
             ToggleSidebarCommand = new RelayCommand(ToggleSidebar);
             OpenJournalsListCommand = new RelayCommand(OpenJournalsList);
             OpenTemplatesListCommand = new RelayCommand(OpenTemplatesList);
@@ -38,14 +38,14 @@ namespace FlexJournalPro.ViewModels
             ScrollLeftCommand = new RelayCommand(ScrollLeft, () => CanScrollLeft);
             ScrollRightCommand = new RelayCommand(ScrollRight, () => CanScrollRight);
 
-            // Підписка на зміну колекції екранів
+            // РџС–РґРїРёСЃРєР° РЅР° Р·РјС–РЅСѓ РєРѕР»РµРєС†С–С— РµРєСЂР°РЅС–РІ
             OpenScreens.CollectionChanged += (s, e) => UpdateScrollButtons();
         }
 
         #region Properties
 
         /// <summary>
-        /// Чи розгорнуто sidebar
+        /// Р§Рё СЂРѕР·РіРѕСЂРЅСѓС‚Рѕ sidebar
         /// </summary>
         public bool IsSidebarExpanded
         {
@@ -54,7 +54,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Поточний відображуваний екран
+        /// РџРѕС‚РѕС‡РЅРёР№ РІС–РґРѕР±СЂР°Р¶СѓРІР°РЅРёР№ РµРєСЂР°РЅ
         /// </summary>
         public ScreenBase? CurrentScreen
         {
@@ -63,7 +63,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Вибраний екран у панелі знизу
+        /// Р’РёР±СЂР°РЅРёР№ РµРєСЂР°РЅ Сѓ РїР°РЅРµР»С– Р·РЅРёР·Сѓ
         /// </summary>
         public ScreenBase? SelectedScreen
         {
@@ -78,12 +78,12 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Колекція відкритих екранів
+        /// РљРѕР»РµРєС†С–СЏ РІС–РґРєСЂРёС‚РёС… РµРєСЂР°РЅС–РІ
         /// </summary>
         public ObservableCollection<ScreenBase> OpenScreens { get; }
 
         /// <summary>
-        /// Чи можна прокручувати вліво
+        /// Р§Рё РјРѕР¶РЅР° РїСЂРѕРєСЂСѓС‡СѓРІР°С‚Рё РІР»С–РІРѕ
         /// </summary>
         public bool CanScrollLeft
         {
@@ -92,7 +92,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Чи можна прокручувати вправо
+        /// Р§Рё РјРѕР¶РЅР° РїСЂРѕРєСЂСѓС‡СѓРІР°С‚Рё РІРїСЂР°РІРѕ
         /// </summary>
         public bool CanScrollRight
         {
@@ -134,8 +134,8 @@ namespace FlexJournalPro.ViewModels
         private async void OpenUsersList()
         {
             await DialogService.ShowInformationAsync(
-                "Екран користувачів буде доданий у наступній версії",
-                "У розробці");
+                "Р•РєСЂР°РЅ РєРѕСЂРёСЃС‚СѓРІР°С‡С–РІ Р±СѓРґРµ РґРѕРґР°РЅРёР№ Сѓ РЅР°СЃС‚СѓРїРЅС–Р№ РІРµСЂСЃС–С—",
+                "РЈ СЂРѕР·СЂРѕР±С†С–");
         }
 
         private void CloseScreen(object? parameter)
@@ -174,7 +174,7 @@ namespace FlexJournalPro.ViewModels
         #region Helper Methods
 
         /// <summary>
-        /// Імпортує шаблони з JSON файлів у БД (виконується при запуску)
+        /// Р†РјРїРѕСЂС‚СѓС” С€Р°Р±Р»РѕРЅРё Р· JSON С„Р°Р№Р»С–РІ Сѓ Р‘Р” (РІРёРєРѕРЅСѓС”С‚СЊСЃСЏ РїСЂРё Р·Р°РїСѓСЃРєСѓ)
         /// </summary>
         private void ImportTemplatesFromJsonFiles()
         {
@@ -196,52 +196,52 @@ namespace FlexJournalPro.ViewModels
 
                     if (template != null)
                     {
-                        // Встановлюємо ID якщо не вказано
+                        // Р’СЃС‚Р°РЅРѕРІР»СЋС”РјРѕ ID СЏРєС‰Рѕ РЅРµ РІРєР°Р·Р°РЅРѕ
                         if (string.IsNullOrEmpty(template.Id))
                         {
                             template.Id = key;
                         }
 
-                        // Перевіряємо, чи вже є такий шаблон у БД
+                        // РџРµСЂРµРІС–СЂСЏС”РјРѕ, С‡Рё РІР¶Рµ С” С‚Р°РєРёР№ С€Р°Р±Р»РѕРЅ Сѓ Р‘Р”
                         var existing = _dbService.GetTemplate(template.Id);
                         if (existing == null)
                         {
                             _dbService.SaveTemplate(template);
-                            System.Diagnostics.Debug.WriteLine($"Імпортовано шаблон: {template.Id}");
+                            System.Diagnostics.Debug.WriteLine($"Р†РјРїРѕСЂС‚РѕРІР°РЅРѕ С€Р°Р±Р»РѕРЅ: {template.Id}");
                         }
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Помилка імпорту {Path.GetFileName(filePath)}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"РџРѕРјРёР»РєР° С–РјРїРѕСЂС‚Сѓ {Path.GetFileName(filePath)}: {ex.Message}");
                 }
             }
         }
 
         /// <summary>
-        /// Відкриває або активує існуючий екран
+        /// Р’С–РґРєСЂРёРІР°С” Р°Р±Рѕ Р°РєС‚РёРІСѓС” С–СЃРЅСѓСЋС‡РёР№ РµРєСЂР°РЅ
         /// </summary>
         private void OpenOrActivateScreen(System.Func<ScreenBase> screenFactory)
         {
-            // Спробуємо знайти вже відкритий екран
+            // РЎРїСЂРѕР±СѓС”РјРѕ Р·РЅР°Р№С‚Рё РІР¶Рµ РІС–РґРєСЂРёС‚РёР№ РµРєСЂР°РЅ
             var screen = screenFactory();
             var existingScreen = OpenScreens.FirstOrDefault(s => s.ScreenId == screen.ScreenId);
 
             if (existingScreen != null)
             {
-                // Активуємо існуючий екран
+                // РђРєС‚РёРІСѓС”РјРѕ С–СЃРЅСѓСЋС‡РёР№ РµРєСЂР°РЅ
                 SelectedScreen = existingScreen;
             }
             else
             {
-                // Відкриваємо новий екран
+                // Р’С–РґРєСЂРёРІР°С”РјРѕ РЅРѕРІРёР№ РµРєСЂР°РЅ
                 OpenScreens.Add(screen);
                 SelectedScreen = screen;
             }
         }
 
         /// <summary>
-        /// Встановлює ScrollViewer панелі екранів (викликається з MainWindow.xaml.cs)
+        /// Р’СЃС‚Р°РЅРѕРІР»СЋС” ScrollViewer РїР°РЅРµР»С– РµРєСЂР°РЅС–РІ (РІРёРєР»РёРєР°С”С‚СЊСЃСЏ Р· MainWindow.xaml.cs)
         /// </summary>
         public void SetScreensPanelScrollViewer(ScrollViewer scrollViewer)
         {
@@ -254,7 +254,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Оновлює стан кнопок прокрутки
+        /// РћРЅРѕРІР»СЋС” СЃС‚Р°РЅ РєРЅРѕРїРѕРє РїСЂРѕРєСЂСѓС‚РєРё
         /// </summary>
         private void UpdateScrollButtons()
         {

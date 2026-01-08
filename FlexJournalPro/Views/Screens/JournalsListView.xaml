@@ -6,21 +6,22 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+     <materialDesign:Card>
 
-        <!-- Toolbar -->
-        <materialDesign:Card Grid.Row="0" Margin="16,16,16,8" Padding="16">
-            <StackPanel Orientation="Horizontal">
+         <Grid>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8">
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
                         Command="{Binding CreateNewJournalCommand}"
                         Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="Plus" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Додати новий" VerticalAlignment="Center"/>
+                        <TextBlock Text="Створити новий" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -33,12 +34,9 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
-        </materialDesign:Card>
 
-        <!-- Journals List -->
-        <materialDesign:Card Grid.Row="1" Margin="16,8,16,16">
-            <Grid>
-                <DataGrid ItemsSource="{Binding Journals}"
+            <DataGrid Grid.Row="1" Margin="8,0,8,8"
+                ItemsSource="{Binding Journals}"
                           SelectedItem="{Binding SelectedJournal}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
@@ -49,19 +47,19 @@
                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
                         <DataGridTextColumn Header="Назва" Binding="{Binding Title}" Width="*"/>
                         <DataGridTextColumn Header="Ідентифікатор шаблону" Binding="{Binding PresetId}" Width="200"/>
-                        <DataGridTextColumn Header="Дата створення" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
+                        <DataGridTextColumn Header="Дата свторення" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
                         <DataGridTemplateColumn Header="Дії" Width="150">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.OpenJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Відкрити" Width="24" Height="24" Padding="4">
+                                                ToolTip="Відкрити журнал" Width="24" Height="24" Padding="4">
                                             <materialDesign:PackIcon Kind="FolderOpen" Width="16" Height="16"/>
                                         </Button>
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.DeleteJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Видалити" Width="24" Height="24" Padding="4">
+                                                ToolTip="Видалити журнал" Width="24" Height="24" Padding="4">
                                             <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
@@ -76,7 +74,8 @@
                 </DataGrid>
 
                 <!-- Empty state -->
-                <StackPanel VerticalAlignment="Center" 
+                <StackPanel Grid.Row="1"
+                    VerticalAlignment="Center" 
                             HorizontalAlignment="Center"
                             Visibility="{Binding Journals.Count, Converter={StaticResource EqualToVisibilityConverter}, ConverterParameter=0}">
                     <materialDesign:PackIcon Kind="BookOpen" 
@@ -86,7 +85,7 @@
                                              Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}"
                                              Opacity="0.3"/>
                 </StackPanel>
-            </Grid>
-        </materialDesign:Card>
-    </Grid>
+         
+         </Grid>
+     </materialDesign:Card>
 </UserControl>

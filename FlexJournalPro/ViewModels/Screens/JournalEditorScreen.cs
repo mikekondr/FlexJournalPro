@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace FlexJournalPro.ViewModels.Screens
 {
     /// <summary>
-    /// Screen для редагування журналу
+    /// Screen РґР»СЏ СЂРµРґР°РіСѓРІР°РЅРЅСЏ Р¶СѓСЂРЅР°Р»Сѓ
     /// </summary>
     public class JournalEditorScreen : ScreenBase
     {
@@ -25,19 +25,19 @@ namespace FlexJournalPro.ViewModels.Screens
             Title = journal.Title;
             Icon = PackIconKind.BookEdit;
 
-            // Завантажуємо шаблон та дані
+            // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ С€Р°Р±Р»РѕРЅ С‚Р° РґР°РЅС–
             LoadTemplate();
         }
 
         #region Properties
 
         /// <summary>
-        /// Метадані журналу
+        /// РњРµС‚Р°РґР°РЅС– Р¶СѓСЂРЅР°Р»Сѓ
         /// </summary>
         public JournalMetadata Journal => _journal;
 
         /// <summary>
-        /// Шаблон журналу
+        /// РЁР°Р±Р»РѕРЅ Р¶СѓСЂРЅР°Р»Сѓ
         /// </summary>
         public TableTemplate? Template
         {
@@ -46,7 +46,7 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Сеансові значення
+        /// РЎРµР°РЅСЃРѕРІС– Р·РЅР°С‡РµРЅРЅСЏ
         /// </summary>
         public Dictionary<string, object> SessionValues => _sessionValues;
 
@@ -60,7 +60,7 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             Template = _dbService.GetTemplate(_journal.PresetId);
             
-            // Відновлюємо сеансові константи
+            // Р’С–РґРЅРѕРІР»СЋС”РјРѕ СЃРµР°РЅСЃРѕРІС– РєРѕРЅСЃС‚Р°РЅС‚Рё
             if (!string.IsNullOrEmpty(_journal.SessionConstantsJson))
             {
                 try
@@ -73,14 +73,14 @@ namespace FlexJournalPro.ViewModels.Screens
                 }
                 catch (System.Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Помилка завантаження констант: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ РєРѕРЅСЃС‚Р°РЅС‚: {ex.Message}");
                 }
             }
         }
 
         public override void OnClosing()
         {
-            // Можна додати логіку збереження перед закриттям
+            // РњРѕР¶РЅР° РґРѕРґР°С‚Рё Р»РѕРіС–РєСѓ Р·Р±РµСЂРµР¶РµРЅРЅСЏ РїРµСЂРµРґ Р·Р°РєСЂРёС‚С‚СЏРј
             base.OnClosing();
         }
 

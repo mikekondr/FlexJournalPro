@@ -4,7 +4,7 @@ using System.Windows.Controls;
 namespace FlexJournalPro.Behaviors
 {
     /// <summary>
-    /// Behavior для вимкнення автоматичного скролу до вибраного елементу в ListBox
+    /// Behavior РґР»СЏ РІРёРјРєРЅРµРЅРЅСЏ Р°РІС‚РѕРјР°С‚РёС‡РЅРѕРіРѕ СЃРєСЂРѕР»Сѓ РґРѕ РІРёР±СЂР°РЅРѕРіРѕ РµР»РµРјРµРЅС‚Сѓ РІ ListBox
     /// </summary>
     public static class ListBoxBehavior
     {
