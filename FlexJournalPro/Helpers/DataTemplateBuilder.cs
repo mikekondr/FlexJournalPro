@@ -16,7 +16,7 @@ namespace FlexJournalPro.Helpers
         /// <summary>
         /// Створює DataTemplate для перегляду простого текстового поля
         /// </summary>
-        public static DataTemplate CreateTextViewTemplate(string fieldName, string format = null, bool isCalculated = false)
+        public static DataTemplate CreateTextViewTemplate(string fieldName, string format = "", bool isCalculated = false)
         {
             var template = new DataTemplate();
             
@@ -59,7 +59,7 @@ namespace FlexJournalPro.Helpers
         /// <summary>
         /// Створює DataTemplate для редагування текстового поля
         /// </summary>
-        public static DataTemplate CreateTextEditTemplate(string fieldName, string format = null, bool isCalculated = false)
+        public static DataTemplate CreateTextEditTemplate(string fieldName, string format = "", bool isCalculated = false)
         {
             var template = new DataTemplate();
             

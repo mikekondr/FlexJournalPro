@@ -35,11 +35,11 @@ namespace FlexJournalPro.Views.Screens
             // Завантажуємо шаблон
             SmartTable.LoadTemplate(viewModel.Template);
 
-            // Будуємо панель констант
-            BuildConstantsPanel(viewModel);
+            // Будуємо панель параметрів заповнення
+            BuildAutoFillPanel(viewModel);
 
-            // Застосовуємо сеансові значення
-            SmartTable.ApplySessionValues(viewModel.SessionValues);
+            // Застосовуємо значення параметрів
+            SmartTable.ApplyAutoFillValues(viewModel.AutoFillValues);
 
             // Завантажуємо дані
             SmartTable.SetVirtualDataSource(
@@ -47,20 +47,20 @@ namespace FlexJournalPro.Views.Screens
                 viewModel.Journal.TableName);
         }
 
-        private void BuildConstantsPanel(JournalEditorScreen viewModel)
+        private void BuildAutoFillPanel(JournalEditorScreen viewModel)
         {
-            if (viewModel.Template?.Constants == null || viewModel.Template.Constants.Count == 0)
+            if (viewModel.Template?.AutoFillConfig == null || viewModel.Template.AutoFillConfig.Count == 0)
             {
                 ConstantsColumn.Width = new GridLength(0);
                 ToggleConstantsButton.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            SessionConstantsHelper.BuildConstantsPanel(
+            AutoFillConfigHelper.BuildAutoFillPanel(
                 ConstantsPanel,
-                viewModel.Template.Constants,
-                viewModel.SessionValues,
-                () => SmartTable.ApplySessionValues(viewModel.SessionValues));
+                viewModel.Template.AutoFillConfig,
+                viewModel.AutoFillValues,
+                () => SmartTable.ApplyAutoFillValues(viewModel.AutoFillValues));
         }
 
         private void ToggleConstantsButton_CheckedChanged(object sender, RoutedEventArgs e)
@@ -83,16 +83,16 @@ namespace FlexJournalPro.Views.Screens
 
             try
             {
-                string json = JsonSerializer.Serialize(viewModel.SessionValues);
+                string json = JsonSerializer.Serialize(viewModel.AutoFillValues);
                 var dbService = new Services.DatabaseService();
-                dbService.UpdateJournalConstants(viewModel.Journal.Id, json);
+                dbService.UpdateJournalAutoFillConfig(viewModel.Journal.Id, json);
 
-                MessageBox.Show("Константи збережено!", "Успіх",
+                MessageBox.Show("Параметри збережено!", "Успіх",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Помилка збереження констант: {ex.Message}",
+                MessageBox.Show($"Помилка збереження параметрів: {ex.Message}",
                     "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

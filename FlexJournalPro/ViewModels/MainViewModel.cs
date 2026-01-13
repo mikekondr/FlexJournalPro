@@ -2,7 +2,6 @@ using FlexJournalPro.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -14,6 +13,7 @@ namespace FlexJournalPro.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly DatabaseService _dbService;
+        private readonly TemplateService _templateService;
         private bool _isSidebarExpanded = true;
         private ScreenBase? _currentScreen;
         private ScreenBase? _selectedScreen;
@@ -24,10 +24,11 @@ namespace FlexJournalPro.ViewModels
         public MainViewModel()
         {
             _dbService = new DatabaseService();
+            _templateService = new TemplateService(_dbService);
             OpenScreens = new ObservableCollection<ScreenBase>();
 
             // Імпортуємо шаблони з JSON файлів
-            ImportTemplatesFromJsonFiles();
+            _templateService.ImportDefaultTemplates();
 
             // Команди
             ToggleSidebarCommand = new RelayCommand(ToggleSidebar);
@@ -43,7 +44,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         #region Properties
-
+        
         /// <summary>
         /// Чи розгорнуто sidebar
         /// </summary>
@@ -128,7 +129,7 @@ namespace FlexJournalPro.ViewModels
 
         private void OpenTemplatesList()
         {
-            OpenOrActivateScreen(() => new Screens.TemplatesListScreen(_dbService, this));
+            OpenOrActivateScreen(() => new Screens.TemplatesListScreen(_templateService, this));
         }
 
         private async void OpenUsersList()
@@ -172,51 +173,6 @@ namespace FlexJournalPro.ViewModels
         #endregion
 
         #region Helper Methods
-
-        /// <summary>
-        /// Імпортує шаблони з JSON файлів у БД (виконується при запуску)
-        /// </summary>
-        private void ImportTemplatesFromJsonFiles()
-        {
-            string presetsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Presets");
-
-            if (!Directory.Exists(presetsPath))
-            {
-                Directory.CreateDirectory(presetsPath);
-                return;
-            }
-
-            foreach (string filePath in Directory.GetFiles(presetsPath, "*.json"))
-            {
-                try
-                {
-                    string jsonContent = File.ReadAllText(filePath);
-                    var template = JsonSerializer.Deserialize<Models.TableTemplate>(jsonContent);
-                    string key = Path.GetFileNameWithoutExtension(filePath);
-
-                    if (template != null)
-                    {
-                        // Встановлюємо ID якщо не вказано
-                        if (string.IsNullOrEmpty(template.Id))
-                        {
-                            template.Id = key;
-                        }
-
-                        // Перевіряємо, чи вже є такий шаблон у БД
-                        var existing = _dbService.GetTemplate(template.Id);
-                        if (existing == null)
-                        {
-                            _dbService.SaveTemplate(template);
-                            System.Diagnostics.Debug.WriteLine($"Імпортовано шаблон: {template.Id}");
-                        }
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Помилка імпорту {Path.GetFileName(filePath)}: {ex.Message}");
-                }
-            }
-        }
 
         /// <summary>
         /// Відкриває або активує існуючий екран

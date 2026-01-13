@@ -9,36 +9,36 @@ using System.Windows.Controls.Primitives;
 namespace FlexJournalPro.Helpers
 {
     /// <summary>
-    /// Допоміжний клас для роботи з сеансовими константами
+    /// Допоміжний клас для роботи з параметрами заповнення
     /// </summary>
-    public static class SessionConstantsHelper
+    public static class AutoFillConfigHelper
     {
         /// <summary>
-        /// Створює UI панель для редагування сеансових констант
+        /// Створює UI панель для редагування параметрів заповнення
         /// </summary>
-        public static void BuildConstantsPanel(
+        public static void BuildAutoFillPanel(
             Panel panel, 
-            List<SessionConstant> constants, 
-            Dictionary<string, object> sessionValues,
-            Action onValueChanged = null)
+            List<AutoFillParameter> parameters, 
+            Dictionary<string, object> autoFillValues,
+            Action? onValueChanged = null)
         {
             panel.Children.Clear();
-            sessionValues.Clear();
+            autoFillValues.Clear();
 
-            if (constants == null || constants.Count == 0)
+            if (parameters == null || parameters.Count == 0)
             {
                 panel.Children.Add(new TextBlock 
                 { 
-                    Text = "Немає налаштувань", 
+                    Text = "Немає параметрів заповнення", 
                     Opacity = 0.5, 
                     FontStyle = FontStyles.Italic 
                 });
                 return;
             }
 
-            foreach (var constant in constants)
+            foreach (var parameter in parameters)
             {
-                var control = CreateConstantControl(constant, sessionValues, onValueChanged);
+                var control = CreateParameterControl(parameter, autoFillValues, onValueChanged);
                 if (control != null)
                 {
                     panel.Children.Add(control);
@@ -47,32 +47,32 @@ namespace FlexJournalPro.Helpers
         }
 
         /// <summary>
-        /// Створює контрол для одної сеансової константи
+        /// Створює контрол для одного параметра заповнення
         /// </summary>
-        private static Control CreateConstantControl(
-            SessionConstant constant, 
-            Dictionary<string, object> sessionValues,
+        private static Control CreateParameterControl(
+            AutoFillParameter parameter, 
+            Dictionary<string, object> autoFillValues,
             Action onValueChanged)
         {
             Control inputControl;
 
-            switch (constant.Type)
+            switch (parameter.Type)
             {
                 case ColumnType.Boolean:
-                    inputControl = CreateBooleanControl(constant, sessionValues, onValueChanged);
+                    inputControl = CreateBooleanControl(parameter, autoFillValues, onValueChanged);
                     break;
 
                 case ColumnType.Date:
-                    inputControl = CreateDateControl(constant, sessionValues, onValueChanged);
+                    inputControl = CreateDateControl(parameter, autoFillValues, onValueChanged);
                     break;
 
                 case ColumnType.Dropdown:
                 case ColumnType.DropdownEditable:
-                    inputControl = CreateDropdownControl(constant, sessionValues, onValueChanged);
+                    inputControl = CreateDropdownControl(parameter, autoFillValues, onValueChanged);
                     break;
 
                 default:
-                    inputControl = CreateTextControl(constant, sessionValues, onValueChanged);
+                    inputControl = CreateTextControl(parameter, autoFillValues, onValueChanged);
                     break;
             }
 
@@ -80,29 +80,29 @@ namespace FlexJournalPro.Helpers
         }
 
         private static CheckBox CreateBooleanControl(
-            SessionConstant constant, 
-            Dictionary<string, object> sessionValues,
+            AutoFillParameter parameter, 
+            Dictionary<string, object> autoFillValues,
             Action onValueChanged)
         {
             var checkBox = new CheckBox 
             { 
-                Content = constant.Label, 
+                Content = parameter.Label, 
                 Margin = new Thickness(0, 10, 0, 10) 
             };
 
-            bool initVal = constant.DefaultValue is JsonElement je && je.GetBoolean();
+            bool initVal = parameter.DefaultValue is JsonElement je && je.GetBoolean();
             checkBox.IsChecked = initVal;
-            sessionValues[constant.Key] = initVal;
+            autoFillValues[parameter.Key] = initVal;
 
             checkBox.Checked += (s, e) =>
             {
-                sessionValues[constant.Key] = true;
+                autoFillValues[parameter.Key] = true;
                 onValueChanged?.Invoke();
             };
 
             checkBox.Unchecked += (s, e) =>
             {
-                sessionValues[constant.Key] = false;
+                autoFillValues[parameter.Key] = false;
                 onValueChanged?.Invoke();
             };
 
@@ -110,8 +110,8 @@ namespace FlexJournalPro.Helpers
         }
 
         private static DatePicker CreateDateControl(
-            SessionConstant constant, 
-            Dictionary<string, object> sessionValues,
+            AutoFillParameter parameter, 
+            Dictionary<string, object> autoFillValues,
             Action onValueChanged)
         {
             var datePicker = new DatePicker 
@@ -120,24 +120,24 @@ namespace FlexJournalPro.Helpers
                 Margin = new Thickness(0, 0, 0, 15) 
             };
 
-            MaterialDesignThemes.Wpf.HintAssist.SetHint(datePicker, constant.Label);
+            MaterialDesignThemes.Wpf.HintAssist.SetHint(datePicker, parameter.Label);
 
-            if (constant.DefaultValue != null)
+            if (parameter.DefaultValue != null)
             {
-                object val = ParseDefaultValue(constant.DefaultValue, ColumnType.Date);
+                object val = ParseDefaultValue(parameter.DefaultValue, ColumnType.Date);
                 if (val is DateTime d)
                 {
                     datePicker.SelectedDate = d;
-                    sessionValues[constant.Key] = d;
+                    autoFillValues[parameter.Key] = d;
                 }
             }
 
             datePicker.SelectedDateChanged += (s, e) =>
             {
                 if (datePicker.SelectedDate.HasValue)
-                    sessionValues[constant.Key] = datePicker.SelectedDate.Value;
+                    autoFillValues[parameter.Key] = datePicker.SelectedDate.Value;
                 else
-                    sessionValues.Remove(constant.Key);
+                    autoFillValues.Remove(parameter.Key);
 
                 onValueChanged?.Invoke();
             };
@@ -146,26 +146,26 @@ namespace FlexJournalPro.Helpers
         }
 
         private static ComboBox CreateDropdownControl(
-            SessionConstant constant, 
-            Dictionary<string, object> sessionValues,
+            AutoFillParameter parameter, 
+            Dictionary<string, object> autoFillValues,
             Action onValueChanged)
         {
-            bool isEditable = (constant.Type == ColumnType.DropdownEditable);
+            bool isEditable = (parameter.Type == ColumnType.DropdownEditable);
 
             var comboBox = new ComboBox
             {
                 Margin = new Thickness(0, 0, 0, 15),
                 IsEditable = isEditable,
-                ItemsSource = constant.Options,
+                ItemsSource = parameter.Options,
                 StaysOpenOnEdit = true
             };
 
-            MaterialDesignThemes.Wpf.HintAssist.SetHint(comboBox, constant.Label);
+            MaterialDesignThemes.Wpf.HintAssist.SetHint(comboBox, parameter.Label);
 
-            if (constant.DefaultValue != null)
+            if (parameter.DefaultValue != null)
             {
-                comboBox.Text = constant.DefaultValue.ToString();
-                sessionValues[constant.Key] = constant.DefaultValue.ToString();
+                comboBox.Text = parameter.DefaultValue.ToString();
+                autoFillValues[parameter.Key] = parameter.DefaultValue.ToString();
             }
 
             if (isEditable)
@@ -173,7 +173,7 @@ namespace FlexJournalPro.Helpers
                 comboBox.AddHandler(TextBoxBase.TextChangedEvent,
                     new TextChangedEventHandler((s, e) =>
                     {
-                        sessionValues[constant.Key] = comboBox.Text;
+                        autoFillValues[parameter.Key] = comboBox.Text;
                         onValueChanged?.Invoke();
                     }));
             }
@@ -182,7 +182,7 @@ namespace FlexJournalPro.Helpers
             {
                 if (comboBox.SelectedValue != null)
                 {
-                    sessionValues[constant.Key] = comboBox.SelectedValue.ToString();
+                    autoFillValues[parameter.Key] = comboBox.SelectedValue.ToString();
                     onValueChanged?.Invoke();
                 }
             };
@@ -191,23 +191,23 @@ namespace FlexJournalPro.Helpers
         }
 
         private static TextBox CreateTextControl(
-            SessionConstant constant, 
-            Dictionary<string, object> sessionValues,
+            AutoFillParameter parameter, 
+            Dictionary<string, object> autoFillValues,
             Action onValueChanged)
         {
             var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 15) };
-            MaterialDesignThemes.Wpf.HintAssist.SetHint(textBox, constant.Label);
+            MaterialDesignThemes.Wpf.HintAssist.SetHint(textBox, parameter.Label);
 
-            if (constant.DefaultValue != null)
+            if (parameter.DefaultValue != null)
             {
-                string val = constant.DefaultValue.ToString();
+                string val = parameter.DefaultValue.ToString();
                 textBox.Text = val;
-                sessionValues[constant.Key] = val;
+                autoFillValues[parameter.Key] = val;
             }
 
             textBox.TextChanged += (s, e) =>
             {
-                sessionValues[constant.Key] = textBox.Text;
+                autoFillValues[parameter.Key] = textBox.Text;
                 onValueChanged?.Invoke();
             };
 

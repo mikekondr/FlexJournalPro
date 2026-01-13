@@ -30,8 +30,8 @@ namespace FlexJournalPro.ViewModels.Screens
             Icon = PackIconKind.BookPlus;
 
             Templates = new ObservableCollection<TemplateMetadata>();
-            ConstantFields = new ObservableCollection<ConstantFieldViewModel>();
-            SessionValues = new Dictionary<string, object>();
+            AutoFillFields = new ObservableCollection<AutoFillFieldViewModel>();
+            AutoFillValues = new Dictionary<string, object>();
 
             // Команди
             CreateJournalCommand = new RelayCommand(CreateJournal, CanCreateJournal);
@@ -89,19 +89,19 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Поля констант для відображення
+        /// Поля параметрів заповнення для відображення
         /// </summary>
-        public ObservableCollection<ConstantFieldViewModel> ConstantFields { get; }
+        public ObservableCollection<AutoFillFieldViewModel> AutoFillFields { get; }
 
         /// <summary>
-        /// Значення сеансових констант
+        /// Значення параметрів заповнення
         /// </summary>
-        public Dictionary<string, object> SessionValues { get; }
+        public Dictionary<string, object> AutoFillValues { get; }
 
         /// <summary>
-        /// Чи є константи для відображення
+        /// Чи є параметри заповнення для відображення
         /// </summary>
-        public bool HasConstants => ConstantFields.Any();
+        public bool HasAutoFillParams => AutoFillFields.Any();
 
         public override string ScreenId => "NewJournal";
 
@@ -144,9 +144,9 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             if (SelectedTemplate == null)
             {
-                ConstantFields.Clear();
-                SessionValues.Clear();
-                OnPropertyChanged(nameof(HasConstants));
+                AutoFillFields.Clear();
+                AutoFillValues.Clear();
+                OnPropertyChanged(nameof(HasAutoFillParams));
                 return;
             }
 
@@ -160,8 +160,8 @@ namespace FlexJournalPro.ViewModels.Screens
                     // Генеруємо назву за замовчуванням
                     JournalTitle = template.Title + " " + DateTime.Now.ToString("yyyy-MM");
 
-                    // Будуємо форму констант
-                    BuildConstantsForm(template.Constants);
+                    // Будуємо форму параметрів заповнення
+                    BuildAutoFillForm(template.AutoFillConfig);
                 }
             }
             catch (Exception ex)
@@ -170,43 +170,43 @@ namespace FlexJournalPro.ViewModels.Screens
             }
         }
 
-        private void BuildConstantsForm(List<SessionConstant>? constants)
+        private void BuildAutoFillForm(List<AutoFillParameter>? parameters)
         {
-            ConstantFields.Clear();
-            SessionValues.Clear();
+            AutoFillFields.Clear();
+            AutoFillValues.Clear();
 
-            if (constants == null || constants.Count == 0)
+            if (parameters == null || parameters.Count == 0)
             {
-                OnPropertyChanged(nameof(HasConstants));
+                OnPropertyChanged(nameof(HasAutoFillParams));
                 return;
             }
 
-            foreach (var constant in constants)
+            foreach (var parameter in parameters)
             {
-                var fieldVm = new ConstantFieldViewModel
+                var fieldVm = new AutoFillFieldViewModel
                 {
-                    Key = constant.Key,
-                    Label = constant.Label,
-                    Value = constant.DefaultValue?.ToString() ?? string.Empty
+                    Key = parameter.Key,
+                    Label = parameter.Label,
+                    Value = parameter.DefaultValue?.ToString() ?? string.Empty
                 };
 
-                if (constant.DefaultValue != null)
+                if (parameter.DefaultValue != null)
                 {
-                    SessionValues[constant.Key] = constant.DefaultValue.ToString() ?? string.Empty;
+                    AutoFillValues[parameter.Key] = parameter.DefaultValue.ToString() ?? string.Empty;
                 }
 
                 fieldVm.PropertyChanged += (s, e) =>
                 {
-                    if (e.PropertyName == nameof(ConstantFieldViewModel.Value))
+                    if (e.PropertyName == nameof(AutoFillFieldViewModel.Value))
                     {
-                        SessionValues[fieldVm.Key] = fieldVm.Value;
+                        AutoFillValues[fieldVm.Key] = fieldVm.Value;
                     }
                 };
 
-                ConstantFields.Add(fieldVm);
+                AutoFillFields.Add(fieldVm);
             }
 
-            OnPropertyChanged(nameof(HasConstants));
+            OnPropertyChanged(nameof(HasAutoFillParams));
         }
 
         private bool CanCreateJournal()
@@ -236,11 +236,14 @@ namespace FlexJournalPro.ViewModels.Screens
                 var metadata = new JournalMetadata
                 {
                     Title = JournalTitle.Trim(),
-                    PresetId = template.Id,
+                    TemplateId = template.Id,
+                    TemplateName = template.Title,
+                    TemplateVersion = SelectedTemplate.Version, // Використовуємо версію з метаданих
                     NumberStart = StartNumber > 0 ? StartNumber : 1,
-                    SessionConstantsJson = SessionValues.Count > 0
-                        ? JsonSerializer.Serialize(SessionValues)
-                        : "{}"
+                    AutoFillConfigJson = AutoFillValues.Count > 0
+                        ? JsonSerializer.Serialize(AutoFillValues)
+                        : "{}",
+                    TemplateConfigJson = JsonSerializer.Serialize(template)
                 };
 
                 // Зберігаємо в БД
@@ -274,9 +277,9 @@ namespace FlexJournalPro.ViewModels.Screens
     }
 
     /// <summary>
-    /// ViewModel для поля константи
+    /// ViewModel для поля параметрів заповнення
     /// </summary>
-    public class ConstantFieldViewModel : ViewModelBase
+    public class AutoFillFieldViewModel : ViewModelBase
     {
         private string _key = string.Empty;
         private string _label = string.Empty;

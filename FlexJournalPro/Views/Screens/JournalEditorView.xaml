@@ -25,7 +25,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="8">
                     <ToggleButton x:Name="ToggleConstantsButton"
                                   Style="{StaticResource MaterialDesignActionToggleButton}"
-                                  ToolTip="Сховати/показати константи"
+                                  ToolTip="Сховати/показати параметри заповнення"
                                   Checked="ToggleConstantsButton_CheckedChanged"
                                   Unchecked="ToggleConstantsButton_CheckedChanged">
                         <materialDesign:PackIcon Kind="Settings"/>
@@ -68,7 +68,7 @@
 
                 <!-- Header -->
                 <TextBlock Grid.Row="0" 
-                           Text="Константи" 
+                           Text="Параметри заповнення" 
                            Style="{StaticResource MaterialDesignHeadline6TextBlock}"
                            Margin="16"/>
 
@@ -81,7 +81,7 @@
 
                 <!-- Save button -->
                 <Button Grid.Row="2" 
-                        Content="Зберегти константи"
+                        Content="Зберегти параметри"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Margin="16"
                         Click="BtnSaveConstants_Click"/>

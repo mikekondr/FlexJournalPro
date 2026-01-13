@@ -1,5 +1,5 @@
-using System;
-using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using FlexJournalPro.Models;
 using FlexJournalPro.Views;
@@ -54,6 +54,15 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
+        /// Отримати чистий JSON конфігурації шаблону без десеріалізації.
+        /// Корисно для копіювання, експорту або створення журналів.
+        /// </summary>
+        public string GetTemplateJsonConfig(string templateId)
+        {
+            return _dbService.GetTemplateJson(templateId);
+        }
+
+        /// <summary>
         /// Отримати список усіх шаблонів
         /// </summary>
         public List<TemplateMetadata> GetAllTemplates()
@@ -83,12 +92,24 @@ namespace FlexJournalPro.Services
                 throw new InvalidOperationException($"Шаблон '{templateId}' не знайдено");
             }
 
+            // Отримуємо версію шаблону
+            int version = 1;
+            var allTemplates = _dbService.GetAllTemplates();
+            var meta = allTemplates.FirstOrDefault(t => t.Id == templateId);
+            if (meta != null)
+            {
+                version = meta.Version;
+            }
+
             var journal = new JournalMetadata
             {
                 Title = journalTitle,
-                PresetId = templateId,
+                TemplateId = templateId,
+                TemplateName = template.Title,
+                TemplateVersion = version,
                 NumberStart = 1,
-                SessionConstantsJson = "{}"
+                AutoFillConfigJson = "{}",
+                TemplateConfigJson = JsonSerializer.Serialize(template)
             };
 
             _dbService.CreateNewJournal(journal, template.Columns);
@@ -108,6 +129,47 @@ namespace FlexJournalPro.Services
             string timestamp = DateTime.Now.Ticks.ToString().Substring(8);
             
             return $"{cleanTitle}_{timestamp}";
+        }
+
+        /// <summary>
+        /// Сканує папку Templates у документах та імпортує нові шаблони
+        /// </summary>
+        public void ImportDefaultTemplates()
+        {
+            string presetsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                Assembly.GetExecutingAssembly().GetName().Name ?? "FlexJournalPro", "Templates");
+
+            if (!Directory.Exists(presetsPath))
+            {
+                Directory.CreateDirectory(presetsPath);
+                return;
+            }
+
+            foreach (string filePath in Directory.GetFiles(presetsPath, "*.json"))
+            {
+                try
+                {
+                    string jsonContent = File.ReadAllText(filePath);
+                    var template = JsonSerializer.Deserialize<TableTemplate>(jsonContent);
+                    string key = Path.GetFileNameWithoutExtension(filePath);
+
+                    if (template != null)
+                    {
+                        if (string.IsNullOrEmpty(template.Id)) template.Id = key;
+
+                        // Перевіряємо наявність
+                        if (GetTemplate(template.Id) == null)
+                        {
+                            CreateTemplate(template);
+                            System.Diagnostics.Debug.WriteLine($"Імпортовано шаблон: {template.Id}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Помилка імпорту {Path.GetFileName(filePath)}: {ex.Message}");
+                }
+            }
         }
     }
 }

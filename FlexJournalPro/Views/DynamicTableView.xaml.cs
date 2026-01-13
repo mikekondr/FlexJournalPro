@@ -127,19 +127,19 @@ namespace FlexJournalPro.Views
         }
 
         /// <summary>
-        /// Застосовує сеансові значення.
+        /// Застосовує значення параметрів заповнення.
         /// </summary>
-        public void ApplySessionValues(Dictionary<string, object> values)
+        public void ApplyAutoFillValues(Dictionary<string, object> values)
         {
-            _viewModel.ApplySessionValues(values);
+            _viewModel.ApplyAutoFillValues(values);
         }
 
         /// <summary>
-        /// Отримує поточні сеансові значення.
+        /// Отримує поточні значення параметрів заповнення.
         /// </summary>
-        public Dictionary<string, object> GetSessionValues()
+        public Dictionary<string, object> GetAutoFillValues()
         {
-            return _viewModel.GetSessionValues();
+            return _viewModel.GetAutoFillValues();
         }
 
         /// <summary>

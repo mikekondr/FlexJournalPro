@@ -46,7 +46,8 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
                         <DataGridTextColumn Header="Назва" Binding="{Binding Title}" Width="*"/>
-                        <DataGridTextColumn Header="Ідентифікатор шаблону" Binding="{Binding PresetId}" Width="200"/>
+                        <DataGridTextColumn Header="Шаблон" Binding="{Binding TemplateName}" Width="150"/>
+                        <DataGridTextColumn Header="Версія" Binding="{Binding TemplateVersion}" Width="60"/>
                         <DataGridTextColumn Header="Дата свторення" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
                         <DataGridTemplateColumn Header="Дії" Width="150">
                             <DataGridTemplateColumn.CellTemplate>

@@ -20,7 +20,7 @@ namespace FlexJournalPro.ViewModels
     {
         #region Fields
 
-        private readonly Dictionary<string, object> _sessionValues = new Dictionary<string, object>();
+        private readonly Dictionary<string, object> _autoFillValues = new Dictionary<string, object>();
         private TableTemplate _currentTemplate;
         private AsyncVirtualizingCollection _virtualData;
         private DataTable _calculationEngine;
@@ -80,7 +80,7 @@ namespace FlexJournalPro.ViewModels
         /// <summary>
         /// Сеансові значення для обчислень
         /// </summary>
-        public IReadOnlyDictionary<string, object> SessionValues => _sessionValues;
+        public IReadOnlyDictionary<string, object> AutoFillValues => _autoFillValues;
 
         #endregion
 
@@ -164,26 +164,26 @@ namespace FlexJournalPro.ViewModels
         }
 
         /// <summary>
-        /// Застосовує сеансові значення
+        /// Застосовує значення параметрів заповнення
         /// </summary>
-        public void ApplySessionValues(Dictionary<string, object> values)
+        public void ApplyAutoFillValues(Dictionary<string, object> values)
         {
             if (values == null) return;
 
-            _sessionValues.Clear();
+            _autoFillValues.Clear();
             foreach (var kvp in values)
             {
-                _sessionValues[kvp.Key] = kvp.Value;
+                _autoFillValues[kvp.Key] = kvp.Value;
             }
-            OnPropertyChanged(nameof(SessionValues));
+            OnPropertyChanged(nameof(AutoFillValues));
         }
 
         /// <summary>
-        /// Отримує поточні сеансові значення
+        /// Отримує поточні значення параметрів заповнення
         /// </summary>
-        public Dictionary<string, object> GetSessionValues()
+        public Dictionary<string, object> GetAutoFillValues()
         {
-            return new Dictionary<string, object>(_sessionValues);
+            return new Dictionary<string, object>(_autoFillValues);
         }
 
         /// <summary>
@@ -533,9 +533,9 @@ namespace FlexJournalPro.ViewModels
                 {
                     newRow[col.FieldName] = col.DefaultValue;
                 }
-                else if (!string.IsNullOrEmpty(col.BindConstant) && _sessionValues.ContainsKey(col.BindConstant))
+                else if (!string.IsNullOrEmpty(col.BindAutoFillParam) && _autoFillValues.ContainsKey(col.BindAutoFillParam))
                 {
-                    newRow[col.FieldName] = _sessionValues[col.BindConstant];
+                    newRow[col.FieldName] = _autoFillValues[col.BindAutoFillParam];
                 }
                 else
                 {

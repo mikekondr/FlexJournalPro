@@ -2,6 +2,7 @@ using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Input;
 
 namespace FlexJournalPro.ViewModels.Screens
@@ -11,13 +12,13 @@ namespace FlexJournalPro.ViewModels.Screens
     /// </summary>
     public class TemplatesListScreen : ScreenBase
     {
-        private readonly DatabaseService _dbService;
+        private readonly TemplateService _templateService;
         private readonly MainViewModel _mainViewModel;
         private TemplateMetadata? _selectedTemplate;
 
-        public TemplatesListScreen(DatabaseService dbService, MainViewModel mainViewModel)
+        public TemplatesListScreen(TemplateService templateService, MainViewModel mainViewModel)
         {
-            _dbService = dbService;
+            _templateService = templateService;
             _mainViewModel = mainViewModel;
 
             Title = "Шаблони";
@@ -79,7 +80,7 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             try
             {
-                var templates = _dbService.GetAllTemplates();
+                var templates = _templateService.GetAllTemplates();
                 Templates.Clear();
                 foreach (var template in templates)
                 {
@@ -121,7 +122,7 @@ namespace FlexJournalPro.ViewModels.Screens
             {
                 try
                 {
-                    _dbService.DeactivateTemplate(SelectedTemplate.Id);
+                    _templateService.DeleteTemplate(SelectedTemplate.Id);
                     LoadTemplates();
                 }
                 catch (System.Exception ex)
@@ -138,7 +139,9 @@ namespace FlexJournalPro.ViewModels.Screens
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
-                Title = "Виберіть файл шаблону"
+                Title = "Виберіть файл шаблону",
+                DefaultDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
+                    System.Reflection.Assembly.GetExecutingAssembly().GetName().Name ?? "FlexJournalPro", "Templates")
             };
 
             if (dialog.ShowDialog() == true)
@@ -150,7 +153,9 @@ namespace FlexJournalPro.ViewModels.Screens
 
                     if (template != null)
                     {
-                        _dbService.SaveTemplate(template);
+                        // ВИПРАВЛЕНО: SaveTemplate -> CreateTemplate
+                        // CreateTemplate всередині викликає SaveTemplate, що опрацьовує і оновлення
+                        _templateService.CreateTemplate(template);
                         LoadTemplates();
                     }
                 }

@@ -40,11 +40,14 @@ namespace FlexJournalPro.Services
                     CREATE TABLE IF NOT EXISTS App_Journals (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         Title TEXT NOT NULL,
-                        PresetId TEXT NOT NULL,
+                        TemplateId TEXT NOT NULL,
+                        TemplateName TEXT,
+                        TemplateVersion INTEGER DEFAULT 1,
                         TableName TEXT NOT NULL UNIQUE,
                         CreatedAt TEXT NOT NULL,
                         NumberStart INTEGER DEFAULT 1,
-                        SessionConstantsJson TEXT
+                        AutoFillConfigJson TEXT,
+                        TemplateConfigJson TEXT
                     )";
 
                 using (var cmd = new SQLiteCommand(sql, conn))
@@ -86,16 +89,29 @@ namespace FlexJournalPro.Services
                 {
                     while (reader.Read())
                     {
-                        list.Add(new JournalMetadata
+                        var journal = new JournalMetadata
                         {
                             Id = (long)reader["Id"],
                             Title = reader["Title"].ToString(),
-                            PresetId = reader["PresetId"].ToString(),
+                            TemplateId = reader["TemplateId"].ToString(),
                             TableName = reader["TableName"].ToString(),
                             CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
                             NumberStart = Convert.ToInt64(reader["NumberStart"]),
-                            SessionConstantsJson = reader["SessionConstantsJson"].ToString()
-                        });
+                            AutoFillConfigJson = reader["AutoFillConfigJson"].ToString()
+                        };
+
+                        if (reader["TemplateName"] != DBNull.Value)
+                            journal.TemplateName = reader["TemplateName"].ToString();
+
+                        if (reader["TemplateVersion"] != DBNull.Value)
+                            journal.TemplateVersion = Convert.ToInt32(reader["TemplateVersion"]);
+
+                        if (reader["TemplateConfigJson"] != DBNull.Value)
+                        {
+                            journal.TemplateConfigJson = reader["TemplateConfigJson"].ToString();
+                        }
+
+                        list.Add(journal);
                     }
                 }
             }
@@ -126,17 +142,20 @@ namespace FlexJournalPro.Services
 
                         // 3. Тільки після успішного створення таблиці додаємо запис у реєстр
                         string insertSql = @"
-                            INSERT INTO App_Journals (Title, PresetId, TableName, CreatedAt, NumberStart, SessionConstantsJson)
-                            VALUES (@Title, @PresetId, @TableName, @CreatedAt, @NumberStart, @Json)";
+                            INSERT INTO App_Journals (Title, TemplateId, TemplateName, TemplateVersion, TableName, CreatedAt, NumberStart, AutoFillConfigJson, TemplateConfigJson)
+                            VALUES (@Title, @TemplateId, @TemplateName, @TemplateVersion, @TableName, @CreatedAt, @NumberStart, @Json, @TemplateJson)";
 
                         using (var cmd = new SQLiteCommand(insertSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Title", meta.Title);
-                            cmd.Parameters.AddWithValue("@PresetId", meta.PresetId);
+                            cmd.Parameters.AddWithValue("@TemplateId", meta.TemplateId);
+                            cmd.Parameters.AddWithValue("@TemplateName", meta.TemplateName ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@TemplateVersion", meta.TemplateVersion);
                             cmd.Parameters.AddWithValue("@TableName", meta.TableName);
                             cmd.Parameters.AddWithValue("@CreatedAt", meta.CreatedAt.ToString("s"));
                             cmd.Parameters.AddWithValue("@NumberStart", meta.NumberStart);
-                            cmd.Parameters.AddWithValue("@Json", meta.SessionConstantsJson ?? "{}");
+                            cmd.Parameters.AddWithValue("@Json", meta.AutoFillConfigJson ?? "{}");
+                            cmd.Parameters.AddWithValue("@TemplateJson", meta.TemplateConfigJson ?? "{}");
                             cmd.ExecuteNonQuery();
                             
                             // Отримуємо згенерований ID для meta
@@ -567,11 +586,14 @@ namespace FlexJournalPro.Services
             {
                 conn.Open();
 
+                // Генеруємо JSON локально
+                string jsonConfig = JsonSerializer.Serialize(template);
+
                 var meta = new TemplateMetadata
                 {
                     Id = template.Id,
                     Name = template.Title,
-                    JsonConfig = JsonSerializer.Serialize(template),
+                    Description = template.Description,
                     UpdatedAt = DateTime.Now
                 };
 
@@ -599,8 +621,8 @@ namespace FlexJournalPro.Services
                         {
                             cmd.Parameters.AddWithValue("@Id", meta.Id);
                             cmd.Parameters.AddWithValue("@Name", meta.Name);
-                            cmd.Parameters.AddWithValue("@Description", meta.Description ?? "");
-                            cmd.Parameters.AddWithValue("@JsonConfig", meta.JsonConfig);
+                            cmd.Parameters.AddWithValue("@Description", meta.Description);
+                            cmd.Parameters.AddWithValue("@JsonConfig", jsonConfig);
                             cmd.Parameters.AddWithValue("@Version", meta.Version);
                             cmd.Parameters.AddWithValue("@UpdatedAt", meta.UpdatedAt.ToString("s"));
                             cmd.ExecuteNonQuery();
@@ -621,8 +643,8 @@ namespace FlexJournalPro.Services
                         {
                             cmd.Parameters.AddWithValue("@Id", meta.Id);
                             cmd.Parameters.AddWithValue("@Name", meta.Name);
-                            cmd.Parameters.AddWithValue("@Description", meta.Description ?? "");
-                            cmd.Parameters.AddWithValue("@JsonConfig", meta.JsonConfig);
+                            cmd.Parameters.AddWithValue("@Description", meta.Description);
+                            cmd.Parameters.AddWithValue("@JsonConfig", jsonConfig);
                             cmd.Parameters.AddWithValue("@Version", meta.Version);
                             cmd.Parameters.AddWithValue("@CreatedAt", meta.CreatedAt.ToString("s"));
                             cmd.Parameters.AddWithValue("@UpdatedAt", meta.UpdatedAt.ToString("s"));
@@ -659,7 +681,25 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
+        /// Отримати сирий JSON конфіг шаблону (без десеріалізації)
+        /// </summary>
+        public string GetTemplateJson(string templateId)
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = "SELECT JsonConfig FROM App_Templates WHERE Id = @Id";
+                using (var cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", templateId);
+                    return cmd.ExecuteScalar() as string;
+                }
+            }
+        }
+
+        /// <summary>
         /// Отримати список усіх активних шаблонів
+        /// ОПТИМІЗОВАНО: Не читає важке поле JsonConfig
         /// </summary>
         public List<TemplateMetadata> GetAllTemplates()
         {
@@ -667,7 +707,7 @@ namespace FlexJournalPro.Services
             using (var conn = new SQLiteConnection(_connectionString))
             {
                 conn.Open();
-                string sql = "SELECT * FROM App_Templates WHERE IsActive = 1 ORDER BY Name";
+                string sql = "SELECT Id, Name, Description, Version, CreatedAt, UpdatedAt, IsActive FROM App_Templates WHERE IsActive = 1 ORDER BY Name";
 
                 using (var cmd = new SQLiteCommand(sql, conn))
                 using (var reader = cmd.ExecuteReader())
@@ -679,7 +719,6 @@ namespace FlexJournalPro.Services
                             Id = reader["Id"].ToString(),
                             Name = reader["Name"].ToString(),
                             Description = reader["Description"].ToString(),
-                            JsonConfig = reader["JsonConfig"].ToString(),
                             Version = Convert.ToInt32(reader["Version"]),
                             CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
                             UpdatedAt = DateTime.Parse(reader["UpdatedAt"].ToString()),
@@ -711,19 +750,19 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Оновлює сеансові константи для журналу
+        /// Оновлює параметри заповнення для журналу
         /// </summary>
-        public void UpdateJournalConstants(long journalId, string sessionConstantsJson)
+        public void UpdateJournalAutoFillConfig(long journalId, string autoFillConfigJson)
         {
             using (var conn = new SQLiteConnection(_connectionString))
             {
                 conn.Open();
-                string sql = "UPDATE App_Journals SET SessionConstantsJson = @Json WHERE Id = @Id";
+                string sql = "UPDATE App_Journals SET AutoFillConfigJson = @Json WHERE Id = @Id";
 
                 using (var cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", journalId);
-                    cmd.Parameters.AddWithValue("@Json", sessionConstantsJson ?? "{}");
+                    cmd.Parameters.AddWithValue("@Json", autoFillConfigJson ?? "{}");
                     cmd.ExecuteNonQuery();
                 }
             }

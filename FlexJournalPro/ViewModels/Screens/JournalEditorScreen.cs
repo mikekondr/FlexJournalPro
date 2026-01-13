@@ -14,7 +14,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private readonly DatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
         private TableTemplate? _template;
-        private Dictionary<string, object> _sessionValues = new Dictionary<string, object>();
+        private Dictionary<string, object> _autoFillValues = new Dictionary<string, object>();
 
         public JournalEditorScreen(JournalMetadata journal, DatabaseService dbService, MainViewModel mainViewModel)
         {
@@ -46,9 +46,9 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Сеансові значення
+        /// Значення параметрів заповнення
         /// </summary>
-        public Dictionary<string, object> SessionValues => _sessionValues;
+        public Dictionary<string, object> AutoFillValues => _autoFillValues;
 
         public override string ScreenId => $"JournalEditor_{_journal.Id}";
 
@@ -58,22 +58,33 @@ namespace FlexJournalPro.ViewModels.Screens
 
         private void LoadTemplate()
         {
-            Template = _dbService.GetTemplate(_journal.PresetId);
-            
-            // Відновлюємо сеансові константи
-            if (!string.IsNullOrEmpty(_journal.SessionConstantsJson))
+            // Спроба завантажити конфігурацію зі зліпка (snapshot)
+            if (!string.IsNullOrEmpty(_journal.TemplateConfigJson))
             {
                 try
                 {
-                    var constants = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(_journal.SessionConstantsJson);
-                    if (constants != null)
+                    Template = System.Text.Json.JsonSerializer.Deserialize<TableTemplate>(_journal.TemplateConfigJson);
+                }
+                catch (System.Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Помилка десеріалізації зліпка шаблону: {ex.Message}");
+                }
+            }
+
+            // Відновлюємо параметри заповнення
+            if (!string.IsNullOrEmpty(_journal.AutoFillConfigJson))
+            {
+                try
+                {
+                    var autoFillParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(_journal.AutoFillConfigJson);
+                    if (autoFillParams != null)
                     {
-                        _sessionValues = new Dictionary<string, object>(constants);
+                        _autoFillValues = new Dictionary<string, object>(autoFillParams);
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Помилка завантаження констант: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Помилка завантаження параметрів заповнення: {ex.Message}");
                 }
             }
         }
