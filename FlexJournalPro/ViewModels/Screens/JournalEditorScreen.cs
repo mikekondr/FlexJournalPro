@@ -2,6 +2,7 @@ using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace FlexJournalPro.ViewModels.Screens
 {
@@ -64,6 +65,12 @@ namespace FlexJournalPro.ViewModels.Screens
                 try
                 {
                     Template = System.Text.Json.JsonSerializer.Deserialize<TableTemplate>(_journal.TemplateConfigJson);
+                    
+                    if (Template != null)
+                    {
+                        // Ensure system dynamic parameters are present (fixes older journals)
+                        InjectSystemAutoFillParameters(Template);
+                    }
                 }
                 catch (System.Exception ex)
                 {
@@ -85,6 +92,44 @@ namespace FlexJournalPro.ViewModels.Screens
                 catch (System.Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Помилка завантаження параметрів заповнення: {ex.Message}");
+                }
+            }
+        }
+
+        private void InjectSystemAutoFillParameters(TableTemplate template)
+        {
+            if (template == null) return;
+            if (template.AutoFillConfig == null) template.AutoFillConfig = new List<AutoFillParameter>();
+
+            var r = template.RegistrationParams;
+            if (r == null) return;
+
+            var parameters = template.AutoFillConfig;
+
+            if (r.UseRegistration && r.UseNumberPrefix)
+            {
+                if (!parameters.Any(p => p.Key == "RegPrefix"))
+                {
+                    parameters.Insert(0, new AutoFillParameter
+                    {
+                        Key = "RegPrefix",
+                        Label = "Префікс номера",
+                        DefaultValue = "",
+                        Type = ColumnType.Text
+                    });
+                }
+            }
+            if (r.UseRegistration && r.UseNumberSuffix)
+            {
+                if (!parameters.Any(p => p.Key == "RegSuffix"))
+                {
+                    parameters.Add(new AutoFillParameter
+                    {
+                        Key = "RegSuffix",
+                        Label = "Суфікс номера",
+                        DefaultValue = "",
+                        Type = ColumnType.Text
+                    });
                 }
             }
         }

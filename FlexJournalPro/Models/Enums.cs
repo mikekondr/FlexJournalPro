@@ -22,7 +22,9 @@ namespace FlexJournalPro.Models
         Time,           // Тільки час (HH:mm)
         Dropdown,
         DropdownEditable,
-        SectionHeader   // Тільки для візуального оформлення заголовків
+        SectionHeader,   // Тільки для візуального оформлення заголовків
+        RegNumber,       // Реєстраційний номер
+        Lock             // Кнопка блокування рядка
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

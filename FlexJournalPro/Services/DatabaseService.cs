@@ -17,7 +17,7 @@ namespace FlexJournalPro.Services
 
         public DatabaseService()
         {
-            // БД створюється поруч з .exe файлом
+            // БД створюється поряд з .exe файлом
             string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db");
             _connectionString = $"Data Source={dbPath};Version=3;";
 
@@ -204,7 +204,9 @@ namespace FlexJournalPro.Services
             switch (type)
             {
                 case ColumnType.Number:
+                case ColumnType.RegNumber: // Реєстраційний номер - ціле число
                 case ColumnType.Boolean: // SQLite використовує 0/1
+                case ColumnType.Lock:    // Блокування - boolean
                     return "INTEGER";
                 case ColumnType.Currency:
                     return "REAL";
@@ -262,6 +264,25 @@ namespace FlexJournalPro.Services
                     return Convert.ToInt32(cmd.ExecuteScalar());
                 }
             }
+        }
+
+        public long GetNextRegistrationNumber(string tableName, long startNumber)
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = $"SELECT MAX(RegNumber) FROM [{tableName}]";
+                using (var cmd = new SQLiteCommand(sql, conn))
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt64(result) + 1;
+                    }
+                }
+            }
+            // Якщо записів немає або MAX вернув NULL - починаємо зі стартового номера
+            return startNumber;
         }
 
         // Повернути список BindableRow для сторінки (LIMIT/OFFSET)
@@ -349,6 +370,7 @@ namespace FlexJournalPro.Services
             switch (targetType)
             {
                 case ColumnType.Number:
+                case ColumnType.RegNumber:
                     // Пряме читання INTEGER з SQLite
                     return reader.GetInt64(columnIndex);
 
@@ -357,6 +379,7 @@ namespace FlexJournalPro.Services
                     return reader.GetDecimal(columnIndex);
 
                 case ColumnType.Boolean:
+                case ColumnType.Lock:
                     // SQLite зберігає bool як INTEGER (0/1)
                     return reader.GetInt64(columnIndex) != 0;
 
@@ -536,12 +559,14 @@ namespace FlexJournalPro.Services
             switch (columnType)
             {
                 case ColumnType.Number:
+                case ColumnType.RegNumber:
                     return new SQLiteParameter(paramName, Convert.ToInt64(value));
 
                 case ColumnType.Currency:
                     return new SQLiteParameter(paramName, Convert.ToDecimal(value));
 
                 case ColumnType.Boolean:
+                case ColumnType.Lock:
                     bool boolVal = value is bool b ? b : Convert.ToBoolean(value);
                     return new SQLiteParameter(paramName, boolVal ? 1 : 0);
 

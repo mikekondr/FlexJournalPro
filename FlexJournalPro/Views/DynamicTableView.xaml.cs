@@ -67,10 +67,12 @@ namespace FlexJournalPro.Views
 
             // Підписка на події ViewModel
             _viewModel.RowSaved += ViewModel_RowSaved;
+            _viewModel.ValidationFailed += ViewModel_ValidationFailed; // Нова підписка
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             // Підписка на події DataGrid
             DynamicGrid.PreparingCellForEdit += DynamicGrid_PreparingCellForEdit;
+            DynamicGrid.BeginningEdit += DynamicGrid_BeginningEdit; // Додаємо перевірку блокування
             DynamicGrid.PreviewMouseLeftButtonDown += DynamicGrid_PreviewMouseLeftButtonDown;
             DynamicGrid.PreviewKeyDown += DynamicGrid_PreviewKeyDown;
             DynamicGrid.PreviewTextInput += DynamicGrid_PreviewTextInput;
@@ -95,6 +97,16 @@ namespace FlexJournalPro.Views
         public void LoadTemplate(TableTemplate template)
         {
             if (template == null) return;
+
+            // Configure grid behavior
+            if (template.RegistrationParams != null && template.RegistrationParams.UseStrictNumbering)
+            {
+                DynamicGrid.CanUserDeleteRows = false;
+            }
+            else
+            {
+                DynamicGrid.CanUserDeleteRows = true;
+            }
 
             _viewModel.LoadTemplate(template);
             BuildGridStructure(template.Columns);
@@ -121,9 +133,9 @@ namespace FlexJournalPro.Views
         /// <summary>
         /// Встановлює віртуальне джерело даних для таблиці.
         /// </summary>
-        public void SetVirtualDataSource(DatabaseService dbService, string tableName)
+        public void SetVirtualDataSource(DatabaseService dbService, string tableName, long startNumber = 1)
         {
-            _viewModel.SetVirtualDataSource(dbService, tableName);
+            _viewModel.SetVirtualDataSource(dbService, tableName, startNumber);
         }
 
         /// <summary>
@@ -195,6 +207,11 @@ namespace FlexJournalPro.Views
         {
             // Пробрасуємо подію далі
             RowSaved?.Invoke(this, e);
+        }
+
+        private async void ViewModel_ValidationFailed(object? sender, string message)
+        {
+            await DialogService.ShowWarningAsync(message, "Операція неможлива");
         }
 
         #endregion
@@ -382,11 +399,71 @@ namespace FlexJournalPro.Views
 
         private void DynamicGrid_PreparingCellForEdit(object? sender, DataGridPreparingCellForEditEventArgs e)
         {
+            // Якщо це новій рядок, ініціалізуємо його значеннями за замовчуванням при на початку редагування
+            if (e.Row.Item is NewRowPlaceholder placeholder && !placeholder.IsInitialized)
+            {
+                _viewModel.InitializeRowDefaults(placeholder);
+            }
+
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 var editingElement = GetActualEditingElement(e.EditingElement);
                 FocusEditingElement(editingElement);
             }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private void DynamicGrid_BeginningEdit(object? sender, DataGridBeginningEditEventArgs e)
+        {
+            var row = e.Row.Item as BindableRow;
+            if (row != null && _viewModel.IsRowLocked(row))
+            {
+                // Дозволяємо редагувати тільки колонку блокування, щоб можна було розблокувати
+                var colConfig = _viewModel.CurrentTemplate.Columns.FirstOrDefault(c => 
+                    c.Type == ColumnType.Lock && 
+                    !string.IsNullOrEmpty(c.FieldName) && 
+                    // Need to match column to config. 
+                    // Usually we don't have direct mapping here locally, but we can match by SortMemberPath or Tag if set.
+                    // TableUIGenerationService sets Tag on controls, not Columns.
+                    // But DataGridColumn.Header usually matches HeaderText.
+                    // Safest is to check if SortMemberPath matches lock column FieldName
+                     e.Column.SortMemberPath == c.FieldName
+                );
+
+                // In standard Grid, TemplateColumn doesn't always have SortMemberPath set if not configured.
+                // DynamicTableView sets SortMemberPath for sorting?
+                // Let's check TableUIGenerationService usage in DynamicTableView.
+                // DynamicTableView uses generated TemplateColumns. 
+                // However, our GenerateLockControlXaml sets Tag on the control.
+                // BUT here we are in BeginningEdit, we don't have the control yet easily.
+                // We can check if the column index or Header matches.
+                
+                // Better approach:
+                // Find if the current column corresponds to the Lock column.
+                
+                bool isLockColumn = false;
+                var lockCol = _viewModel.CurrentTemplate.Columns.FirstOrDefault(c => c.Type == ColumnType.Lock);
+                if (lockCol != null)
+                {
+                    // Check if current column header matches lock column header
+                    // Or try to infer from data context if possible.
+                    // Since we generate columns, binding paths are inside templates.
+                    // But we set SortMemberPath logic? No, we set CanUserSort.
+                    
+                    // Let's rely on finding the lock column field name from the column definition if possible?
+                    // No.
+                    
+                    // Let's assume user cannot edit locked row.
+                    // BUT he MUST be able to unlock it.
+                    // The Lock control is a ToggleButton in a TemplateColumn.
+                    // ToggleButton click does NOT trigger BeginningEdit usually because it's a button.
+                    // It changes the property directly via binding.
+                    // So BeginningEdit is triggered for TextBoxes, ComboBoxes, etc.
+                    // So we can safely cancel BeginningEdit for ALL columns if row is locked.
+                    // Clicking ToggleButton bypasses Edit mode.
+                    
+                    e.Cancel = true;
+                }
+            }
         }
 
         private void DynamicGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

@@ -24,6 +24,9 @@ namespace FlexJournalPro.ViewModels
         private TableTemplate _currentTemplate;
         private AsyncVirtualizingCollection _virtualData;
         private DataTable _calculationEngine;
+        private DatabaseService _dbService; // Store reference
+        private string _tableName;          // Store reference
+        private long _initialStartNumber = 1; // Default
 
         // Статичні кеші
         private static readonly Dictionary<string, TableTemplate> _jsonTemplateCache = new Dictionary<string, TableTemplate>();
@@ -92,6 +95,11 @@ namespace FlexJournalPro.ViewModels
         public event EventHandler<RowSavedEventArgs> RowSaved;
 
         /// <summary>
+        /// Виникає при помилці валідації (наприклад, при спробі заблокувати некоректний рядок)
+        /// </summary>
+        public event EventHandler<string> ValidationFailed;
+
+        /// <summary>
         /// Виникає при зміні властивості
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
@@ -108,6 +116,19 @@ namespace FlexJournalPro.ViewModels
             if (template == null) return;
 
             CurrentTemplate = template;
+
+            // Apply strict numbering read-only logic
+            if (CurrentTemplate.RegistrationParams != null && CurrentTemplate.RegistrationParams.UseStrictNumbering)
+            {
+                foreach (var col in CurrentTemplate.Columns)
+                {
+                    if (col.Type == ColumnType.RegNumber)
+                    {
+                        col.IsReadOnly = true;
+                    }
+                }
+            }
+
             InitializeCalculationEngine(CurrentTemplate.Columns);
         }
 
@@ -147,12 +168,16 @@ namespace FlexJournalPro.ViewModels
         /// <summary>
         /// Встановлює віртуальне джерело даних
         /// </summary>
-        public void SetVirtualDataSource(DatabaseService dbService, string tableName)
+        public void SetVirtualDataSource(DatabaseService dbService, string tableName, long startNumber = 1)
         {
             if (CurrentTemplate == null)
             {
                 throw new InvalidOperationException("Спочатку завантажте шаблон");
             }
+
+            _dbService = dbService;
+            _tableName = tableName;
+            _initialStartNumber = startNumber;
 
             var provider = new JournalDataProvider(dbService, tableName, CurrentTemplate.Columns);
             VirtualData = new AsyncVirtualizingCollection(provider);
@@ -371,6 +396,17 @@ namespace FlexJournalPro.ViewModels
         {
             if (rowData == null) return;
 
+            // Перевірка на блокування
+            if (IsRowLocked(rowData))
+            {
+                // Якщо рядок заблокований, дозволяємо тільки зміну статусу блокування (розблокування, якщо дозволено, або логування)
+                // Але якщо UseStrictNumbering and UseLocking -> заблокований рядок редагувати не можна.
+                // Перевіримо, чи це спроба змінити інші поля. 
+                // Для спрощення: якщо IsLocked=true, ми просто зберігаємо (раптом це сама операція блокування).
+                // Валідація UI повинна заборонити редагування полів.
+                // Тут ми можемо зробити додаткову перевірку, якщо потрібно.
+            }
+
             // Якщо це рядок-заглушка і він порожній - не зберігаємо
             if (rowData is NewRowPlaceholder && IsRowEmpty(rowData))
             {
@@ -395,6 +431,16 @@ namespace FlexJournalPro.ViewModels
                 SubscribeToRowEvents(newPlaceholder);
             }
 
+            bool isNewRow = !rowToSave.ContainsKey("Id") ||
+                            rowToSave["Id"] == null ||
+                            Convert.ToInt64(rowToSave["Id"]) <= 0;
+
+            // Для суворої нумерації актуалізуємо номер перед остаточним збереженням (тільки для нових рядків)
+            if (isNewRow && CurrentTemplate.RegistrationParams != null && CurrentTemplate.RegistrationParams.UseStrictNumbering)
+            {
+                rowToSave["RegNumber"] = GetNextRegistrationNumber();
+            }
+
             PerformCalculations(rowToSave);
 
             // Скидаємо прапорець "змінено" після збереження
@@ -405,10 +451,6 @@ namespace FlexJournalPro.ViewModels
             // Оновлюємо віртуальну колекцію після збереження
             if (VirtualData != null)
             {
-                bool isNewRow = !rowToSave.ContainsKey("Id") ||
-                                rowToSave["Id"] == null ||
-                                Convert.ToInt64(rowToSave["Id"]) <= 0;
-
                 if (isNewRow)
                 {
                     VirtualData.RefreshAfterSave();
@@ -512,6 +554,42 @@ namespace FlexJournalPro.ViewModels
                 }
 
                 PerformCalculations(rowData);
+
+                // Автоматичне збереження при зміні статусу блокування
+                if (!string.IsNullOrEmpty(e.PropertyName))
+                {
+                    var col = CurrentTemplate.Columns.FirstOrDefault(c => c.FieldName == e.PropertyName);
+                    if (col != null && col.Type == ColumnType.Lock)
+                    {
+                        // Перевіряємо, чи намагається користувач заблокувати рядок
+                        bool isLocking = false;
+                        var val = rowData[e.PropertyName];
+                        if (val is bool b && b) isLocking = true;
+                        else if (val is long l && l == 1) isLocking = true;
+                        else if (val?.ToString().ToLower() == "true") isLocking = true;
+
+                        if (isLocking)
+                        {
+                            // Валідуємо рядок перед блокуванням
+                            var errors = ValidateRow(rowData);
+                            if (errors.Any())
+                            {
+                                // Скасовуємо блокування
+                                rowData[e.PropertyName] = false;
+                                ValidationFailed?.Invoke(this, "Неможливо заблокувати рядок з помилками:\n" + string.Join("\n", errors));
+                                return;
+                            }
+                        }
+
+                        // Якщо це новий рядок (заглушка) і він ще не ініціалізований - ініціалізуємо значеннями за замовчуванням
+                        if (rowData is NewRowPlaceholder placeholder && !placeholder.IsInitialized)
+                        {
+                            InitializeRowDefaults(placeholder);
+                        }
+
+                        SaveRow(rowData);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -523,30 +601,106 @@ namespace FlexJournalPro.ViewModels
         {
             if (CurrentTemplate == null || newRow == null) return;
 
+            // If it is a placeholder, do not initialize values yet, keep it empty
+            if (newRow is NewRowPlaceholder) return;
+
+            InitializeRowDefaults(newRow);
+        }
+
+        public void InitializeRowDefaults(BindableRow row)
+        {
+            if (CurrentTemplate == null || row == null) return;
+
+            // 1. Спочатку заповнюємо стандартні поля
             foreach (var col in CurrentTemplate.Columns)
             {
                 if (col == null || col.Type == ColumnType.SectionHeader) continue;
                 if (string.IsNullOrEmpty(col.FieldName)) continue;
                 if (col.FieldName.Equals("Id", StringComparison.OrdinalIgnoreCase)) continue;
 
+                // Skip if already has value (e.g. partial edit)
+                if (row.ContainsKey(col.FieldName) && row[col.FieldName] != null) continue;
+
                 if (col.DefaultValue != null)
                 {
-                    newRow[col.FieldName] = col.DefaultValue;
+                    row[col.FieldName] = col.DefaultValue;
                 }
                 else if (!string.IsNullOrEmpty(col.BindAutoFillParam) && _autoFillValues.ContainsKey(col.BindAutoFillParam))
                 {
-                    newRow[col.FieldName] = _autoFillValues[col.BindAutoFillParam];
+                    row[col.FieldName] = _autoFillValues[col.BindAutoFillParam];
                 }
                 else
                 {
-                    newRow[col.FieldName] = GetDefaultValueForType(col.Type);
+                    row[col.FieldName] = GetDefaultValueForType(col.Type);
                 }
             }
 
-            PerformCalculations(newRow);
+            // 2. Спеціальна логіка для RegistrationParams
+            if (CurrentTemplate.RegistrationParams != null && CurrentTemplate.RegistrationParams.UseRegistration)
+            {
+                // Префікс
+                if (CurrentTemplate.RegistrationParams.UseNumberPrefix && _autoFillValues.ContainsKey("RegPrefix"))
+                {
+                    if (!row.ContainsKey("RegPrefix") || row["RegPrefix"] == null)
+                        row["RegPrefix"] = _autoFillValues["RegPrefix"];
+                }
+                
+                // Суфікс
+                if (CurrentTemplate.RegistrationParams.UseNumberSuffix && _autoFillValues.ContainsKey("RegSuffix"))
+                {
+                     if (!row.ContainsKey("RegSuffix") || row["RegSuffix"] == null)
+                        row["RegSuffix"] = _autoFillValues["RegSuffix"];
+                }
+
+                // Номер
+                // Якщо сувора нумерація - обчислюємо наступний номер
+                // Або якщо це поле RegNumber ще не заповнене
+                if (CurrentTemplate.RegistrationParams.UseStrictNumbering || !row.ContainsKey("RegNumber") || row["RegNumber"] == null)
+                {
+                    long nextNumber = GetNextRegistrationNumber();
+                    row["RegNumber"] = nextNumber;
+                }
+            }
+
+            PerformCalculations(row);
             
+            // Mark as initialized so UI updates
+            row.IsInitialized = true;
+
             // Скидаємо статус "IsDirty" після ініціалізації (оскільки це дефолтні значення)
-            newRow.MarkAsSaved();
+            row.MarkAsSaved();
+        }
+
+        private long GetNextRegistrationNumber()
+        {
+            if (_dbService != null && !string.IsNullOrEmpty(_tableName))
+            {
+                // Отримуємо наступний номер з БД, враховуючи початковий номер
+                return _dbService.GetNextRegistrationNumber(_tableName, _initialStartNumber);
+            }
+            
+            // Якщо немає доступу до БД (наприклад, ще не створено), повертаємо StartNumber
+            return _initialStartNumber;
+        }
+
+        public bool IsRowLocked(BindableRow row)
+        {
+            if (CurrentTemplate?.RegistrationParams?.UseLocking != true) return false;
+            
+            // Find lock column
+            var lockCol = CurrentTemplate.Columns.FirstOrDefault(c => c.Type == ColumnType.Lock);
+            string fieldName = lockCol?.FieldName ?? "IsLocked";
+
+            if (row.ContainsKey(fieldName))
+            {
+                var val = row[fieldName];
+                if (val is bool b) return b;
+                if (val is long l) return l == 1;
+                if (val is int i) return i == 1;
+                if (val?.ToString().ToLower() == "true") return true;
+                if (val?.ToString() == "1") return true;
+            }
+            return false;
         }
 
         private object GetDefaultValueForType(ColumnType type)
@@ -556,6 +710,7 @@ namespace FlexJournalPro.ViewModels
                 ColumnType.Number => null,
                 ColumnType.Currency => null,
                 ColumnType.Boolean => false,
+                ColumnType.Lock => false, // Default unlocked
                 ColumnType.Date => null,
                 ColumnType.DateTime => null,
                 ColumnType.Time => null,

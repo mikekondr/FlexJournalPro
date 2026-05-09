@@ -44,7 +44,8 @@ namespace FlexJournalPro.Views.Screens
             // Завантажуємо дані
             SmartTable.SetVirtualDataSource(
                 new Services.DatabaseService(), 
-                viewModel.Journal.TableName);
+                viewModel.Journal.TableName,
+                viewModel.Journal.NumberStart);
         }
 
         private void BuildAutoFillPanel(JournalEditorScreen viewModel)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace FlexJournalPro.Models
 {
@@ -10,8 +11,24 @@ namespace FlexJournalPro.Models
         public string Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
+
+        public RegistrationParams RegistrationParams { get; set; } = new RegistrationParams();
+
         public List<AutoFillParameter> AutoFillConfig { get; set; } = new List<AutoFillParameter>();
         public List<ColumnConfig> Columns { get; set; } = new List<ColumnConfig>();
+    }
+
+    /// <summary>
+    /// Параметри реєстрації документа
+    /// </summary>
+    public class RegistrationParams
+    {
+        public bool UseRegistration { get; set; }
+        public bool UseStrictNumbering { get; set; }
+        public bool UseCustomStartNumber { get; set; }
+        public bool UseLocking { get; set; }
+        public bool UseNumberPrefix { get; set; }
+        public bool UseNumberSuffix { get; set; }
     }
 
     /// <summary>
@@ -57,6 +74,7 @@ namespace FlexJournalPro.Models
 
         public string BindAutoFillParam { get; set; }
         public bool IsRequired { get; set; }
+        public bool IsReadOnly { get; set; } // New property
         public ColumnPosition Position { get; set; } = ColumnPosition.NewColumn;
     }
 

@@ -21,6 +21,24 @@ namespace FlexJournalPro.Models
         /// </summary>
         public virtual bool IsPlaceholder => false;
 
+        private bool _isInitialized = true;
+
+        /// <summary>
+        /// Визначає, чи рядок ініціалізований даними (має значення за замовчуванням або введені дані)
+        /// </summary>
+        public virtual bool IsInitialized
+        {
+            get => _isInitialized;
+            set
+            {
+                if (_isInitialized != value)
+                {
+                    _isInitialized = value;
+                    OnPropertyChanged(nameof(IsInitialized));
+                }
+            }
+        }
+
         /// <summary>
         /// Визначає, чи рядок був змінений але не збережений
         /// </summary>
@@ -119,6 +137,7 @@ namespace FlexJournalPro.Models
         {
             // Маркер для ідентифікації рядка-заглушки
             base["__isNewRowPlaceholder"] = true;
+            IsInitialized = false;
         }
     }
 }

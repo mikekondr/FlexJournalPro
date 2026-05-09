@@ -23,6 +23,10 @@ namespace FlexJournalPro.Helpers
             Action? onValueChanged = null)
         {
             panel.Children.Clear();
+            
+            // Save current values to preserve loaded data
+            var currentValues = new Dictionary<string, object>(autoFillValues);
+            
             autoFillValues.Clear();
 
             if (parameters == null || parameters.Count == 0)
@@ -38,7 +42,14 @@ namespace FlexJournalPro.Helpers
 
             foreach (var parameter in parameters)
             {
-                var control = CreateParameterControl(parameter, autoFillValues, onValueChanged);
+                // Determine initial value: priority to saved values
+                object initialValue = parameter.DefaultValue;
+                if (currentValues.TryGetValue(parameter.Key, out var savedVal))
+                {
+                    initialValue = savedVal;
+                }
+
+                var control = CreateParameterControl(parameter, autoFillValues, onValueChanged, initialValue);
                 if (control != null)
                 {
                     panel.Children.Add(control);
@@ -52,27 +63,28 @@ namespace FlexJournalPro.Helpers
         private static Control CreateParameterControl(
             AutoFillParameter parameter, 
             Dictionary<string, object> autoFillValues,
-            Action onValueChanged)
+            Action? onValueChanged,
+            object initialValue)
         {
             Control inputControl;
 
             switch (parameter.Type)
             {
                 case ColumnType.Boolean:
-                    inputControl = CreateBooleanControl(parameter, autoFillValues, onValueChanged);
+                    inputControl = CreateBooleanControl(parameter, autoFillValues, onValueChanged, initialValue);
                     break;
 
                 case ColumnType.Date:
-                    inputControl = CreateDateControl(parameter, autoFillValues, onValueChanged);
+                    inputControl = CreateDateControl(parameter, autoFillValues, onValueChanged, initialValue);
                     break;
 
                 case ColumnType.Dropdown:
                 case ColumnType.DropdownEditable:
-                    inputControl = CreateDropdownControl(parameter, autoFillValues, onValueChanged);
+                    inputControl = CreateDropdownControl(parameter, autoFillValues, onValueChanged, initialValue);
                     break;
 
                 default:
-                    inputControl = CreateTextControl(parameter, autoFillValues, onValueChanged);
+                    inputControl = CreateTextControl(parameter, autoFillValues, onValueChanged, initialValue);
                     break;
             }
 
@@ -82,7 +94,8 @@ namespace FlexJournalPro.Helpers
         private static CheckBox CreateBooleanControl(
             AutoFillParameter parameter, 
             Dictionary<string, object> autoFillValues,
-            Action onValueChanged)
+            Action? onValueChanged,
+            object initialValue)
         {
             var checkBox = new CheckBox 
             { 
@@ -90,7 +103,14 @@ namespace FlexJournalPro.Helpers
                 Margin = new Thickness(0, 10, 0, 10) 
             };
 
-            bool initVal = parameter.DefaultValue is JsonElement je && je.GetBoolean();
+            bool initVal = false;
+            
+            if (initialValue is bool b) initVal = b;
+            else if (initialValue is JsonElement je && (je.ValueKind == JsonValueKind.True || je.ValueKind == JsonValueKind.False))
+                initVal = je.GetBoolean();
+            else if (initialValue != null)
+                bool.TryParse(initialValue.ToString(), out initVal);
+
             checkBox.IsChecked = initVal;
             autoFillValues[parameter.Key] = initVal;
 
@@ -112,7 +132,8 @@ namespace FlexJournalPro.Helpers
         private static DatePicker CreateDateControl(
             AutoFillParameter parameter, 
             Dictionary<string, object> autoFillValues,
-            Action onValueChanged)
+            Action? onValueChanged,
+            object initialValue)
         {
             var datePicker = new DatePicker 
             { 
@@ -122,9 +143,9 @@ namespace FlexJournalPro.Helpers
 
             MaterialDesignThemes.Wpf.HintAssist.SetHint(datePicker, parameter.Label);
 
-            if (parameter.DefaultValue != null)
+            if (initialValue != null)
             {
-                object val = ParseDefaultValue(parameter.DefaultValue, ColumnType.Date);
+                object val = ParseDefaultValue(initialValue, ColumnType.Date);
                 if (val is DateTime d)
                 {
                     datePicker.SelectedDate = d;
@@ -148,7 +169,8 @@ namespace FlexJournalPro.Helpers
         private static ComboBox CreateDropdownControl(
             AutoFillParameter parameter, 
             Dictionary<string, object> autoFillValues,
-            Action onValueChanged)
+            Action? onValueChanged,
+            object initialValue)
         {
             bool isEditable = (parameter.Type == ColumnType.DropdownEditable);
 
@@ -162,10 +184,11 @@ namespace FlexJournalPro.Helpers
 
             MaterialDesignThemes.Wpf.HintAssist.SetHint(comboBox, parameter.Label);
 
-            if (parameter.DefaultValue != null)
+            if (initialValue != null)
             {
-                comboBox.Text = parameter.DefaultValue.ToString();
-                autoFillValues[parameter.Key] = parameter.DefaultValue.ToString();
+                string val = initialValue.ToString();
+                comboBox.Text = val;
+                autoFillValues[parameter.Key] = val;
             }
 
             if (isEditable)
@@ -193,14 +216,15 @@ namespace FlexJournalPro.Helpers
         private static TextBox CreateTextControl(
             AutoFillParameter parameter, 
             Dictionary<string, object> autoFillValues,
-            Action onValueChanged)
+            Action? onValueChanged,
+            object initialValue)
         {
             var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 15) };
             MaterialDesignThemes.Wpf.HintAssist.SetHint(textBox, parameter.Label);
 
-            if (parameter.DefaultValue != null)
+            if (initialValue != null)
             {
-                string val = parameter.DefaultValue.ToString();
+                string val = initialValue.ToString();
                 textBox.Text = val;
                 autoFillValues[parameter.Key] = val;
             }
@@ -223,9 +247,13 @@ namespace FlexJournalPro.Helpers
                     case ColumnType.Date:
                     case ColumnType.DateTime:
                     case ColumnType.Time:
-                        string dateStr = jsonElement.GetString();
+                        string dateStr = jsonElement.ToString();
+                        if (jsonElement.ValueKind == JsonValueKind.String) 
+                            dateStr = jsonElement.GetString();
+
                         if (dateStr?.ToUpper() == "NOW") return DateTime.Now;
-                        return DateTime.Parse(dateStr);
+                        if (DateTime.TryParse(dateStr, out var d)) return d;
+                        return dateStr;
                     default:
                         return jsonElement.ToString();
                 }

@@ -114,6 +114,10 @@ namespace FlexJournalPro.Services
         /// </summary>
         public bool CanUseCompiledTemplate(VisualColumnGroup group)
         {
+            // Disable compiled templates for Lock and RegNumber fields with special logic for now
+            if (group.MainConfig.Type == ColumnType.Lock || group.MainConfig.IsReadOnly)
+                return false;
+
             if (group.Rows.Count != 1 || group.Rows[0].Items.Count != 1)
                 return false;
 
@@ -129,10 +133,11 @@ namespace FlexJournalPro.Services
             DataTemplate innerTemplate = config.Type switch
             {
                 ColumnType.Boolean => DataTemplateBuilder.CreateBooleanViewTemplate(config.FieldName),
+                ColumnType.Lock => DataTemplateBuilder.CreateBooleanEditTemplate(config.FieldName), // Lock is always interactive (button)
                 _ => DataTemplateBuilder.CreateTextViewTemplate(
                     config.FieldName,
                     GetDisplayFormat(config),
-                    !string.IsNullOrEmpty(config.Expression))
+                    !string.IsNullOrEmpty(config.Expression) || config.IsReadOnly)
             };
 
             return innerTemplate;
@@ -146,10 +151,11 @@ namespace FlexJournalPro.Services
             DataTemplate innerTemplate = config.Type switch
             {
                 ColumnType.Boolean => DataTemplateBuilder.CreateBooleanEditTemplate(config.FieldName),
+                ColumnType.Lock => DataTemplateBuilder.CreateBooleanEditTemplate(config.FieldName),
                 _ => DataTemplateBuilder.CreateTextEditTemplate(
                     config.FieldName,
                     config.Format,
-                    !string.IsNullOrEmpty(config.Expression))
+                    !string.IsNullOrEmpty(config.Expression) || config.IsReadOnly)
             };
             return innerTemplate;
         }
@@ -382,6 +388,13 @@ namespace FlexJournalPro.Services
 
         private string GenerateEditControlXaml(ColumnConfig col, ResourceDictionary resources)
         {
+            if (col.IsReadOnly && col.Type != ColumnType.Lock)
+            {
+                // If column is read-only, render as view/textblock even in edit mode, OR read-only TextBox
+                // Let's use ReadOnly TextBox for consistency in sizing
+                return GenerateTextBoxXaml(col);
+            }
+
             return col.Type switch
             {
                 ColumnType.Dropdown or ColumnType.DropdownEditable => GenerateDropdownXaml(col, resources),
@@ -389,6 +402,8 @@ namespace FlexJournalPro.Services
                 ColumnType.Time => GenerateTimePickerXaml(col, resources),
                 ColumnType.DateTime => GenerateDateTimePickerXaml(col),
                 ColumnType.Boolean => GenerateCheckBoxXaml(col),
+                ColumnType.Lock => GenerateLockControlXaml(col),
+                ColumnType.RegNumber => GenerateTextBoxXaml(col),
                 _ => GenerateTextBoxXaml(col)
             };
         }
@@ -399,8 +414,40 @@ namespace FlexJournalPro.Services
 
             if (col.Type == ColumnType.Boolean)
                 return GenerateBooleanViewXaml(col);
+            
+            if (col.Type == ColumnType.Lock)
+                return GenerateLockControlXaml(col); // Always interactive
 
             return GenerateTextBlockViewXaml(col, resources);
+        }
+
+        private string GenerateLockControlXaml(ColumnConfig col)
+        {
+            string bindingDef = $"Binding [{col.FieldName}], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={{StaticResource SafeBoolConverter}}, TargetNullValue=False, FallbackValue=False";
+            
+            // Using ToggleButton style for Lock
+            // Added Visibility trigger to hide when IsInitialized is False (new row not yet edited)
+            return $@"<ToggleButton IsChecked=""{{{bindingDef}}}""
+                        Tag=""{col.FieldName}""
+                        Focusable=""False"" IsTabStop=""False""
+                        HorizontalAlignment=""Center"" VerticalAlignment=""Center"">
+                        <ToggleButton.Style>
+                            <Style TargetType=""ToggleButton"" BasedOn=""{{StaticResource MaterialDesignActionToggleButton}}"">
+                                <Style.Triggers>
+                                    <DataTrigger Binding=""{{Binding IsInitialized}}"" Value=""False"">
+                                        <Setter Property=""Visibility"" Value=""Hidden""/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+
+                        <ToggleButton.Content>
+                            <materialDesign:PackIcon Kind=""LockOpenVariant"" Size=""16""/>
+                        </ToggleButton.Content>
+                        <materialDesign:ToggleButtonAssist.OnContent>
+                            <materialDesign:PackIcon Kind=""Lock"" Size=""16""/>
+                        </materialDesign:ToggleButtonAssist.OnContent>
+                    </ToggleButton>";
         }
 
         private string GenerateDropdownXaml(ColumnConfig col, ResourceDictionary resources)
@@ -484,7 +531,7 @@ namespace FlexJournalPro.Services
 
         private string GenerateCheckBoxXaml(ColumnConfig col)
         {
-            string bindingDef = $"Binding [{col.FieldName}], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={{StaticResource SafeBoolConverter}}";
+            string bindingDef = $"Binding [{col.FieldName}], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={{StaticResource SafeBoolConverter}}, TargetNullValue=False, FallbackValue=False";
             return $@"<CheckBox IsChecked=""{{{bindingDef}}}""
                         Tag=""{col.FieldName}""
                         Focusable=""True"" IsTabStop=""True""
@@ -493,7 +540,7 @@ namespace FlexJournalPro.Services
 
         private string GenerateTextBoxXaml(ColumnConfig col)
         {
-            bool isCalculated = !string.IsNullOrEmpty(col.Expression);
+            bool isCalculated = !string.IsNullOrEmpty(col.Expression) || col.IsReadOnly;
             string mode = isCalculated ? "OneWay" : "TwoWay";
 
             string readOnlyProps = isCalculated ? @"IsReadOnly=""True"" Focusable=""False"" IsTabStop=""False"" Foreground=""Gray"" FontStyle=""Italic""" : "";
@@ -523,7 +570,7 @@ namespace FlexJournalPro.Services
         private string GenerateTextBlockViewXaml(ColumnConfig col, ResourceDictionary resources)
         {
             string bindingDef = BuildViewBindingDefinition(col, resources);
-            string readOnlyProps = !string.IsNullOrEmpty(col.Expression)
+            string readOnlyProps = (!string.IsNullOrEmpty(col.Expression) || col.IsReadOnly)
                 ? @"Focusable=""False"" Foreground=""Gray"" FontStyle=""Italic"""
                 : "";
 
@@ -537,7 +584,10 @@ namespace FlexJournalPro.Services
 
         private string BuildViewBindingDefinition(ColumnConfig col, ResourceDictionary resources = null)
         {
-            var binding = $"Binding [{col.FieldName}], Mode=OneWay, TargetNullValue={{}}, FallbackValue={{}}";
+            string nullValue = "{}";
+            if (col.Type == ColumnType.Boolean) nullValue = "False";
+
+            var binding = $"Binding [{col.FieldName}], Mode=OneWay, TargetNullValue={nullValue}, FallbackValue={nullValue}";
 
             if (col.Type == ColumnType.Time)
             {
