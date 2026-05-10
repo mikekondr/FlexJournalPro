@@ -1,37 +1,72 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using FlexJournalPro.Config;
 using FlexJournalPro.Models;
+using Microsoft.Data.Sqlite;
 
 namespace FlexJournalPro.Services
 {
     public class DatabaseService
     {
         private readonly string _connectionString;
+        private readonly AppConfig _config;
+        private readonly bool _useCipher;
 
         public string ConnectionString => _connectionString;
 
         public DatabaseService()
         {
+            // Завантажимо конфігурацію
+            _config = AppConfig.Load();
+            _useCipher = _config.Database.UseCipher;
+
             // БД створюється поряд з .exe файлом
             string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db");
-            _connectionString = $"Data Source={dbPath};Version=3;";
+
+            if (_useCipher)
+            {
+                // SQLite-Cipher
+                if (string.IsNullOrWhiteSpace(_config.Database.CipherPassword))
+                {
+                    throw new InvalidOperationException("CipherPassword не встановлено в конфігурації");
+                }
+                _connectionString = $"Data Source={dbPath};Password={_config.Database.CipherPassword};";
+            }
+            else
+            {
+                // Звичайний SQLite
+                _connectionString = $"Data Source={dbPath};";
+            }
 
             InitializeDatabase();
         }
 
         private void InitializeDatabase()
         {
+            // Створюємо файл БД якщо його немає
             if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db")))
             {
-                SQLiteConnection.CreateFile("app_data.db");
+                if (_useCipher)
+                {
+                    // Для SQLCipher створюємо через відкриття з'єднання
+                    using (var conn = new SqliteConnection(_connectionString))
+                    {
+                        conn.Open();
+                    }
+                }
+                else
+                {
+                    // SqliteConnection буде автоматично створювати файл, якщо його немає
+                    using (var conn = new SqliteConnection(_connectionString))
+                    {
+                        conn.Open();
+                    }
+                }
             }
 
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
 
@@ -50,7 +85,7 @@ namespace FlexJournalPro.Services
                         TemplateConfigJson TEXT
                     )";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.ExecuteNonQuery();
                 }
@@ -68,7 +103,7 @@ namespace FlexJournalPro.Services
                         IsActive INTEGER DEFAULT 1
                     )";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.ExecuteNonQuery();
                 }
@@ -80,11 +115,11 @@ namespace FlexJournalPro.Services
         public List<JournalMetadata> GetAllJournals()
         {
             var list = new List<JournalMetadata>();
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "SELECT * FROM App_Journals ORDER BY CreatedAt DESC";
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
@@ -92,23 +127,23 @@ namespace FlexJournalPro.Services
                         var journal = new JournalMetadata
                         {
                             Id = (long)reader["Id"],
-                            Title = reader["Title"].ToString(),
-                            TemplateId = reader["TemplateId"].ToString(),
-                            TableName = reader["TableName"].ToString(),
-                            CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
+                            Title = reader["Title"]?.ToString() ?? string.Empty,
+                            TemplateId = reader["TemplateId"]?.ToString() ?? string.Empty,
+                            TableName = reader["TableName"]?.ToString() ?? string.Empty,
+                            CreatedAt = DateTime.Parse(reader["CreatedAt"]?.ToString() ?? DateTime.MinValue.ToString()),
                             NumberStart = Convert.ToInt64(reader["NumberStart"]),
-                            AutoFillConfigJson = reader["AutoFillConfigJson"].ToString()
+                            AutoFillConfigJson = reader["AutoFillConfigJson"]?.ToString()
                         };
 
                         if (reader["TemplateName"] != DBNull.Value)
-                            journal.TemplateName = reader["TemplateName"].ToString();
+                            journal.TemplateName = reader["TemplateName"]?.ToString();
 
                         if (reader["TemplateVersion"] != DBNull.Value)
                             journal.TemplateVersion = Convert.ToInt32(reader["TemplateVersion"]);
 
                         if (reader["TemplateConfigJson"] != DBNull.Value)
                         {
-                            journal.TemplateConfigJson = reader["TemplateConfigJson"].ToString();
+                            journal.TemplateConfigJson = reader["TemplateConfigJson"]?.ToString();
                         }
 
                         list.Add(journal);
@@ -120,7 +155,7 @@ namespace FlexJournalPro.Services
 
         public void CreateNewJournal(JournalMetadata meta, List<ColumnConfig> columns)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 using (var transaction = conn.BeginTransaction())
@@ -135,7 +170,7 @@ namespace FlexJournalPro.Services
                         // 2. Спочатку створюємо фізичну таблицю для даних
                         // (Якщо це не вдасться, немає сенсу додавати запис у реєстр)
                         string createTableSql = BuildCreateTableSql(tableName, columns);
-                        using (var cmd = new SQLiteCommand(createTableSql, conn, transaction))
+                        using (var cmd = new SqliteCommand(createTableSql, conn, transaction))
                         {
                             cmd.ExecuteNonQuery();
                         }
@@ -145,7 +180,7 @@ namespace FlexJournalPro.Services
                             INSERT INTO App_Journals (Title, TemplateId, TemplateName, TemplateVersion, TableName, CreatedAt, NumberStart, AutoFillConfigJson, TemplateConfigJson)
                             VALUES (@Title, @TemplateId, @TemplateName, @TemplateVersion, @TableName, @CreatedAt, @NumberStart, @Json, @TemplateJson)";
 
-                        using (var cmd = new SQLiteCommand(insertSql, conn, transaction))
+                        using (var cmd = new SqliteCommand(insertSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Title", meta.Title);
                             cmd.Parameters.AddWithValue("@TemplateId", meta.TemplateId);
@@ -159,7 +194,11 @@ namespace FlexJournalPro.Services
                             cmd.ExecuteNonQuery();
                             
                             // Отримуємо згенерований ID для meta
-                            meta.Id = conn.LastInsertRowId;
+                            using (var cmdId = new SqliteCommand("SELECT last_insert_rowid()", conn, transaction))
+                            {
+                                var scalarResult = cmdId.ExecuteScalar();
+                                meta.Id = scalarResult != null ? Convert.ToInt64(scalarResult) : 0;
+                            }
                         }
 
                         transaction.Commit();
@@ -220,13 +259,14 @@ namespace FlexJournalPro.Services
         public DataTable LoadJournalData(string tableName)
         {
             var dt = new DataTable();
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = $"SELECT * FROM [{tableName}]";
-                using (var adapter = new SQLiteDataAdapter(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
+                using (var reader = cmd.ExecuteReader())
                 {
-                    adapter.Fill(dt);
+                    dt.Load(reader);
                 }
             }
             return dt;
@@ -236,11 +276,11 @@ namespace FlexJournalPro.Services
         public DataTable LoadJournalPage(string tableName, int offset, int limit)
         {
             var dt = new DataTable();
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = $"SELECT * FROM [{tableName}] ORDER BY Id DESC LIMIT @Limit OFFSET @Offset";
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Limit", limit);
                     cmd.Parameters.AddWithValue("@Offset", offset);
@@ -256,10 +296,10 @@ namespace FlexJournalPro.Services
         // Повертає загальну кількість рядків у таблиці (для віртуалізації / scrollbar)
         public int GetJournalCount(string tableName)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
-                using (var cmd = new SQLiteCommand($"SELECT COUNT(*) FROM [{tableName}]", conn))
+                using (var cmd = new SqliteCommand($"SELECT COUNT(*) FROM [{tableName}]", conn))
                 {
                     return Convert.ToInt32(cmd.ExecuteScalar());
                 }
@@ -268,11 +308,11 @@ namespace FlexJournalPro.Services
 
         public long GetNextRegistrationNumber(string tableName, long startNumber)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = $"SELECT MAX(RegNumber) FROM [{tableName}]";
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     var result = cmd.ExecuteScalar();
                     if (result != null && result != DBNull.Value)
@@ -290,12 +330,12 @@ namespace FlexJournalPro.Services
         {
             var list = new List<BindableRow>();
 
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = $"SELECT * FROM [{tableName}] ORDER BY Id DESC LIMIT @Limit OFFSET @Offset";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Limit", count);
                     cmd.Parameters.AddWithValue("@Offset", startIndex);
@@ -327,7 +367,7 @@ namespace FlexJournalPro.Services
                                 // Пропускаємо конфігурацію поля Id з шаблону (системне поле вже додано)
                                 if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
-                                if (!columnIndexMap.TryGetValue(col.FieldName, out int columnIndex))
+                                if (col.FieldName == null || !columnIndexMap.TryGetValue(col.FieldName, out int columnIndex))
                                     continue;
 
                                 try
@@ -335,7 +375,7 @@ namespace FlexJournalPro.Services
                                     // Швидка перевірка на NULL
                                     if (reader.IsDBNull(columnIndex))
                                     {
-                                        row[col.FieldName] = null;
+                                        row[col.FieldName] = string.Empty; // замість null для уникнення помилок
                                         continue;
                                     }
 
@@ -363,9 +403,9 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Читає значення з SQLiteDataReader використовуючи типізовані методи (без ToString + парсингу)
+        /// Читає значення з SqliteDataReader використовуючи типізовані методи (без ToString + парсингу)
         /// </summary>
-        private object ReadTypedValue(SQLiteDataReader reader, int columnIndex, ColumnType targetType)
+        private object ReadTypedValue(SqliteDataReader reader, int columnIndex, ColumnType targetType)
         {
             switch (targetType)
             {
@@ -395,8 +435,8 @@ namespace FlexJournalPro.Services
                         return DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified);
                     }
                     return DateTime.TryParse(dateStr, out parsedDate) 
-                        ? DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified) 
-                        : null;
+                        ? (object)DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified) 
+                        : DBNull.Value;
 
                 case ColumnType.DateTime:
                     var dtStr = reader.GetString(columnIndex);
@@ -409,8 +449,8 @@ namespace FlexJournalPro.Services
                         return DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified);
                     }
                     return DateTime.TryParse(dtStr, out parsedDt) 
-                        ? DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified) 
-                        : null;
+                        ? (object)DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified) 
+                        : DBNull.Value;
 
                 case ColumnType.Time:
                     var timeStr = reader.GetString(columnIndex);
@@ -431,7 +471,7 @@ namespace FlexJournalPro.Services
                     {
                         return dtForTime.TimeOfDay;
                     }
-                    return null;
+                    return DBNull.Value;
 
                 case ColumnType.Text:
                 case ColumnType.Dropdown:
@@ -444,7 +484,7 @@ namespace FlexJournalPro.Services
 
         public void UpsertDictionaryRow(string tableName, BindableRow rowData, List<ColumnConfig> columns)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
 
@@ -471,12 +511,12 @@ namespace FlexJournalPro.Services
         /// <summary>
         /// Виконує UPDATE з оптимізованою конвертацією типів
         /// </summary>
-        private void ExecuteUpdate(SQLiteConnection conn, string tableName, BindableRow rowData, List<ColumnConfig> columns, long id)
+        private void ExecuteUpdate(SqliteConnection conn, string tableName, BindableRow rowData, List<ColumnConfig> columns, long id)
         {
             var sb = new StringBuilder();
             sb.Append($"UPDATE [{tableName}] SET ");
 
-            var parameters = new List<SQLiteParameter>();
+            var parameters = new List<SqliteParameter>();
             bool first = true;
 
             foreach (var col in columns)
@@ -489,7 +529,7 @@ namespace FlexJournalPro.Services
                 if (!first) sb.Append(", ");
                 sb.Append($"[{col.FieldName}] = @{col.FieldName}");
 
-                object value = rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
+                object value = col.FieldName != null && rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
                 
                 // Типізована конвертація
                 parameters.Add(CreateTypedParameter($"@{col.FieldName}", value, col.Type));
@@ -497,9 +537,9 @@ namespace FlexJournalPro.Services
             }
 
             sb.Append(" WHERE Id = @Id");
-            parameters.Add(new SQLiteParameter("@Id", id));
+            parameters.Add(new SqliteParameter("@Id", id));
 
-            using (var cmd = new SQLiteCommand(sb.ToString(), conn))
+            using (var cmd = new SqliteCommand(sb.ToString(), conn))
             {
                 cmd.Parameters.AddRange(parameters.ToArray());
                 cmd.ExecuteNonQuery();
@@ -509,13 +549,13 @@ namespace FlexJournalPro.Services
         /// <summary>
         /// Виконує INSERT з оптимізованою конвертацією типів
         /// </summary>
-        private void ExecuteInsert(SQLiteConnection conn, string tableName, BindableRow rowData, List<ColumnConfig> columns)
+        private void ExecuteInsert(SqliteConnection conn, string tableName, BindableRow rowData, List<ColumnConfig> columns)
         {
             var sb = new StringBuilder();
             sb.Append($"INSERT INTO [{tableName}] (");
             var colNames = new List<string>();
             var paramNames = new List<string>();
-            var parameters = new List<SQLiteParameter>();
+            var parameters = new List<SqliteParameter>();
 
             foreach (var col in columns)
             {
@@ -527,7 +567,7 @@ namespace FlexJournalPro.Services
                 colNames.Add($"[{col.FieldName}]");
                 paramNames.Add($"@{col.FieldName}");
 
-                object value = rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
+                object value = col.FieldName != null && rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
                 
                 // Типізована конвертація
                 parameters.Add(CreateTypedParameter($"@{col.FieldName}", value, col.Type));
@@ -538,65 +578,65 @@ namespace FlexJournalPro.Services
             sb.Append(string.Join(", ", paramNames));
             sb.Append("); SELECT last_insert_rowid();");
 
-            using (var cmd = new SQLiteCommand(sb.ToString(), conn))
+            using (var cmd = new SqliteCommand(sb.ToString(), conn))
             {
                 cmd.Parameters.AddRange(parameters.ToArray());
-                object newId = cmd.ExecuteScalar();
-                rowData["Id"] = Convert.ToInt64(newId);
+                object? newId = cmd.ExecuteScalar();
+                rowData["Id"] = newId != null ? Convert.ToInt64(newId) : 0;
             }
         }
 
         /// <summary>
-        /// Створює типізований SQLiteParameter без ToString() конвертації
+        /// Створює типізований SqliteParameter без ToString() конвертації
         /// </summary>
-        private SQLiteParameter CreateTypedParameter(string paramName, object value, ColumnType columnType)
+        private SqliteParameter CreateTypedParameter(string paramName, object value, ColumnType columnType)
         {
             if (value == null || value == DBNull.Value)
             {
-                return new SQLiteParameter(paramName, DBNull.Value);
+                return new SqliteParameter(paramName, DBNull.Value);
             }
 
             switch (columnType)
             {
                 case ColumnType.Number:
                 case ColumnType.RegNumber:
-                    return new SQLiteParameter(paramName, Convert.ToInt64(value));
+                    return new SqliteParameter(paramName, Convert.ToInt64(value));
 
                 case ColumnType.Currency:
-                    return new SQLiteParameter(paramName, Convert.ToDecimal(value));
+                    return new SqliteParameter(paramName, Convert.ToDecimal(value));
 
                 case ColumnType.Boolean:
                 case ColumnType.Lock:
                     bool boolVal = value is bool b ? b : Convert.ToBoolean(value);
-                    return new SQLiteParameter(paramName, boolVal ? 1 : 0);
+                    return new SqliteParameter(paramName, boolVal ? 1 : 0);
 
                 case ColumnType.Date:
                     if (value is DateTime dateVal)
                     {
-                        return new SQLiteParameter(paramName, dateVal.ToString("yyyy-MM-dd"));
+                        return new SqliteParameter(paramName, dateVal.ToString("yyyy-MM-dd"));
                     }
-                    return new SQLiteParameter(paramName, value.ToString());
+                    return new SqliteParameter(paramName, value.ToString());
 
                 case ColumnType.DateTime:
                     if (value is DateTime dtVal)
                     {
-                        return new SQLiteParameter(paramName, dtVal.ToString("yyyy-MM-dd HH:mm:ss"));
+                        return new SqliteParameter(paramName, dtVal.ToString("yyyy-MM-dd HH:mm:ss"));
                     }
-                    return new SQLiteParameter(paramName, value.ToString());
+                    return new SqliteParameter(paramName, value.ToString());
 
                 case ColumnType.Time:
                     if (value is TimeSpan tsVal)
                     {
-                        return new SQLiteParameter(paramName, tsVal.ToString(@"hh\:mm\:ss"));
+                        return new SqliteParameter(paramName, tsVal.ToString(@"hh\:mm\:ss"));
                     }
                     if (value is DateTime dtTimeVal)
                     {
-                        return new SQLiteParameter(paramName, dtTimeVal.ToString("HH:mm:ss"));
+                        return new SqliteParameter(paramName, dtTimeVal.ToString("HH:mm:ss"));
                     }
-                    return new SQLiteParameter(paramName, value.ToString());
+                    return new SqliteParameter(paramName, value.ToString());
 
                 default:
-                    return new SQLiteParameter(paramName, value.ToString());
+                    return new SqliteParameter(paramName, value.ToString());
             }
         }
 
@@ -607,7 +647,7 @@ namespace FlexJournalPro.Services
         /// </summary>
         public void SaveTemplate(TableTemplate template)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
 
@@ -623,7 +663,7 @@ namespace FlexJournalPro.Services
                 };
 
                 // Перевіряємо, чи існує шаблон
-                using (var checkCmd = new SQLiteCommand("SELECT Version FROM App_Templates WHERE Id = @Id", conn))
+                using (var checkCmd = new SqliteCommand("SELECT Version FROM App_Templates WHERE Id = @Id", conn))
                 {
                     checkCmd.Parameters.AddWithValue("@Id", meta.Id);
                     var existingVersion = checkCmd.ExecuteScalar();
@@ -642,7 +682,7 @@ namespace FlexJournalPro.Services
                                 UpdatedAt = @UpdatedAt
                             WHERE Id = @Id";
 
-                        using (var cmd = new SQLiteCommand(updateSql, conn))
+                        using (var cmd = new SqliteCommand(updateSql, conn))
                         {
                             cmd.Parameters.AddWithValue("@Id", meta.Id);
                             cmd.Parameters.AddWithValue("@Name", meta.Name);
@@ -664,7 +704,7 @@ namespace FlexJournalPro.Services
                             INSERT INTO App_Templates (Id, Name, Description, JsonConfig, Version, CreatedAt, UpdatedAt, IsActive)
                             VALUES (@Id, @Name, @Description, @JsonConfig, @Version, @CreatedAt, @UpdatedAt, @IsActive)";
 
-                        using (var cmd = new SQLiteCommand(insertSql, conn))
+                        using (var cmd = new SqliteCommand(insertSql, conn))
                         {
                             cmd.Parameters.AddWithValue("@Id", meta.Id);
                             cmd.Parameters.AddWithValue("@Name", meta.Name);
@@ -686,23 +726,23 @@ namespace FlexJournalPro.Services
         /// </summary>
         public TableTemplate GetTemplate(string templateId)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "SELECT JsonConfig FROM App_Templates WHERE Id = @Id AND IsActive = 1";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", templateId);
                     var json = cmd.ExecuteScalar() as string;
 
                     if (json != null)
                     {
-                        return JsonSerializer.Deserialize<TableTemplate>(json);
+                        return JsonSerializer.Deserialize<TableTemplate>(json) ?? new TableTemplate();
                     }
                 }
             }
-            return null;
+            return new TableTemplate();
         }
 
         /// <summary>
@@ -710,14 +750,14 @@ namespace FlexJournalPro.Services
         /// </summary>
         public string GetTemplateJson(string templateId)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "SELECT JsonConfig FROM App_Templates WHERE Id = @Id";
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", templateId);
-                    return cmd.ExecuteScalar() as string;
+                    return cmd.ExecuteScalar() as string ?? string.Empty;
                 }
             }
         }
@@ -729,24 +769,24 @@ namespace FlexJournalPro.Services
         public List<TemplateMetadata> GetAllTemplates()
         {
             var list = new List<TemplateMetadata>();
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "SELECT Id, Name, Description, Version, CreatedAt, UpdatedAt, IsActive FROM App_Templates WHERE IsActive = 1 ORDER BY Name";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
                         list.Add(new TemplateMetadata
                         {
-                            Id = reader["Id"].ToString(),
-                            Name = reader["Name"].ToString(),
-                            Description = reader["Description"].ToString(),
+                            Id = reader["Id"]?.ToString() ?? string.Empty,
+                            Name = reader["Name"]?.ToString() ?? string.Empty,
+                            Description = reader["Description"]?.ToString() ?? string.Empty,
                             Version = Convert.ToInt32(reader["Version"]),
-                            CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
-                            UpdatedAt = DateTime.Parse(reader["UpdatedAt"].ToString()),
+                            CreatedAt = DateTime.Parse(reader["CreatedAt"]?.ToString() ?? DateTime.MinValue.ToString()),
+                            UpdatedAt = DateTime.Parse(reader["UpdatedAt"]?.ToString() ?? DateTime.MinValue.ToString()),
                             IsActive = Convert.ToInt32(reader["IsActive"]) == 1
                         });
                     }
@@ -760,12 +800,12 @@ namespace FlexJournalPro.Services
         /// </summary>
         public void DeactivateTemplate(string templateId)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "UPDATE App_Templates SET IsActive = 0, UpdatedAt = @UpdatedAt WHERE Id = @Id";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", templateId);
                     cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now.ToString("s"));
@@ -779,12 +819,12 @@ namespace FlexJournalPro.Services
         /// </summary>
         public void UpdateJournalAutoFillConfig(long journalId, string autoFillConfigJson)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 string sql = "UPDATE App_Journals SET AutoFillConfigJson = @Json WHERE Id = @Id";
 
-                using (var cmd = new SQLiteCommand(sql, conn))
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", journalId);
                     cmd.Parameters.AddWithValue("@Json", autoFillConfigJson ?? "{}");
@@ -799,7 +839,7 @@ namespace FlexJournalPro.Services
         /// <param name="journalId">ID журналу для видалення</param>
         public void DeleteJournal(long journalId)
         {
-            using (var conn = new SQLiteConnection(_connectionString))
+            using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 using (var transaction = conn.BeginTransaction())
@@ -807,14 +847,14 @@ namespace FlexJournalPro.Services
                     try
                     {
                         // 1. Отримуємо назву таблиці журналу
-                        string tableName = null;
-                        using (var cmd = new SQLiteCommand("SELECT TableName FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        string tableName = string.Empty;
+                        using (var cmd = new SqliteCommand("SELECT TableName FROM App_Journals WHERE Id = @Id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Id", journalId);
                             var result = cmd.ExecuteScalar();
                             if (result != null)
                             {
-                                tableName = result.ToString();
+                                tableName = result.ToString() ?? string.Empty;
                             }
                         }
 
@@ -825,7 +865,7 @@ namespace FlexJournalPro.Services
 
                         // 2. Видаляємо запис з реєстру журналів
                         // (Робимо це спочатку, щоб уникнути ситуації, коли таблиця видалена, а запис залишився)
-                        using (var cmd = new SQLiteCommand("DELETE FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        using (var cmd = new SqliteCommand("DELETE FROM App_Journals WHERE Id = @Id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Id", journalId);
                             int rowsAffected = cmd.ExecuteNonQuery();
@@ -837,7 +877,7 @@ namespace FlexJournalPro.Services
                         }
 
                         // 3. Видаляємо фізичну таблицю з даними
-                        using (var cmd = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableName}]", conn, transaction))
+                        using (var cmd = new SqliteCommand($"DROP TABLE IF EXISTS [{tableName}]", conn, transaction))
                         {
                             cmd.ExecuteNonQuery();
                         }
