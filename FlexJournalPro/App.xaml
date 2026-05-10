@@ -4,8 +4,7 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:conv="clr-namespace:FlexJournalPro.Converters"
              xmlns:services="clr-namespace:FlexJournalPro.Services"
-             xmlns:views="clr-namespace:FlexJournalPro.Views"
-             StartupUri="MainWindow.xaml">
+             xmlns:views="clr-namespace:FlexJournalPro.Views">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

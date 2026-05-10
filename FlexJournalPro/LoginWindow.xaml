@@ -1,0 +1,63 @@
+<Window x:Class="FlexJournalPro.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="ЖурналПро - Вхід у систему" Height="460" Width="340"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Border CornerRadius="8" Background="{DynamicResource MaterialDesign.Brush.Background}" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesign.Brush.Divider}">
+        <Grid>
+            <Border Height="32" VerticalAlignment="Top" Background="{DynamicResource MaterialDesign.Brush.Primary}" CornerRadius="8,8,0,0" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="Авторизація" Foreground="White" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold"/>
+                    <Button Click="CloseButton_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0" Background="Transparent" BorderThickness="0" Width="24" Height="24" Padding="0">
+                        <materialDesign:PackIcon Kind="Close" Foreground="White" Width="16" Height="16"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <StackPanel Margin="32,56,32,32">
+                <!-- Логотип та назва програми -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <materialDesign:PackIcon Kind="BookOpenPageVariant" Width="72" Height="72" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesign.Brush.Primary}"/>
+                    <TextBlock Text="ЖурналПро" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource MaterialDesign.Brush.Primary}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    <TextBlock Text="Система управління журналами" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Поля введення -->
+                <!-- Логін -->
+                <TextBox x:Name="LoginTextBox"
+                         materialDesign:HintAssist.Hint="Логін"
+                         materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                         materialDesign:TextFieldAssist.LeadingIcon="Account"
+                         materialDesign:TextFieldAssist.LeadingIconSize="22"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Margin="0,16,0,0" FontSize="16" />
+
+                <!-- Пароль -->
+                <PasswordBox x:Name="PasswordBox"
+                             materialDesign:HintAssist.Hint="Пароль"
+                             materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                             materialDesign:TextFieldAssist.LeadingIcon="Lock"
+                             materialDesign:TextFieldAssist.LeadingIconSize="22"
+                             Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
+                             Margin="0,24,0,0" FontSize="16" />
+                
+                <!-- Повідомлення про помилку -->
+                <TextBlock x:Name="ErrorTextBlock" Foreground="Red" Margin="0,16,0,0" Visibility="Collapsed" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+
+                <Button Content="УВІЙТИ" 
+                        Click="LoginButton_Click"
+                        Margin="0,32,0,0"
+                        Height="44"
+                        IsDefault="True"
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

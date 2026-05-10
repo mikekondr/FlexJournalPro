@@ -103,6 +103,46 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                        
+                        <!-- Кнопка профілю користувача зі спадним списком -->
+                        <materialDesign:PopupBox Style="{DynamicResource MaterialDesignToolPopupBox}"
+                                                 Margin="0,0,8,0"
+                                                 PlacementMode="BottomAndAlignRightEdges"
+                                                 StaysOpen="False"
+                                                 WindowChrome.IsHitTestVisibleInChrome="True"
+                                                 ToolTip="Меню користувача"
+                                                 PopupMode="Click">
+                            <materialDesign:PopupBox.ToggleContent>
+                                <StackPanel Orientation="Horizontal" Focusable="False">
+                                    <materialDesign:PackIcon Kind="AccountCircle" Width="20" Height="20" Foreground="White" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding CurrentUserFullName}" 
+                                               Foreground="White" 
+                                               Margin="8,0,0,0" 
+                                               VerticalAlignment="Center" 
+                                               FontWeight="Medium"/>
+                                    <materialDesign:PackIcon Kind="ChevronDown" Width="16" Height="16" Foreground="White" Opacity="0.8" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                </StackPanel>
+                            </materialDesign:PopupBox.ToggleContent>
+
+                            <StackPanel MinWidth="180" Margin="0,8,0,8">
+                                <Button Command="{Binding ChangePasswordCommand}">
+                                    <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
+                                        <materialDesign:PackIcon Kind="Key" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesign.Brush.Primary}"/>
+                                        <TextBlock Text="Змінити пароль" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                
+                                <Separator Margin="0,4" />
+                                
+                                <Button Command="{Binding LogoutCommand}">
+                                    <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
+                                        <materialDesign:PackIcon Kind="Logout" Width="20" Height="20" VerticalAlignment="Center" Foreground="Red"/>
+                                        <TextBlock Text="Вийти з системи" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </materialDesign:PopupBox>
+
                         <Button Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click" ToolTip="Згорнути">
                             <materialDesign:PackIcon Kind="WindowMinimize" Width="16" Height="16"/>
                         </Button>

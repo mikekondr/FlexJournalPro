@@ -107,6 +107,24 @@ namespace FlexJournalPro.Services
                 {
                     cmd.ExecuteNonQuery();
                 }
+
+                // Таблиця користувачів
+                sql = @"
+                    CREATE TABLE IF NOT EXISTS App_Users (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Login TEXT NOT NULL UNIQUE,
+                        PasswordHash TEXT NOT NULL,
+                        FullName TEXT NOT NULL,
+                        Role INTEGER DEFAULT 0
+                    )";
+
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Перевірка та створення адміністратора
+                EnsureAdminExists(conn);
             }
         }
 
@@ -889,6 +907,28 @@ namespace FlexJournalPro.Services
                         transaction.Rollback();
                         throw;
                     }
+                }
+            }
+        }
+
+        private void EnsureAdminExists(SqliteConnection conn)
+        {
+            string countSql = "SELECT COUNT(*) FROM App_Users";
+            long count = 0;
+            using (var cmd = new SqliteCommand(countSql, conn))
+            {
+                count = (long)cmd.ExecuteScalar();
+            }
+
+            if (count == 0)
+            {
+                // Створюємо адміністратора з порожнім паролем (вимога встановити при вході)
+                string insertSql = @"
+                    INSERT INTO App_Users (Login, PasswordHash, FullName, Role) 
+                    VALUES ('admin', '', 'Administrator', 1)";
+                using (var cmd = new SqliteCommand(insertSql, conn))
+                {
+                    cmd.ExecuteNonQuery();
                 }
             }
         }

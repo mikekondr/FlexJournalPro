@@ -38,9 +38,17 @@ namespace FlexJournalPro.ViewModels
             CloseScreenCommand = new RelayCommand(CloseScreen);
             ScrollLeftCommand = new RelayCommand(ScrollLeft, () => CanScrollLeft);
             ScrollRightCommand = new RelayCommand(ScrollRight, () => CanScrollRight);
+            ChangePasswordCommand = new RelayCommand(ChangePassword);
+            LogoutCommand = new RelayCommand(Logout);
 
             // Підписка на зміну колекції екранів
             OpenScreens.CollectionChanged += (s, e) => UpdateScrollButtons();
+
+            // Встановимо ім'я користувача, якщо він залогінений
+            if (App.CurrentUser != null)
+            {
+                CurrentUserFullName = App.CurrentUser.FullName;
+            }
         }
 
         #region Properties
@@ -101,6 +109,15 @@ namespace FlexJournalPro.ViewModels
             set => SetProperty(ref _canScrollRight, value);
         }
 
+        // Властивості для користувача
+        private string _currentUserFullName = "Користувач"; // Тестове значення, поки що
+
+        public string CurrentUserFullName
+        {
+            get => _currentUserFullName;
+            set => SetProperty(ref _currentUserFullName, value);
+        }
+
         #endregion
 
         #region Commands
@@ -112,6 +129,10 @@ namespace FlexJournalPro.ViewModels
         public ICommand CloseScreenCommand { get; }
         public ICommand ScrollLeftCommand { get; }
         public ICommand ScrollRightCommand { get; }
+
+        // Команди
+        public ICommand ChangePasswordCommand { get; private set; }
+        public ICommand LogoutCommand { get; private set; }
 
         #endregion
 
@@ -168,6 +189,47 @@ namespace FlexJournalPro.ViewModels
         {
             _screensPanelScrollViewer?.LineRight();
             UpdateScrollButtons();
+        }
+
+        private void ChangePassword()
+        {
+            // TODO: Показати вікно зміни пароля
+        }
+
+        private void Logout()
+        {
+            // Скидаємо користувача
+            App.CurrentUser = null;
+            
+             // Змінюємо режим зупинки, щоб програма не завершилася під час закриття головного вікна
+            System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
+
+            // Отримуємо поточне головне вікно та закриваємо його
+            if (System.Windows.Application.Current.MainWindow != null)
+            {
+                System.Windows.Application.Current.MainWindow.Close();
+            }
+
+            // Створюємо та відкриваємо вікно авторизації наново
+            var dbService = new DatabaseService();
+            var authService = new FlexJournalPro.Services.AuthService(dbService);
+            var loginWindow = new LoginWindow(authService);
+            
+            if (loginWindow.ShowDialog() == true)
+            {
+                // Повертаємо режим закриття програми за замовчуванням
+                System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnMainWindowClose;
+                
+                // Якщо користувач знову залогінився, відкриваємо його вікно
+                var mainWindow = new MainWindow();
+                System.Windows.Application.Current.MainWindow = mainWindow;
+                mainWindow.Show();
+            }
+            else
+            {
+                // Якщо закрили вікно авторизації
+                System.Windows.Application.Current.Shutdown();
+            }
         }
 
         #endregion
