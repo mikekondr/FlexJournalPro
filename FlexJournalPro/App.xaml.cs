@@ -23,8 +23,16 @@ namespace FlexJournalPro
             Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             // Перевіряємо, чи це перший запуск (немає конфігу або БД)
-            string dbFilePath = "database.db"; // Вкажіть правильний шлях/ім'я вашої БД
-            string configFilePath = "config.json"; // Вкажіть правильний шлях/ім'я до конфігу
+            string dbFilePath = AppConfig.DatabasePath;
+            string configFilePath = AppConfig.ConfigPath;
+
+            if (!File.Exists(dbFilePath) || !File.Exists(configFilePath))
+                if (new FirstRunWindow().ShowDialog() != true)
+                {
+                    // Якщо користувач закрив вікно налаштувань або скасував, завершуємо роботу
+                    Shutdown();
+                    return;
+                }
             
             // 1. Ініціалізуємо менеджер ключів (тепер це безпечно робити, налаштування завершено)
             KeyManager = new KeyManagementService();

@@ -73,12 +73,6 @@ namespace FlexJournalPro.Services
                                 Role = (UserRole)Convert.ToInt32(reader["Role"])
                             };
 
-                            // Для адміна без пароля
-                            if (user.Login == "admin" && string.IsNullOrEmpty(user.PasswordHash))
-                            {
-                                return user; // Потребує встановлення пароля
-                            }
-
                             if (VerifyPassword(password, user.PasswordHash))
                             {
                                 return user;

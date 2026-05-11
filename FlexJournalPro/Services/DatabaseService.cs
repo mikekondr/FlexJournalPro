@@ -11,7 +11,7 @@ namespace FlexJournalPro.Services
     public class DatabaseService
     {
         private readonly string _connectionString;
-        private readonly AppConfig _config;
+        private readonly AppConfig _config = AppConfig.Instance;
         private readonly bool _useCipher;
 
         public string ConnectionString => _connectionString;
@@ -19,11 +19,10 @@ namespace FlexJournalPro.Services
         public DatabaseService(string? decryptedDek = null)
         {
             // Завантажимо конфігурацію
-            _config = AppConfig.Instance;
             _useCipher = _config.Database.UseCipher;
 
             // БД створюється поряд з .exe файлом
-            string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db");
+            string dbPath = AppConfig.DatabasePath;
 
             if (_useCipher)
             {
@@ -46,7 +45,7 @@ namespace FlexJournalPro.Services
         private void InitializeDatabase()
         {
             // Створюємо файл БД якщо його немає
-            if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db")))
+            if (!File.Exists(AppConfig.DatabasePath))
             {
                 if (_useCipher)
                 {
@@ -136,8 +135,6 @@ namespace FlexJournalPro.Services
                 {
                     cmd.ExecuteNonQuery();
                 }
-
-                EnsureAdminExists(conn);
             }
         }
 
@@ -944,24 +941,255 @@ namespace FlexJournalPro.Services
             }
         }
 
-        private void EnsureAdminExists(SqliteConnection conn)
+        // --- КЕРУВАННЯ КОРИСТУВАЧАМИ ---
+
+        /// <summary>
+        /// Отримує список усіх користувачів разом з їхніми правами доступу до журналів.
+        /// </summary>
+        public List<AppUser> GetAllUsers()
         {
-            string countSql = "SELECT COUNT(*) FROM App_Users";
-            long count = 0;
-            using (var cmd = new SqliteCommand(countSql, conn))
+            var users = new Dictionary<int, AppUser>();
+
+            using (var conn = new SqliteConnection(_connectionString))
             {
-                count = (long)cmd.ExecuteScalar();
+                conn.Open();
+
+                // 1. Завантажуємо основні дані користувачів
+                string sqlUsers = "SELECT Id, Login, FullName, Role FROM App_Users ORDER BY FullName";
+                using (var cmd = new SqliteCommand(sqlUsers, conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var user = new AppUser
+                        {
+                            Id = (int)reader["Id"],
+                            Login = reader["Login"]?.ToString() ?? string.Empty,
+                            FullName = reader["FullName"]?.ToString() ?? string.Empty,
+                            Role = (UserRole)Convert.ToInt32(reader["Role"]),
+                            AllowedJournalIds = new List<long>()
+                        };
+                        users.Add(user.Id, user);
+                    }
+                }
+
+                // 2. Завантажуємо права доступу до журналів (щоб уникнути проблеми N+1 запитів)
+                string sqlAccess = "SELECT UserId, JournalId FROM App_UserJournalAccess";
+                using (var cmd = new SqliteCommand(sqlAccess, conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        int userId = (int)reader["UserId"];
+                        int journalId = (int)reader["JournalId"];
+
+                        if (users.ContainsKey(userId))
+                        {
+                            users[userId].AllowedJournalIds.Add(journalId);
+                        }
+                    }
+                }
             }
 
-            if (count == 0)
+            return users.Values.ToList();
+        }
+
+        /// <summary>
+        /// Створює нового користувача та призначає йому права доступу до журналів.
+        /// </summary>
+        public void CreateUser(AppUser user, string passwordHash)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
             {
-                // Створюємо адміністратора з порожнім паролем (вимога встановити при вході)
-                string insertSql = @"
-                    INSERT INTO App_Users (Login, PasswordHash, FullName, Role) 
-                    VALUES ('admin', '', 'Administrator', 1)";
-                using (var cmd = new SqliteCommand(insertSql, conn))
+                conn.Open();
+
+                // Перевірка на унікальність логіна
+                using (var checkCmd = new SqliteCommand("SELECT COUNT(1) FROM App_Users WHERE Login = @Login", conn))
                 {
-                    cmd.ExecuteNonQuery();
+                    checkCmd.Parameters.AddWithValue("@Login", user.Login);
+                    if (Convert.ToInt64(checkCmd.ExecuteScalar()) > 0)
+                    {
+                        throw new InvalidOperationException($"Користувач з логіном '{user.Login}' вже існує.");
+                    }
+                }
+
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Додаємо користувача
+                        string insertUserSql = @"
+                            INSERT INTO App_Users (Login, PasswordHash, FullName, Role) 
+                            VALUES (@Login, @PasswordHash, @FullName, @Role);
+                            SELECT last_insert_rowid();";
+
+                        using (var cmd = new SqliteCommand(insertUserSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Login", user.Login);
+                            cmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
+                            cmd.Parameters.AddWithValue("@FullName", user.FullName);
+                            cmd.Parameters.AddWithValue("@Role", (int)user.Role);
+
+                            user.Id = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+
+                        // 2. Додаємо доступи до журналів
+                        if (user.AllowedJournalIds != null && user.AllowedJournalIds.Any())
+                        {
+                            string insertAccessSql = "INSERT INTO App_UserJournalAccess (UserId, JournalId) VALUES (@UserId, @JournalId)";
+                            using (var cmd = new SqliteCommand(insertAccessSql, conn, transaction))
+                            {
+                                // Оптимізація: використовуємо один об'єкт команди і міняємо лише параметри
+                                var paramUserId = cmd.Parameters.Add("@UserId", SqliteType.Integer);
+                                var paramJournalId = cmd.Parameters.Add("@JournalId", SqliteType.Integer);
+
+                                foreach (long journalId in user.AllowedJournalIds)
+                                {
+                                    paramUserId.Value = user.Id;
+                                    paramJournalId.Value = journalId;
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Оновлює дані існуючого користувача. 
+        /// Якщо передано newPasswordHash (не null), пароль також буде оновлено.
+        /// </summary>
+        public void UpdateUser(AppUser user, string? newPasswordHash = null)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+
+                // Перевірка на унікальність логіна (щоб не зайняти логін іншого користувача)
+                using (var checkCmd = new SqliteCommand("SELECT COUNT(1) FROM App_Users WHERE Login = @Login AND Id != @Id", conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@Login", user.Login);
+                    checkCmd.Parameters.AddWithValue("@Id", user.Id);
+                    if (Convert.ToInt64(checkCmd.ExecuteScalar()) > 0)
+                    {
+                        throw new InvalidOperationException($"Користувач з логіном '{user.Login}' вже існує.");
+                    }
+                }
+
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Оновлюємо дані користувача
+                        string updateUserSql = newPasswordHash != null
+                            ? "UPDATE App_Users SET Login = @Login, FullName = @FullName, Role = @Role, PasswordHash = @PasswordHash WHERE Id = @Id"
+                            : "UPDATE App_Users SET Login = @Login, FullName = @FullName, Role = @Role WHERE Id = @Id";
+
+                        using (var cmd = new SqliteCommand(updateUserSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", user.Id);
+                            cmd.Parameters.AddWithValue("@Login", user.Login);
+                            cmd.Parameters.AddWithValue("@FullName", user.FullName);
+                            cmd.Parameters.AddWithValue("@Role", (int)user.Role);
+
+                            if (newPasswordHash != null)
+                            {
+                                cmd.Parameters.AddWithValue("@PasswordHash", newPasswordHash);
+                            }
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Оновлюємо доступи до журналів
+                        // Найбезпечніший спосіб: видалити старі доступи і записати нові
+                        using (var cmd = new SqliteCommand("DELETE FROM App_UserJournalAccess WHERE UserId = @UserId", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@UserId", user.Id);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        if (user.AllowedJournalIds != null && user.AllowedJournalIds.Any())
+                        {
+                            string insertAccessSql = "INSERT INTO App_UserJournalAccess (UserId, JournalId) VALUES (@UserId, @JournalId)";
+                            using (var cmd = new SqliteCommand(insertAccessSql, conn, transaction))
+                            {
+                                var paramUserId = cmd.Parameters.Add("@UserId", SqliteType.Integer);
+                                var paramJournalId = cmd.Parameters.Add("@JournalId", SqliteType.Integer);
+
+                                foreach (long journalId in user.AllowedJournalIds)
+                                {
+                                    paramUserId.Value = user.Id;
+                                    paramJournalId.Value = journalId;
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Видаляє користувача та всі пов'язані з ним права доступу.
+        /// </summary>
+        public void DeleteUser(long userId)
+        {
+            // Захист від видалення єдиного/головного адміністратора (опціонально, але рекомендовано)
+            if (userId == 1)
+            {
+                throw new InvalidOperationException("Неможливо видалити головного адміністратора системи (Id = 1).");
+            }
+
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Спочатку видаляємо права доступу (хоча ON DELETE CASCADE є в схемі, 
+                        // в SQLite зовнішні ключі за замовчуванням вимкнені для кожного з'єднання, 
+                        // тому безпечніше видалити вручну або увімкнути PRAGMA foreign_keys = ON).
+                        using (var cmd = new SqliteCommand("DELETE FROM App_UserJournalAccess WHERE UserId = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", userId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Видаляємо самого користувача
+                        using (var cmd = new SqliteCommand("DELETE FROM App_Users WHERE Id = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", userId);
+                            int rowsAffected = cmd.ExecuteNonQuery();
+
+                            if (rowsAffected == 0)
+                            {
+                                throw new InvalidOperationException($"Користувача з ID {userId} не знайдено.");
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }

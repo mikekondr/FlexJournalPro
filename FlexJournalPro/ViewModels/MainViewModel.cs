@@ -12,7 +12,7 @@ namespace FlexJournalPro.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        private readonly DatabaseService _dbService;
+        private readonly DatabaseService _dbService = App.Database;
         private readonly TemplateService _templateService;
         private bool _isSidebarExpanded = true;
         private ScreenBase? _currentScreen;
@@ -23,7 +23,6 @@ namespace FlexJournalPro.ViewModels
 
         public MainViewModel()
         {
-            _dbService = new DatabaseService();
             _templateService = new TemplateService(_dbService);
             OpenScreens = new ObservableCollection<ScreenBase>();
 

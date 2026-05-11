@@ -44,33 +44,35 @@ namespace FlexJournalPro
 
                 if (!isKeyUnlocked)
                 {
-                    // Якщо це перший запуск адміна
-                    bool isDefaultUnlocked = _keyManager.UnlockDekWithPassword(login, "");
-
-                    if (isDefaultUnlocked && login == "admin")
+                    // Якщо ні дефолтний, ні введений пароль не підійшли
+                    ShowError("Невірний логін або пароль");
+                    return;
+                }
+                else
+                {
+                    try
                     {
-                        // Відкрили базу дефолтним ключем, але користувач ввів якийсь пароль? 
-                        // Це означає, що база ще не захищена і admin повинен встановити пароль.
-                        // (Обробляємо цей кейс нижче)
+                        dbService = new DatabaseService(_keyManager.GetDecryptedDekString());
                     }
-                    else
+                    catch (System.Exception)
                     {
-                        // Якщо ні дефолтний, ні введений пароль не підійшли
-                        ShowError("Невірний логін або пароль");
+                        ShowError("Неможливо відкрити базу даних. Помилка шифрування.");
                         return;
                     }
-                }
-            }
 
-            try
+                }
+            } else
             {
-                // На цьому етапі либо шифрування вимкнено, либо ми отримали правильний ключ
-                dbService = new DatabaseService();
-            }
-            catch (System.Exception)
-            {
-                ShowError("Неможливо відкрити базу даних. Помилка шифрування.");
-                return;
+                try
+                {
+                    dbService = new DatabaseService();
+                }
+                catch (System.Exception)
+                {
+                    ShowError("Неможливо відкрити базу даних. Файл пошкоджено або зашифровано.");
+                    return;
+                }
+
             }
 
             var authService = new AuthService(dbService);
@@ -78,39 +80,6 @@ namespace FlexJournalPro
 
             if (user != null)
             {
-                // Перевірка на перший запуск адміна без пароля
-                if (user.Login == "admin" && string.IsNullOrEmpty(user.PasswordHash))
-                {
-                    //ShowError("Потрібне встановлення пароля для адміністратора. Відкрийте вікно встановлення пароля.");
-                    
-                    // Тимчасово відкриємо MessageBox, але тут має відкриватися спеціальне вікно (SetPasswordWindow)
-                    // TODO: Реалізувати SetPasswordWindow і розкоментувати:
-                    /*
-                    var setPasswordWindow = new SetPasswordWindow(user);
-                    if (setPasswordWindow.ShowDialog() == true)
-                    {
-                        string newPassword = setPasswordWindow.NewPassword;
-                        
-                        if (useCipher)
-                        {
-                            // Перешифровуємо DEK новим паролем і зберігаємо
-                            _keyManager.RotateKek(newPassword);
-                            AppConfig.Instance.Database.CipherPassword = _keyManager.GetDecryptedDekString();
-                        }
-                        
-                        // Зберігаємо змінений пароль в базі
-                        authService.UpdateUserPassword(user, newPassword);
-                    }
-                    else
-                    {
-                        return; // Скасували встановлення пароля
-                    }
-                    */
-
-                    // Поки що не пускаємо далі, щоб не було небезпеки
-                    //return;
-                }
-
                 // Успішний вхід. Зберігаємо ініціалізовану БД в App, щоб не створювати знову
                 App.Database = dbService;
                 App.CurrentUser = user;

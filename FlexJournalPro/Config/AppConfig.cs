@@ -9,12 +9,13 @@ namespace FlexJournalPro.Config
         private static AppConfig? _instance;
         private static readonly object _lock = new object();
         
-        // Вказуємо шлях до конфігураційного файлу як константу чи властивість
-        private static readonly string ConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_settings.json");
+        public static readonly string ConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_settings.json");
+        public static readonly string DatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_database.db");
+        public static readonly string KeystorePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_keystore.dat");
 
         public DatabaseConfig Database { get; set; } = new DatabaseConfig();
         
-        private AppConfig() { }
+        public AppConfig() { }
 
         public static AppConfig Instance
         {

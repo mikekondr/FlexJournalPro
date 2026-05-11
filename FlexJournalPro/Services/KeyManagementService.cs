@@ -1,3 +1,4 @@
+using FlexJournalPro.Config;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +17,7 @@ namespace FlexJournalPro.Services
             public string EncryptedDekBase64 { get; set; } = string.Empty;
         }
 
-        private readonly string _keyStorePath;
+        private readonly string _keyStorePath = AppConfig.KeystorePath;
         private byte[]? _currentDecryptedDek = null; 
         
         // Хранилище: Логин -> Данные ключа
@@ -24,7 +25,6 @@ namespace FlexJournalPro.Services
 
         public KeyManagementService()
         {
-            _keyStorePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "keystore.json");
             LoadKeyStore();
         }
 
@@ -89,7 +89,7 @@ namespace FlexJournalPro.Services
         // Вызывается при входе в систему
         public bool UnlockDekWithPassword(string login, string password)
         {
-            if (!_keyStore.TryGetValue(login, out var entry)) 
+            if (!_keyStore.TryGetValue(login, out var entry))
                 return false; // Нет такого пользователя в хранилище ключей
 
             try
@@ -110,18 +110,21 @@ namespace FlexJournalPro.Services
                     using (ICryptoTransform decryptor = aes.CreateDecryptor())
                     using (MemoryStream ms = new MemoryStream(cipherText))
                     using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                    using (MemoryStream resultStream = new MemoryStream())
                     {
-                        byte[] plainDek = new byte[32];
-                        int bytesRead = cs.Read(plainDek, 0, plainDek.Length);
-                        
-                        if (bytesRead > 0)
-                        {
-                            _currentDecryptedDek = plainDek;
-                            
-                            return true;
-                        }
+                        // CopyTo автоматично читає CryptoStream до самого кінця (всі блоки)
+                        cs.CopyTo(resultStream);
+                        byte[] plainDek = resultStream.ToArray();
+
+                        _currentDecryptedDek = plainDek;
+                        return true;
                     }
                 }
+            }
+            catch (CryptographicException)
+            {
+                // Невірний пароль призведе до помилки Padding під час Flush/читання останнього блоку
+                return false;
             }
             catch
             {
