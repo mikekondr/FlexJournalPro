@@ -1,31 +1,46 @@
+using System.IO;
 using System.Windows;
 using FlexJournalPro.Services;
 using FlexJournalPro.Models;
+using FlexJournalPro.Config;
+using FlexJournalPro.Views;
 
 namespace FlexJournalPro
 {
     public partial class App : Application
     {
         public static AppUser? CurrentUser { get; set; }
+        
+        // Робимо сервіси доступними глобально
+        public static KeyManagementService KeyManager { get; private set; } = null!;
+        public static DatabaseService Database { get; set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Тимчасово змінюємо режим закриття, щоб програма не завершувалась при закритті LoginWindow
+            // Тимчасово змінюємо режим закриття
             Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            var dbService = new DatabaseService();
-            var authService = new AuthService(dbService);
+            // Перевіряємо, чи це перший запуск (немає конфігу або БД)
+            string dbFilePath = "database.db"; // Вкажіть правильний шлях/ім'я вашої БД
+            string configFilePath = "config.json"; // Вкажіть правильний шлях/ім'я до конфігу
+            
+            // 1. Ініціалізуємо менеджер ключів (тепер це безпечно робити, налаштування завершено)
+            KeyManager = new KeyManagementService();
+            // Якщо шифрування було вимкнено майстром, цей метод має перевіряти налаштування і не створювати Keystore
+            KeyManager.EnsureKeyStoreInitialized();
 
-            var loginWindow = new LoginWindow(authService);
+            // Передаємо його у вікно входу
+            var loginWindow = new LoginWindow(KeyManager); 
+            
             if (loginWindow.ShowDialog() == true)
             {
-                // Після успішного входу міняємо режим закриття на OnMainWindowClose (закриття при закритті головного вікна)
+                // Database вже створена та присвоєна (App.Database = dbService) всередині LoginWindow
                 Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
                 
                 var mainWindow = new MainWindow();
-                Current.MainWindow = mainWindow; // Вказуємо головне вікно
+                Current.MainWindow = mainWindow; 
                 mainWindow.Show();
             }
             else

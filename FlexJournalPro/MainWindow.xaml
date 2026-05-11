@@ -107,6 +107,7 @@
                         <!-- Кнопка профілю користувача зі спадним списком -->
                         <materialDesign:PopupBox Style="{DynamicResource MaterialDesignToolPopupBox}"
                                                  Margin="0,0,8,0"
+                                                 Padding="12,8"
                                                  PlacementMode="BottomAndAlignRightEdges"
                                                  StaysOpen="False"
                                                  WindowChrome.IsHitTestVisibleInChrome="True"
@@ -114,29 +115,29 @@
                                                  PopupMode="Click">
                             <materialDesign:PopupBox.ToggleContent>
                                 <StackPanel Orientation="Horizontal" Focusable="False">
-                                    <materialDesign:PackIcon Kind="AccountCircle" Width="20" Height="20" Foreground="White" VerticalAlignment="Center"/>
+                                    <materialDesign:PackIcon Kind="AccountCircle" Width="20" Height="20" Margin="8,0,0,0" Foreground="White" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding CurrentUserFullName}" 
                                                Foreground="White" 
-                                               Margin="8,0,0,0" 
+                                               Margin="8,0,8,0" 
                                                VerticalAlignment="Center" 
                                                FontWeight="Medium"/>
-                                    <materialDesign:PackIcon Kind="ChevronDown" Width="16" Height="16" Foreground="White" Opacity="0.8" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                    <materialDesign:PackIcon Kind="ChevronDown" Width="16" Height="16" Margin="0,0,8,0" Foreground="White" Opacity="0.8" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </materialDesign:PopupBox.ToggleContent>
 
-                            <StackPanel MinWidth="180" Margin="0,8,0,8">
-                                <Button Command="{Binding ChangePasswordCommand}">
-                                    <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
-                                        <materialDesign:PackIcon Kind="Key" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesign.Brush.Primary}"/>
+                            <StackPanel MinWidth="180" Margin="0,4,0,4">
+                                <Button Command="{Binding ChangePasswordCommand}" Padding="12,4" Height="Auto" HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Key" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesign.Brush.Primary}"/>
                                         <TextBlock Text="Змінити пароль" Margin="12,0,0,0" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                                 
-                                <Separator Margin="0,4" />
+                                <Separator Margin="0,0" />
                                 
-                                <Button Command="{Binding LogoutCommand}">
-                                    <StackPanel Orientation="Horizontal" Margin="4,0,0,0">
-                                        <materialDesign:PackIcon Kind="Logout" Width="20" Height="20" VerticalAlignment="Center" Foreground="Red"/>
+                                <Button Command="{Binding LogoutCommand}" Padding="12,4" Height="Auto" HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Logout" Width="18" Height="18" VerticalAlignment="Center" Foreground="Red"/>
                                         <TextBlock Text="Вийти з системи" Margin="12,0,0,0" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>

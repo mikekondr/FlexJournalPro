@@ -7,7 +7,7 @@
 	<UseUtf8>true</UseUtf8>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Platforms>AnyCPU;x86;x64</Platforms>
+    <Platforms>AnyCPU;x86;x64;ARM64</Platforms>
     
     <!-- Метадані додатку -->
     <AssemblyName>FlexJournalPro</AssemblyName>

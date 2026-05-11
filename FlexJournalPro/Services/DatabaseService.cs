@@ -16,10 +16,10 @@ namespace FlexJournalPro.Services
 
         public string ConnectionString => _connectionString;
 
-        public DatabaseService()
+        public DatabaseService(string? decryptedDek = null)
         {
             // Завантажимо конфігурацію
-            _config = AppConfig.Load();
+            _config = AppConfig.Instance;
             _useCipher = _config.Database.UseCipher;
 
             // БД створюється поряд з .exe файлом
@@ -28,11 +28,11 @@ namespace FlexJournalPro.Services
             if (_useCipher)
             {
                 // SQLite-Cipher
-                if (string.IsNullOrWhiteSpace(_config.Database.CipherPassword))
+                if (string.IsNullOrWhiteSpace(decryptedDek))
                 {
-                    throw new InvalidOperationException("CipherPassword не встановлено в конфігурації");
+                    throw new InvalidOperationException("DEK ключ не передано для шифрованої бази даних.");
                 }
-                _connectionString = $"Data Source={dbPath};Password={_config.Database.CipherPassword};";
+                _connectionString = $"Data Source={dbPath};Password={decryptedDek};";
             }
             else
             {
@@ -123,20 +123,53 @@ namespace FlexJournalPro.Services
                     cmd.ExecuteNonQuery();
                 }
 
-                // Перевірка та створення адміністратора
+                // Таблиця доступу користувачів до журналів
+                sql = @"
+                    CREATE TABLE IF NOT EXISTS App_UserJournalAccess (
+                        UserId INTEGER NOT NULL,
+                        JournalId INTEGER NOT NULL,
+                        PRIMARY KEY (UserId, JournalId),
+                        FOREIGN KEY (UserId) REFERENCES App_Users(Id) ON DELETE CASCADE,
+                        FOREIGN KEY (JournalId) REFERENCES App_Journals(Id) ON DELETE CASCADE
+                    )";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
                 EnsureAdminExists(conn);
             }
         }
 
         // --- МЕТОДИ ДЛЯ РЕЄСТРУ ---
 
-        public List<JournalMetadata> GetAllJournals()
+        public List<JournalMetadata> GetAllJournals(AppUser? currentUser = null)
         {
+            // Якщо currentUser не передано, беремо глобального (App.CurrentUser)
+            currentUser ??= App.CurrentUser;
+
             var list = new List<JournalMetadata>();
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
-                string sql = "SELECT * FROM App_Journals ORDER BY CreatedAt DESC";
+                
+                string sql;
+                bool filterByUser = currentUser != null && currentUser.Role != UserRole.Admin;
+                
+                if (filterByUser)
+                {
+                    if (currentUser.AllowedJournalIds.Count == 0)
+                        return list; // Немає доступу до жодного журналу
+
+                    string ids = string.Join(",", currentUser.AllowedJournalIds);
+                    sql = $"SELECT * FROM App_Journals WHERE Id IN ({ids}) ORDER BY CreatedAt DESC";
+                }
+                else
+                {
+                    // Адмін бачить все
+                    sql = "SELECT * FROM App_Journals ORDER BY CreatedAt DESC";
+                }
+
                 using (var cmd = new SqliteCommand(sql, conn))
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -930,6 +963,55 @@ namespace FlexJournalPro.Services
                 {
                     cmd.ExecuteNonQuery();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Перевіряє, чи підходить вказаний DEK (у форматі Base64) для розшифрування існуючої бази даних.
+        /// Цей метод використовується при аварійному відновленні (Recovery).
+        /// </summary>
+        /// <param name="base64Dek">Спробуваний майстер-ключ відновлення.</param>
+        /// <returns>True, якщо база успішно відкрилась, інакше False.</returns>
+        public static bool VerifyRecoveryKey(string base64Dek)
+        {
+            string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db");
+            
+            // Якщо бази не існує, ключу нічого відкривати.
+            // Можна вважати ключ "умовно правильним", якщо бази ще немає, 
+            // але в сценарії відновлення ми відновлюємо саме ДОСТУП ДО ДАНИХ.
+            if (!File.Exists(dbPath))
+            {
+                return false; 
+            }
+
+            string testConnectionString = $"Data Source={dbPath};Password={base64Dek};";
+
+            try
+            {
+                using (var conn = new SqliteConnection(testConnectionString))
+                {
+                    conn.Open();
+                    
+                    // Щоб гарантовано перевірити, чи ключ дійсно правильний для SQLCipher,
+                    // потрібно виконати хоча б один запит на читання будь-якої таблиці.
+                    // Користуємося системною таблицею sqlite_master.
+                    using (var cmd = new SqliteCommand("SELECT count(*) FROM sqlite_master", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                
+                return true; // Спроба читання успішна
+            }
+            catch (SqliteException ex)
+            {
+                // Помилка шифрування зазвичай видає "file is not a database"
+                System.Diagnostics.Debug.WriteLine($"Recovery Check Failed: {ex.Message}");
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
     }

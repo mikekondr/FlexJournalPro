@@ -211,9 +211,7 @@ namespace FlexJournalPro.ViewModels
             }
 
             // Створюємо та відкриваємо вікно авторизації наново
-            var dbService = new DatabaseService();
-            var authService = new FlexJournalPro.Services.AuthService(dbService);
-            var loginWindow = new LoginWindow(authService);
+            var loginWindow = new LoginWindow(App.KeyManager);
             
             if (loginWindow.ShowDialog() == true)
             {
