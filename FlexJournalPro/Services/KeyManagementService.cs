@@ -1,9 +1,7 @@
-using FlexJournalPro.Config;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using FlexJournalPro.Config;
 
 namespace FlexJournalPro.Services
 {
@@ -34,11 +32,34 @@ namespace FlexJournalPro.Services
             {
                 try
                 {
-                    string json = File.ReadAllText(_keyStorePath);
-                    _keyStore = JsonSerializer.Deserialize<Dictionary<string, UserKeyEntry>>(json) 
+                    // 1. Читаємо зашифровані байти з файлу
+                    byte[] encryptedBytes = File.ReadAllBytes(_keyStorePath);
+
+                    // 2. Знімаємо шар DPAPI (працюватиме лише на цьому ж ПК)
+                    byte[] decryptedBytes = ProtectedData.Unprotect(
+                        encryptedBytes,
+                        null,
+                        DataProtectionScope.LocalMachine);
+
+                    // 3. Десеріалізуємо JSON
+                    string json = System.Text.Encoding.UTF8.GetString(decryptedBytes);
+                    _keyStore = JsonSerializer.Deserialize<Dictionary<string, UserKeyEntry>>(json)
                                 ?? new Dictionary<string, UserKeyEntry>(StringComparer.OrdinalIgnoreCase);
+
                 }
-                catch { /* Игнорируем или логируем ошибку */ }
+                catch (CryptographicException)
+                {
+                    // ПОМИЛКА DPAPI: Файл перенесено на інший ПК або пошкоджено.
+                    // Очищуємо сховище в пам'яті, щоб програма запросила відновлення.
+                    System.Diagnostics.Debug.WriteLine("Помилка DPAPI: Неможливо розшифрувати keystore (можливо, інший ПК).");
+                    _keyStore = new Dictionary<string, UserKeyEntry>(StringComparer.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    // Інші помилки (наприклад, невірний формат старого файлу)
+                    System.Diagnostics.Debug.WriteLine($"Ошибка загрузки keystore: {ex.Message}");
+                    _keyStore = new Dictionary<string, UserKeyEntry>(StringComparer.OrdinalIgnoreCase);
+                }
             }
         }
 
@@ -52,7 +73,19 @@ namespace FlexJournalPro.Services
                     WriteIndented = true,
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
-                File.WriteAllText(_keyStorePath, JsonSerializer.Serialize(_keyStore, options));
+
+                // 1. Формуємо JSON та конвертуємо в байти
+                string json = JsonSerializer.Serialize(_keyStore, options);
+                byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+
+                // 2. Шифруємо дані за допомогою DPAPI (прив'язуємо до ПК)
+                byte[] encryptedBytes = ProtectedData.Protect(
+                    jsonBytes,
+                    null,
+                    DataProtectionScope.LocalMachine);
+
+                // 3. Записуємо зашифровані байти у файл
+                File.WriteAllBytes(_keyStorePath, encryptedBytes);
             }
             catch (Exception ex)
             {
@@ -200,6 +233,24 @@ namespace FlexJournalPro.Services
         /// </summary>
         public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
         {
+
+            /*
+             * Оскільки ми конвертували 32 байти у форматований Hex (XXXX-XXXX-XXXX...), 
+             * коли користувач захоче відновити дані, він введе саме цей рядок.
+              // 1. Прибираємо дефіси з того, що ввів юзер
+                string cleanHex = userInputKey.Replace("-", "").Trim();
+
+                // 2. Конвертуємо Hex-рядок у масив байтів
+                byte[] keyBytes = Enumerable.Range(0, cleanHex.Length / 2)
+                                            .Select(x => Convert.ToByte(cleanHex.Substring(x * 2, 2), 16))
+                                            .ToArray();
+
+                // 3. Конвертуємо байти у Base64 і віддаємо сервісу
+                string base64Dek = Convert.ToBase64String(keyBytes);
+                _keyService.RecoverWithMasterKey(base64Dek, login, newPassword);
+             */
+
+
             byte[] dekBytes;
             try
             {

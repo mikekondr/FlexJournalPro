@@ -1,9 +1,11 @@
+using FlexJournalPro.Config;
+using FlexJournalPro.Services;
+using Microsoft.Win32;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using FlexJournalPro.Config;
-using FlexJournalPro.Services;
 
 namespace FlexJournalPro
 {
@@ -45,6 +47,43 @@ namespace FlexJournalPro
             {
                 Clipboard.SetText(MasterDekTextBlock.Text);
                 ShowMessage("Ключ скопійовано в буфер обміну!", isError: false);
+            }
+        }
+
+        // Збереження ключа
+        private void SaveKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_tempMasterKey)) return;
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|Key files (*.key)|*.key",
+                DefaultExt = ".txt",
+                FileName = "JournalPro_RecoveryKey.txt",
+                Title = "Збереження Майстер-ключа"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Формуємо гарний файл з інструкціями для користувача
+                    string fileContent = $"ЖурналПро - Майстер-ключ відновлення\r\n" +
+                                         $"Створено: {DateTime.Now}\r\n" +
+                                         $"Логін адміністратора: {LoginTextBox.Text.Trim()}\r\n" +
+                                         $"----------------------------------------\r\n" +
+                                         $"{_tempMasterKey}\r\n" +
+                                         $"----------------------------------------\r\n" +
+                                         $"УВАГА: Цей файл є єдиним способом відновити доступ до ваших даних\r\n" +
+                                         $"у разі втрати пароля або перенесення бази на інший комп'ютер.";
+
+                    File.WriteAllText(saveFileDialog.FileName, fileContent);
+                    ShowMessage("Ключ успішно збережено у файл!", isError: false);
+                }
+                catch (Exception ex)
+                {
+                    ShowMessage($"Помилка збереження файлу: {ex.Message}", isError: true);
+                }
             }
         }
 
@@ -158,7 +197,21 @@ namespace FlexJournalPro
         {
             _keyService = new KeyManagementService();
             _keyService.EnsureKeyStoreInitialized();
-            return _keyService.ExportMasterRecoveryKey();
+
+            // Отримуємо сирий Base64
+            string base64Key = _keyService.ExportMasterRecoveryKey();
+
+            // Конвертуємо Base64 назад у байти
+            byte[] keyBytes = Convert.FromBase64String(base64Key);
+
+            // Конвертуємо байти у суцільний Hex-рядок (напр. 4A3B8C9D...)
+            string hexString = BitConverter.ToString(keyBytes).Replace("-", "");
+
+            // Розбиваємо дефісами кожні 4 символи для зручності читання
+            var formattedGroups = Enumerable.Range(0, hexString.Length / 6)
+                                            .Select(i => hexString.Substring(i * 6, 6));
+
+            return string.Join("-", formattedGroups);
         }
 
         private void CreateConfiguration(bool useEncryption)
