@@ -1,9 +1,8 @@
 using FlexJournalPro.ViewModels;
 using System.Windows;
-using System.Windows.Input;
 using MaterialDesignThemes.Wpf;
 
-namespace FlexJournalPro
+namespace FlexJournalPro.Windows
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

@@ -1,9 +1,8 @@
 using System.Windows;
 using FlexJournalPro.Services;
 using FlexJournalPro.Config;
-using FlexJournalPro.Models;
 
-namespace FlexJournalPro
+namespace FlexJournalPro.Windows
 {
     public partial class LoginWindow : Window
     {
@@ -32,6 +31,11 @@ namespace FlexJournalPro
                 ShowError("Введіть логін");
                 return;
             }
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                ShowError("Введіть пароль");
+                return;
+            }
 
             bool useCipher = AppConfig.Instance.Database.UseCipher;
             DatabaseService? dbService = null;
@@ -39,7 +43,6 @@ namespace FlexJournalPro
             if (useCipher)
             {
                 // Для шифрованої бази спочатку пробуємо розблокувати ключ шифрування
-                // Заглушка обновлення виклику:
                 bool isKeyUnlocked = _keyManager.UnlockDekWithPassword(login, password);
 
                 if (!isKeyUnlocked)

@@ -3,15 +3,18 @@ using System.Windows;
 using FlexJournalPro.Services;
 using FlexJournalPro.Models;
 using FlexJournalPro.Config;
-using FlexJournalPro.Views;
+using FlexJournalPro.Windows;
 
 namespace FlexJournalPro
 {
+    /// <summary>
+    /// Основной класс приложения с управлением потоком запуска
+    /// </summary>
     public partial class App : Application
     {
         public static AppUser? CurrentUser { get; set; }
         
-        // Робимо сервіси доступними глобально
+        // Глобальные сервисы
         public static KeyManagementService KeyManager { get; private set; } = null!;
         public static DatabaseService Database { get; set; } = null!;
 
@@ -19,43 +22,109 @@ namespace FlexJournalPro
         {
             base.OnStartup(e);
 
-            // Тимчасово змінюємо режим закриття
+            // Устанавливаем режим завершения в явный (контролируем сами)
             Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            // Перевіряємо, чи це перший запуск (немає конфігу або БД)
-            string dbFilePath = AppConfig.DatabasePath;
-            string configFilePath = AppConfig.ConfigPath;
+            try
+            {
+                // Проверяем аргументы командной строки
+                bool needsRecovery = e.Args.Contains("-recover");
 
-            if (!File.Exists(dbFilePath) || !File.Exists(configFilePath))
-                if (new FirstRunWindow().ShowDialog() != true)
+                // Этап 1: Инициализация KeyManager (выявляет ошибки DPAPI)
+                KeyManager = new KeyManagementService();
+
+                // Этап 2: Проверяем необходимость восстановления
+                if (needsRecovery || KeyManager.HasDpapiError())
                 {
-                    // Якщо користувач закрив вікно налаштувань або скасував, завершуємо роботу
+                    if (!HandleRecoveryFlow())
+                    {
+                        Shutdown();
+                        return;
+                    }
+                }
+
+                // Этап 3: Проверяем первый запуск
+                if (!HandleFirstRunIfNeeded())
+                {
                     Shutdown();
                     return;
                 }
-            
-            // 1. Ініціалізуємо менеджер ключів (тепер це безпечно робити, налаштування завершено)
-            KeyManager = new KeyManagementService();
-            // Якщо шифрування було вимкнено майстром, цей метод має перевіряти налаштування і не створювати Keystore
-            KeyManager.EnsureKeyStoreInitialized();
 
-            // Передаємо його у вікно входу
-            var loginWindow = new LoginWindow(KeyManager); 
-            
-            if (loginWindow.ShowDialog() == true)
-            {
-                // Database вже створена та присвоєна (App.Database = dbService) всередині LoginWindow
-                Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
-                
-                var mainWindow = new MainWindow();
-                Current.MainWindow = mainWindow; 
-                mainWindow.Show();
+                // Этап 4: Показываем окно входа
+                if (!HandleLoginFlow())
+                {
+                    Shutdown();
+                    return;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // Якщо користувач закрив вікно входу кнопкою "Х" або скасував
+                System.Diagnostics.Debug.WriteLine($"Ошибка инициализации приложения: {ex.Message}");
+                MessageBox.Show(
+                    $"Критическая ошибка при запуске приложения:\n\n{ex.Message}",
+                    "Ошибка инициализации",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                 Shutdown();
             }
+        }
+
+        /// <summary>
+        /// Обработка потока восстановления доступа
+        /// </summary>
+        private bool HandleRecoveryFlow()
+        {
+            // Показываем окно восстановления
+            // RecoveryWindow сам будет проверять ключ через DatabaseService.VerifyRecoveryKey(base64Dek)
+            var recoveryWindow = new RecoveryWindow(KeyManager);
+            
+            if (recoveryWindow.ShowDialog() != true)
+            {
+                return false; // Пользователь отменил восстановление
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Обработка первого запуска приложения
+        /// </summary>
+        private bool HandleFirstRunIfNeeded()
+        {
+            string dbFilePath = AppConfig.DatabasePath;
+            string configFilePath = AppConfig.ConfigPath;
+
+            // Проверяем наличие конфигурации и базы данных
+            if (File.Exists(dbFilePath) && File.Exists(configFilePath))
+            {
+                return true; // Все есть, первый запуск не требуется
+            }
+
+            // Показываем окно первого запуска
+            var firstRunWindow = new FirstRunWindow();
+            return firstRunWindow.ShowDialog() == true;
+        }
+
+        /// <summary>
+        /// Обработка потока входа в приложение
+        /// </summary>
+        private bool HandleLoginFlow()
+        {
+            var loginWindow = new LoginWindow(KeyManager);
+            
+            if (loginWindow.ShowDialog() != true)
+            {
+                return false; // Пользователь не вошел
+            }
+
+            // Успешный вход - переходим на главное окно
+            Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+            var mainWindow = new MainWindow();
+            Current.MainWindow = mainWindow;
+            mainWindow.Show();
+
+            return true;
         }
     }
 }

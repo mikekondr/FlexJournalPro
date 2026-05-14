@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
-namespace FlexJournalPro
+namespace FlexJournalPro.Windows
 {
     public partial class FirstRunWindow : Window
     {
@@ -15,12 +15,12 @@ namespace FlexJournalPro
         private bool _isWaitingForKeyBackup = false;
 
         // Тимчасове зберігання згенерованого ключа між натисканнями
-        private string _tempMasterKey;
+        private string? _tempMasterKey;
 
-        private KeyManagementService _keyService;
-        private AppConfig _config;
-        private DatabaseService _databaseService;
-        private AuthService _auth;
+        private KeyManagementService? _keyService = App.KeyManager;
+        private AppConfig? _config;
+        private DatabaseService? _databaseService;
+        private AuthService? _auth;
 
         public FirstRunWindow()
         {
@@ -139,7 +139,7 @@ namespace FlexJournalPro
             // ЕТАП 2: Фінальне створення системи (Або Етап 1, якщо шифрування вимкнено)
             try
             {
-                // Деактивуємо кнопку, щоб уникнути подвійного кліку під час завантаження
+                // Деактивуємо кнопку, щоб уникнути подвійного кліка під час завантаження
                 var btn = (System.Windows.Controls.Button)sender;
                 btn.IsEnabled = false;
                 btn.Content = "НАЛАШТУВАННЯ...";
@@ -195,8 +195,8 @@ namespace FlexJournalPro
 
         private string GenerateRecoveryKeyFormat()
         {
-            _keyService = new KeyManagementService();
-            _keyService.EnsureKeyStoreInitialized();
+            //_keyService = new KeyManagementService();
+            _keyService.GenerateMasterKeyInMemory();
 
             // Отримуємо сирий Base64
             string base64Key = _keyService.ExportMasterRecoveryKey();
@@ -208,8 +208,8 @@ namespace FlexJournalPro
             string hexString = BitConverter.ToString(keyBytes).Replace("-", "");
 
             // Розбиваємо дефісами кожні 4 символи для зручності читання
-            var formattedGroups = Enumerable.Range(0, hexString.Length / 6)
-                                            .Select(i => hexString.Substring(i * 6, 6));
+            var formattedGroups = Enumerable.Range(0, hexString.Length / 4)
+                                            .Select(i => hexString.Substring(i * 4, 4));
 
             return string.Join("-", formattedGroups);
         }
@@ -223,8 +223,7 @@ namespace FlexJournalPro
 
         private void SaveEncryptionKeys(string login, string password)
         {
-            _keyService.RemoveUserKey("admin");
-            _keyService.SetOrUpdateUserKey(login, password);
+            _keyService.SetOrUpdateUserKey(login, password); 
         }
 
         private void CreateDatabase(bool useEncryption)
@@ -234,8 +233,7 @@ namespace FlexJournalPro
 
         private void CreateAdminUser(string login, string password, bool isEncryptedDb)
         {
-            _auth = new AuthService(_databaseService);
-            string passwordHash = _auth.HashPassword(password);
+            string passwordHash = AuthService.HashPassword(password);
 
             Models.AppUser adminUser = new Models.AppUser
             {

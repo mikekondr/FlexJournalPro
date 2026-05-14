@@ -1,0 +1,133 @@
+<Window x:Class="FlexJournalPro.Windows.RecoveryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Відновлення доступу" 
+        Height="650" Width="480"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True">
+
+    <Border CornerRadius="8" Background="{DynamicResource MaterialDesign.Brush.Background}" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesign.Brush.Divider}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Кастомний заголовок (TitleBar) -->
+            <Border Grid.Row="0" Height="32" VerticalAlignment="Top" Background="{DynamicResource MaterialDesign.Brush.Primary}" CornerRadius="8,8,0,0" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="Відновлення доступу" Foreground="White" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold"/>
+                    <Button Click="CancelButton_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0" Background="Transparent" BorderThickness="0" Width="24" Height="24" Padding="0">
+                        <materialDesign:PackIcon Kind="Close" Foreground="White" Width="16" Height="16"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Основний вміст -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                <StackPanel Margin="32,24,32,32">
+                    
+                    <!-- Логотип та назва програми -->
+                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,24">
+                        <materialDesign:PackIcon Kind="ShieldLock" Width="72" Height="72" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesign.Brush.Primary}"/>
+                        <TextBlock Text="Відновлення доступу" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource MaterialDesign.Brush.Primary}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock Text="База даних перенесена на новий ПК" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Опис -->
+                    <TextBlock Text="Введіть майстер-ключ, отриманий під час створення бази даних, та новий пароль адміністратора."
+                               TextWrapping="Wrap"
+                               Opacity="0.8"
+                               FontSize="13"
+                               LineHeight="20"
+                               Margin="0,0,0,24"
+                               TextAlignment="Center"/>
+
+                    <!-- Поля введення -->
+                    
+                    <!-- Майстер-ключ -->
+                    <TextBox x:Name="MasterKeyTextBox"
+                             materialDesign:HintAssist.Hint="Майстер-ключ (XXXX-XXXX-XXXX-XXXX-...)"
+                             materialDesign:HintAssist.IsFloating="True"
+                             materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                             materialDesign:TextFieldAssist.LeadingIcon="Key"
+                             materialDesign:TextFieldAssist.LeadingIconSize="22"
+                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                             Height="80"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             FontFamily="Courier New"
+                             FontSize="13"
+                             Margin="0,0,0,8" />
+
+                    <!-- Помилка майстер-ключа -->
+                    <TextBlock x:Name="MasterKeyError"
+                               Foreground="Red"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed"
+                               Margin="0,0,0,8"
+                               TextAlignment="Center"/>
+
+                    <!-- Новий пароль -->
+                    <PasswordBox x:Name="NewPasswordBox"
+                                 materialDesign:HintAssist.Hint="Новий пароль адміністратора"
+                                 materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                                 materialDesign:TextFieldAssist.LeadingIcon="LockReset"
+                                 materialDesign:TextFieldAssist.LeadingIconSize="22"
+                                 Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
+                                 Margin="0,16,0,0" FontSize="16" />
+
+                    <!-- Підтвердження пароля -->
+                    <PasswordBox x:Name="ConfirmPasswordBox"
+                                 materialDesign:HintAssist.Hint="Підтвердіть пароль"
+                                 materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                                 materialDesign:TextFieldAssist.LeadingIcon="LockCheck"
+                                 materialDesign:TextFieldAssist.LeadingIconSize="22"
+                                 Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
+                                 Margin="0,16,0,0" FontSize="16" />
+
+                    <!-- Помилка паролю -->
+                    <TextBlock x:Name="PasswordError"
+                               Foreground="Red"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed"
+                               Margin="0,16,0,0"
+                               TextAlignment="Center"/>
+
+                    <!-- Кнопки -->
+                    <Grid Margin="0,32,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="СКАСУВАТИ" 
+                                Click="CancelButton_Click"
+                                Height="44"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"/>
+
+                        <Button Grid.Column="2" x:Name="RecoverButton"
+                                Content="ВІДНОВИТИ" 
+                                Click="RecoverButton_Click"
+                                Height="44"
+                                IsDefault="True"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+
+</Window>

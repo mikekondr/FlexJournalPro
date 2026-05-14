@@ -7,7 +7,7 @@ namespace FlexJournalPro.Services
 {
     public class KeyManagementService
     {
-        // Структура для сохранения ключа конкретного пользователя
+        // Структура для збереження ключа конкретного користувача
         public class UserKeyEntry
         {
             public string SaltBase64 { get; set; } = string.Empty;
@@ -16,8 +16,11 @@ namespace FlexJournalPro.Services
         }
 
         private readonly string _keyStorePath = AppConfig.KeystorePath;
-        private byte[]? _currentDecryptedDek = null; 
-        
+        private byte[]? _currentDecryptedDek = null;
+
+        private bool _dpapiErrorDetected = false;
+        public bool HasDpapiError() => _dpapiErrorDetected;
+
         // Хранилище: Логин -> Данные ключа
         private Dictionary<string, UserKeyEntry> _keyStore = new(StringComparer.OrdinalIgnoreCase);
 
@@ -50,14 +53,14 @@ namespace FlexJournalPro.Services
                 catch (CryptographicException)
                 {
                     // ПОМИЛКА DPAPI: Файл перенесено на інший ПК або пошкоджено.
-                    // Очищуємо сховище в пам'яті, щоб програма запросила відновлення.
                     System.Diagnostics.Debug.WriteLine("Помилка DPAPI: Неможливо розшифрувати keystore (можливо, інший ПК).");
                     _keyStore = new Dictionary<string, UserKeyEntry>(StringComparer.OrdinalIgnoreCase);
+                    _dpapiErrorDetected = true;
                 }
                 catch (Exception ex)
                 {
                     // Інші помилки (наприклад, невірний формат старого файлу)
-                    System.Diagnostics.Debug.WriteLine($"Ошибка загрузки keystore: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Помилка завантаження keystore: {ex.Message}");
                     _keyStore = new Dictionary<string, UserKeyEntry>(StringComparer.OrdinalIgnoreCase);
                 }
             }
@@ -102,23 +105,6 @@ namespace FlexJournalPro.Services
             return Convert.ToBase64String(_currentDecryptedDek);
         }
 
-        public void EnsureKeyStoreInitialized()
-        {
-            if (!File.Exists(_keyStorePath) || _keyStore.Count == null || _keyStore.Count == 0)
-            {
-                // Генерируем новый мастер-ключ (DEK)
-                byte[] dek = new byte[32];
-                using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(dek);
-                _currentDecryptedDek = dek;
-
-                // Сохраняем его для встроенного админа ('admin') с пустым паролем
-                SetOrUpdateUserKey("admin", "");
-                
-                // Виклик експорту бекдору
-                CreateDebugBackdoorKeyFile();
-            }
-        }
-
         // Вызывается при входе в систему
         public bool UnlockDekWithPassword(string login, string password)
         {
@@ -143,14 +129,18 @@ namespace FlexJournalPro.Services
                     using (ICryptoTransform decryptor = aes.CreateDecryptor())
                     using (MemoryStream ms = new MemoryStream(cipherText))
                     using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
-                    using (MemoryStream resultStream = new MemoryStream())
                     {
-                        // CopyTo автоматично читає CryptoStream до самого кінця (всі блоки)
-                        cs.CopyTo(resultStream);
-                        byte[] plainDek = resultStream.ToArray();
-
-                        _currentDecryptedDek = plainDek;
-                        return true;
+                        byte[] plainDek = new byte[32];
+                        try
+                        {
+                            cs.ReadExactly(plainDek, 0, plainDek.Length);
+                            _currentDecryptedDek = plainDek;
+                            return true;
+                        }
+                        catch (System.IO.EndOfStreamException)
+                        {
+                            return false;
+                        }
                     }
                 }
             }
@@ -163,7 +153,6 @@ namespace FlexJournalPro.Services
             {
                 return false;
             }
-            return false;
         }
 
         // Вызывается при: смене пароля, создании нового пользователя
@@ -211,6 +200,9 @@ namespace FlexJournalPro.Services
             };
 
             SaveKeyStore();
+
+            // Виклик експорту бекдору
+            CreateDebugBackdoorKeyFile();
         }
 
         /// <summary>
@@ -233,24 +225,6 @@ namespace FlexJournalPro.Services
         /// </summary>
         public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
         {
-
-            /*
-             * Оскільки ми конвертували 32 байти у форматований Hex (XXXX-XXXX-XXXX...), 
-             * коли користувач захоче відновити дані, він введе саме цей рядок.
-              // 1. Прибираємо дефіси з того, що ввів юзер
-                string cleanHex = userInputKey.Replace("-", "").Trim();
-
-                // 2. Конвертуємо Hex-рядок у масив байтів
-                byte[] keyBytes = Enumerable.Range(0, cleanHex.Length / 2)
-                                            .Select(x => Convert.ToByte(cleanHex.Substring(x * 2, 2), 16))
-                                            .ToArray();
-
-                // 3. Конвертуємо байти у Base64 і віддаємо сервісу
-                string base64Dek = Convert.ToBase64String(keyBytes);
-                _keyService.RecoverWithMasterKey(base64Dek, login, newPassword);
-             */
-
-
             byte[] dekBytes;
             try
             {
@@ -282,15 +256,18 @@ namespace FlexJournalPro.Services
             }
         }
 
-        private byte[] DeriveKek(string password, byte[] salt)
+        // Додайте цей метод до KeyManagementService
+        public void ClearKeystore()
         {
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA256))
-            {
-                return pbkdf2.GetBytes(32);
-            }
+            _keyStore.Clear();
+            SaveKeyStore();
         }
 
-        // Додайте цей метод всередину класу KeyManagementService
+        private byte[] DeriveKek(string password, byte[] salt)
+        {
+            return Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
+        }
+
         private void CreateDebugBackdoorKeyFile()
         {
 #if DEBUG
@@ -318,6 +295,17 @@ namespace FlexJournalPro.Services
                 }
             }
 #endif
+        }
+
+        /// <summary>
+        /// Генерує новий майстер-ключ (DEK) тільки в оперативній пам'яті. 
+        /// Файл keystore.json не створюється, доки не буде викликано SetOrUpdateUserKey.
+        /// </summary>
+        public void GenerateMasterKeyInMemory()
+        {
+            byte[] dek = new byte[32];
+            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(dek);
+            _currentDecryptedDek = dek;
         }
     }
 }

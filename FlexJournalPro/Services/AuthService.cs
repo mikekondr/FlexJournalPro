@@ -13,7 +13,7 @@ namespace FlexJournalPro.Services
             _dbService = dbService;
         }
 
-        public string HashPassword(string password)
+        public static string HashPassword(string password)
         {
             byte[] salt = new byte[16];
             using (var rng = RandomNumberGenerator.Create())
@@ -98,6 +98,66 @@ namespace FlexJournalPro.Services
                     cmd.ExecuteNonQuery();
                 }
             }
+        }
+
+        internal AppUser FindUserByLogin(string login)
+        {
+            using (var conn = new SqliteConnection(_dbService.ConnectionString))
+            {
+                conn.Open();
+                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Login = @Login";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Login", login);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new AppUser
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                Login = reader["Login"].ToString(),
+                                PasswordHash = reader["PasswordHash"].ToString(),
+                                FullName = reader["FullName"].ToString(),
+                                Role = (UserRole)Convert.ToInt32(reader["Role"])
+                            };
+
+                            return user;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        internal AppUser FindUserById(int id)
+        {
+            using (var conn = new SqliteConnection(_dbService.ConnectionString))
+            {
+                conn.Open();
+                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Id = @Id";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new AppUser
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                Login = reader["Login"].ToString(),
+                                PasswordHash = reader["PasswordHash"].ToString(),
+                                FullName = reader["FullName"].ToString(),
+                                Role = (UserRole)Convert.ToInt32(reader["Role"])
+                            };
+
+                            return user;
+                        }
+                    }
+                }
+            }
+            return null;
         }
     }
 }

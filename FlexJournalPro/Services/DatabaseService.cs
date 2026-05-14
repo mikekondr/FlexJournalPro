@@ -1202,7 +1202,7 @@ namespace FlexJournalPro.Services
         /// <returns>True, якщо база успішно відкрилась, інакше False.</returns>
         public static bool VerifyRecoveryKey(string base64Dek)
         {
-            string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_data.db");
+            string dbPath = AppConfig.DatabasePath;
             
             // Якщо бази не існує, ключу нічого відкривати.
             // Можна вважати ключ "умовно правильним", якщо бази ще немає, 
