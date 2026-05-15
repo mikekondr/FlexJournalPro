@@ -18,6 +18,6 @@ namespace FlexJournalPro.Models
         public UserRole Role { get; set; }
 
         // Список ID журналів, до яких користувач має доступ (ігнорується для Admin)
-        public List<long> AllowedJournalIds { get; set; } = new List<long>();
+        public List<int> AllowedJournalIds { get; set; } = new List<int>();
     }
 }

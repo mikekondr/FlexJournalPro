@@ -1,8 +1,7 @@
 {
   "profiles": {
     "FlexJournalPro": {
-      "commandName": "Project",
-      "commandLineArgs": "-recover"
+      "commandName": "Project"
     }
   }
 }

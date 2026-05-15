@@ -1,4 +1,4 @@
-<UserControl x:Class="FlexJournalPro.Views.Screens.JournalsListView"
+<UserControl x:Class="FlexJournalPro.Views.Screens.UsersListView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -17,11 +17,11 @@
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8">
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                        Command="{Binding CreateNewJournalCommand}"
+                        Command="{Binding AddUserCommand}"
                         Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="Plus" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Створити новий" VerticalAlignment="Center"/>
+                        <TextBlock Text="Створити нового" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -36,8 +36,8 @@
             </StackPanel>
 
             <DataGrid Grid.Row="1" Margin="8,0,8,8"
-                          ItemsSource="{Binding Journals}"
-                          SelectedItem="{Binding SelectedJournal}"
+                          ItemsSource="{Binding Users}"
+                          SelectedItem="{Binding SelectedUser}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
@@ -45,22 +45,21 @@
                           SelectionMode="Single">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
-                        <DataGridTextColumn Header="Назва" Binding="{Binding Title}" Width="*"/>
-                        <DataGridTextColumn Header="Шаблон" Binding="{Binding TemplateName}" Width="150"/>
-                        <DataGridTextColumn Header="Версія" Binding="{Binding TemplateVersion}" Width="60"/>
-                        <DataGridTextColumn Header="Дата свторення" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
+                        <DataGridTextColumn Header="Ім'я" Binding="{Binding FullName}" Width="300"/>
+                        <DataGridTextColumn Header="Логін" Binding="{Binding Login}" Width="*"/>
+                        <DataGridTextColumn Header="Роль" Binding="{Binding Role}" Width="120"/>
                         <DataGridTemplateColumn Header="Дії" Width="150">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                Command="{Binding DataContext.OpenJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Відкрити журнал" Width="24" Height="24" Padding="4">
+                                                Command="{Binding DataContext.EditUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Редагувати користувача" Width="24" Height="24" Padding="4">
                                             <materialDesign:PackIcon Kind="FolderOpen" Width="16" Height="16"/>
                                         </Button>
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                Command="{Binding DataContext.DeleteJournalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Видалити журнал" Width="24" Height="24" Padding="4">
+                                                Command="{Binding DataContext.DeleteUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Видалити користувача" Width="24" Height="24" Padding="4">
                                             <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
@@ -70,7 +69,7 @@
                     </DataGrid.Columns>
                     <DataGrid.InputBindings>
                         <MouseBinding Gesture="LeftDoubleClick" 
-                                      Command="{Binding OpenJournalCommand}"/>
+                                      Command="{Binding EditUserCommand}"/>
                     </DataGrid.InputBindings>
                 </DataGrid>
 
@@ -78,8 +77,8 @@
                 <StackPanel Grid.Row="1"
                     VerticalAlignment="Center" 
                             HorizontalAlignment="Center"
-                            Visibility="{Binding Journals.Count, Converter={StaticResource EqualToVisibilityConverter}, ConverterParameter=0}">
-                    <materialDesign:PackIcon Kind="BookOpen" 
+                            Visibility="{Binding Users.Count, Converter={StaticResource EqualToVisibilityConverter}, ConverterParameter=0}">
+                    <materialDesign:PackIcon Kind="AccountGroupOutline" 
                                              Width="80" 
                                              Height="80" 
                                              HorizontalAlignment="Center"

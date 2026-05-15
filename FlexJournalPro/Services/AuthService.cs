@@ -75,6 +75,8 @@ namespace FlexJournalPro.Services
 
                             if (VerifyPassword(password, user.PasswordHash))
                             {
+                                // Завантажуємо дозволи!
+                                user.AllowedJournalIds = _dbService.GetUserAllowedJournalIds(user.Id);
                                 return user;
                             }
                         }

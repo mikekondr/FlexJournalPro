@@ -1,9 +1,8 @@
 using FlexJournalPro.Services;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
+using FlexJournalPro.Windows;
 
 namespace FlexJournalPro.ViewModels
 {
@@ -44,10 +43,10 @@ namespace FlexJournalPro.ViewModels
             OpenScreens.CollectionChanged += (s, e) => UpdateScrollButtons();
 
             // Встановимо ім'я користувача, якщо він залогінений
-            if (App.CurrentUser != null)
-            {
-                CurrentUserFullName = App.CurrentUser.FullName;
-            }
+            //if (App.CurrentUser != null)
+            //{
+            //    CurrentUserFullName = App.CurrentUser.FullName;
+            //}
         }
 
         #region Properties
@@ -109,13 +108,9 @@ namespace FlexJournalPro.ViewModels
         }
 
         // Властивості для користувача
-        private string _currentUserFullName = "Користувач"; // Тестове значення, поки що
+        private string _currentUserFullName = App.CurrentUser?.FullName ?? "Користувач";
 
-        public string CurrentUserFullName
-        {
-            get => _currentUserFullName;
-            set => SetProperty(ref _currentUserFullName, value);
-        }
+        public string CurrentUserFullName => _currentUserFullName;
 
         #endregion
 
@@ -154,9 +149,7 @@ namespace FlexJournalPro.ViewModels
 
         private async void OpenUsersList()
         {
-            await DialogService.ShowInformationAsync(
-                "Екран користувачів буде доданий у наступній версії",
-                "У розробці");
+            OpenOrActivateScreen(() => new Screens.UsersListScreen(this));
         }
 
         private void CloseScreen(object? parameter)

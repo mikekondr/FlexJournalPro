@@ -963,11 +963,11 @@ namespace FlexJournalPro.Services
                     {
                         var user = new AppUser
                         {
-                            Id = (int)reader["Id"],
+                            Id = Convert.ToInt32(reader["Id"]),
                             Login = reader["Login"]?.ToString() ?? string.Empty,
                             FullName = reader["FullName"]?.ToString() ?? string.Empty,
                             Role = (UserRole)Convert.ToInt32(reader["Role"]),
-                            AllowedJournalIds = new List<long>()
+                            AllowedJournalIds = new List<int>()
                         };
                         users.Add(user.Id, user);
                     }
@@ -980,8 +980,8 @@ namespace FlexJournalPro.Services
                 {
                     while (reader.Read())
                     {
-                        int userId = (int)reader["UserId"];
-                        int journalId = (int)reader["JournalId"];
+                        int userId = Convert.ToInt32(reader["UserId"]);
+                        int journalId = Convert.ToInt32(reader["JournalId"]);
 
                         if (users.ContainsKey(userId))
                         {
@@ -1194,53 +1194,26 @@ namespace FlexJournalPro.Services
             }
         }
 
-        /// <summary>
-        /// Перевіряє, чи підходить вказаний DEK (у форматі Base64) для розшифрування існуючої бази даних.
-        /// Цей метод використовується при аварійному відновленні (Recovery).
-        /// </summary>
-        /// <param name="base64Dek">Спробуваний майстер-ключ відновлення.</param>
-        /// <returns>True, якщо база успішно відкрилась, інакше False.</returns>
-        public static bool VerifyRecoveryKey(string base64Dek)
+        public List<int> GetUserAllowedJournalIds(int userId)
         {
-            string dbPath = AppConfig.DatabasePath;
-            
-            // Якщо бази не існує, ключу нічого відкривати.
-            // Можна вважати ключ "умовно правильним", якщо бази ще немає, 
-            // але в сценарії відновлення ми відновлюємо саме ДОСТУП ДО ДАНИХ.
-            if (!File.Exists(dbPath))
+            var ids = new List<int>();
+            using (var conn = new SqliteConnection(_connectionString))
             {
-                return false; 
-            }
-
-            string testConnectionString = $"Data Source={dbPath};Password={base64Dek};";
-
-            try
-            {
-                using (var conn = new SqliteConnection(testConnectionString))
+                conn.Open();
+                string sql = "SELECT JournalId FROM App_UserJournalAccess WHERE UserId = @UserId";
+                using (var cmd = new SqliteCommand(sql, conn))
                 {
-                    conn.Open();
-                    
-                    // Щоб гарантовано перевірити, чи ключ дійсно правильний для SQLCipher,
-                    // потрібно виконати хоча б один запит на читання будь-якої таблиці.
-                    // Користуємося системною таблицею sqlite_master.
-                    using (var cmd = new SqliteCommand("SELECT count(*) FROM sqlite_master", conn))
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        cmd.ExecuteScalar();
+                        while (reader.Read())
+                        {
+                            ids.Add(Convert.ToInt32(reader["JournalId"]));
+                        }
                     }
                 }
-                
-                return true; // Спроба читання успішна
             }
-            catch (SqliteException ex)
-            {
-                // Помилка шифрування зазвичай видає "file is not a database"
-                System.Diagnostics.Debug.WriteLine($"Recovery Check Failed: {ex.Message}");
-                return false;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return ids;
         }
     }
 
