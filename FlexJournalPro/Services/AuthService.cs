@@ -21,56 +21,54 @@ namespace FlexJournalPro.Services
 
         public string HashPassword(string password)
         {
-            byte[] salt = new byte[16];
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(salt);
-            }
+            // Сучасна та швидка генерація солі (без блоку using)
+            byte[] salt = RandomNumberGenerator.GetBytes(16);
 
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA256))
-            {
-                byte[] hash = pbkdf2.GetBytes(32);
-                byte[] hashBytes = new byte[48];
-                Array.Copy(salt, 0, hashBytes, 0, 16);
-                Array.Copy(hash, 0, hashBytes, 16, 32);
-                return Convert.ToBase64String(hashBytes);
-            }
+            // Статичний метод замість new Rfc2898DeriveBytes(...)
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                iterations: 600000,
+                HashAlgorithmName.SHA256,
+                outputLength: 32);
+
+            // Об'єднуємо сіль та хеш
+            byte[] hashBytes = new byte[48];
+            Array.Copy(salt, 0, hashBytes, 0, 16);
+            Array.Copy(hash, 0, hashBytes, 16, 32);
+
+            return Convert.ToBase64String(hashBytes);
         }
 
         public bool VerifyPassword(string password, string storedHash)
         {
             try
             {
-                // 1. Конвертуємо збережений хеш назад у масив байтів
                 byte[] hashBytes = Convert.FromBase64String(storedHash);
 
-                // Перевіряємо, чи має масив очікувану довжину (16 байт сіль + 32 байти хеш)
                 if (hashBytes.Length != 48)
                 {
                     return false;
                 }
 
-                // 2. Витягуємо сіль (перші 16 байт)
                 byte[] salt = new byte[16];
                 Array.Copy(hashBytes, 0, salt, 0, 16);
 
-                // 3. Витягуємо сам хеш (наступні 32 байти)
                 byte[] actualStoredHash = new byte[32];
                 Array.Copy(hashBytes, 16, actualStoredHash, 0, 32);
 
-                // 4. Хешуємо введений пароль з використанням ВИТЯГНУТОЇ солі
-                using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA256))
-                {
-                    byte[] computedHash = pbkdf2.GetBytes(32);
+                // Статичний метод для обчислення хешу введеного пароля
+                byte[] computedHash = Rfc2898DeriveBytes.Pbkdf2(
+                    password,
+                    salt,
+                    iterations: 600000,
+                    HashAlgorithmName.SHA256,
+                    outputLength: 32);
 
-                    // 5. Порівнюємо хеші. 
-                    // Використовуємо FixedTimeEquals для захисту від таймінг-атак
-                    return CryptographicOperations.FixedTimeEquals(computedHash, actualStoredHash);
-                }
+                return CryptographicOperations.FixedTimeEquals(computedHash, actualStoredHash);
             }
             catch
             {
-                // Якщо storedHash має невірний формат Base64 тощо
                 return false;
             }
         }
