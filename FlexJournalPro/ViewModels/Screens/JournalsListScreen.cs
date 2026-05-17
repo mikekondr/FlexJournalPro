@@ -13,12 +13,14 @@ namespace FlexJournalPro.ViewModels.Screens
     {
         private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
+        private readonly IScreenFactory _screenFactory;
         private JournalMetadata? _selectedJournal;
 
-        public JournalsListScreen(IDatabaseService dbService, MainViewModel mainViewModel)
+        public JournalsListScreen(IDatabaseService dbService, MainViewModel mainViewModel, IScreenFactory screenFactory)
         {
             _dbService = dbService;
             _mainViewModel = mainViewModel;
+            _screenFactory = screenFactory;
 
             Title = "Всі журнали";
             Icon = PackIconKind.BookOpen;
@@ -94,7 +96,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private void CreateNewJournal()
         {
             // Відкриваємо екран створення нового журналу
-            var newJournalScreen = new NewJournalScreen(_dbService, _mainViewModel);
+            var newJournalScreen = _screenFactory.CreateNewJournalScreen(_mainViewModel);
             
             _mainViewModel.OpenScreens.Add(newJournalScreen);
             _mainViewModel.SelectedScreen = newJournalScreen;
@@ -105,7 +107,7 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedJournal == null) return;
 
             // Відкриваємо екран редагування журналу
-            var editorScreen = new JournalEditorScreen(SelectedJournal, _dbService, _mainViewModel);
+            var editorScreen = _screenFactory.CreateJournalEditorScreen(SelectedJournal, _mainViewModel);
             
             // Перевіряємо, чи не відкритий вже цей журнал
             var existingScreen = _mainViewModel.OpenScreens

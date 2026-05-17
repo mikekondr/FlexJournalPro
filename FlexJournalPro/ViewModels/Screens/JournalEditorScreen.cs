@@ -15,6 +15,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private readonly JournalMetadata _journal;
         private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
+
         private TableTemplate? _template;
         private Dictionary<string, object> _autoFillValues = new Dictionary<string, object>();
         public IDatabaseService DatabaseService => _dbService;

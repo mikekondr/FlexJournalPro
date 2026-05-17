@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using FlexJournalPro.Services;
@@ -37,55 +34,9 @@ namespace FlexJournalPro
 
             try
             {
-                // Перевіряємо аргументи командного рядка
-                bool needsRecovery = e.Args.Contains("-recover");
-
-                // Отримуємо базові сервіси з контейнера
-                var keyManager = ServiceProvider.GetRequiredService<IKeyManagementService>();
-                var dbService = ServiceProvider.GetRequiredService<IDatabaseService>();
-
-                // Етап 1: Перевіряємо необхідність відновлення (виявляє помилки DPAPI)
-                if (needsRecovery || keyManager.HasDpapiError())
-                {
-                    // Запитуємо вікно відновлення з DI-контейнера
-                    var recoveryWindow = ServiceProvider.GetRequiredService<RecoveryWindow>();
-                    if (recoveryWindow.ShowDialog() != true)
-                    {
-                        Shutdown();
-                        return;
-                    }
-                }
-
-                // Етап 2: Перевіряємо перший запуск
-                if (!HandleFirstRunIfNeeded())
-                {
-                    Shutdown();
-                    return;
-                }
-
-                // Етап 3: Показуємо вікно входу (створюється через DI з усіма залежностями)
-                var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
-                if (loginWindow.ShowDialog() != true)
-                {
-                    Shutdown();
-                    return;
-                }
-
-                // Етап 4: ІНІЦІАЛІЗАЦІЯ ПІДКЛЮЧЕННЯ ДО БД
-                // Користувач успішно увійшов, DEK розшифровано в оперативній пам'яті.
-                // Тепер ми можемо безпечно ініціалізувати рядок підключення!
-                // ПІДКЛЮЧЕННЯ ВИКОНУЄ LoginWindow для перевірки пароля
-                // dbService.Connect();
-
-                // Етап 5: Переходимо на головне вікно
-                // Повертаємо стандартний режим завершення додатку (при закритті головного вікна)
-                Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
-
-                // Запитуємо MainWindow з контейнера. 
-                // DI автоматично створить MainViewModel та передасть туди вже підключений DatabaseService!
-                var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-                Current.MainWindow = mainWindow;
-                mainWindow.Show();
+                // 2. Отримуємо сервіс життєвого циклу та запускаємо початковий ланцюжок вікон
+                var lifecycleService = ServiceProvider.GetRequiredService<IAppLifecycleService>();
+                lifecycleService.Startup(e.Args);
             }
             catch (Exception ex)
             {
@@ -107,11 +58,15 @@ namespace FlexJournalPro
             // Реєструємо Singleton-конфігурацію
             services.AddSingleton<AppConfig>();
 
-            // Реєструємо основні сервіси через їхні інтерфейси
+            // Реєструємо сервіси через їхні інтерфейси
+            services.AddSingleton<IAppLifecycleService, AppLifecycleService>();
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
             services.AddSingleton<IDatabaseService, DatabaseService>();
             services.AddSingleton<ITemplateService, TemplateService>();
             services.AddTransient<IAuthService, AuthService>();
+
+            // Реєструємо фабрику для створення вікон
+            services.AddSingleton<IScreenFactory, ScreenFactory>();
 
             // Реєструємо ViewModels (зазвичай Transient або Scoped)
             services.AddTransient<MainViewModel>();
@@ -121,25 +76,6 @@ namespace FlexJournalPro
             services.AddTransient<MainWindow>();
             services.AddTransient<RecoveryWindow>();
             services.AddTransient<FirstRunWindow>();
-        }
-
-        /// <summary>
-        /// Обробка першого запуска додатка
-        /// </summary>
-        private bool HandleFirstRunIfNeeded()
-        {
-            var config = ServiceProvider.GetRequiredService<AppConfig>();
-
-            string dbFilePath = config.DatabasePath;
-            string configFilePath = config.ConfigPath;
-
-            if (File.Exists(dbFilePath) && File.Exists(configFilePath))
-            {
-                return true;
-            }
-
-            var firstRunWindow = ServiceProvider.GetRequiredService<FirstRunWindow>();
-            return firstRunWindow.ShowDialog() == true;
         }
     }
 }

@@ -11,6 +11,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private readonly IDatabaseService _databaseService;
         private readonly IKeyManagementService _keyManagementService;
         private readonly IAuthService _authService;
+        private readonly IScreenFactory _screenFactory;
         private readonly MainViewModel _mainViewModel;
 
         public override string ScreenId => "UsersList";
@@ -36,12 +37,13 @@ namespace FlexJournalPro.ViewModels.Screens
         public ICommand DeleteUserCommand { get; }
         public ICommand RefreshCommand { get; }
 
-        public UsersListScreen(IDatabaseService databaseService, IKeyManagementService keyManagementService, IAuthService authService, MainViewModel mainViewModel)
+        public UsersListScreen(IDatabaseService databaseService, IKeyManagementService keyManagementService, IAuthService authService, IScreenFactory screenFactory, MainViewModel mainViewModel)
         {
             _mainViewModel = mainViewModel;
             _databaseService = databaseService;
             _keyManagementService = keyManagementService;
             _authService = authService;
+            _screenFactory = screenFactory;
 
             Users = new ObservableCollection<AppUser>();
 
@@ -77,7 +79,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private void CreateNewUser()
         {
             // Відкриваємо екран створення нового користувача (передаємо null замість наявного юзера)
-            var userEditorScreen = new UserEditorScreen(null, _mainViewModel, _databaseService, _keyManagementService, _authService);
+            var userEditorScreen = _screenFactory.CreateUserEditorScreen(null, _mainViewModel);
             
             _mainViewModel.OpenScreens.Add(userEditorScreen);
             _mainViewModel.SelectedScreen = userEditorScreen;
@@ -88,7 +90,7 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedUser == null) return;
 
             // Відкриваємо екран редагування існуючого користувача
-            var editorScreen = new UserEditorScreen(SelectedUser, _mainViewModel, _databaseService, _keyManagementService, _authService);
+            var editorScreen = _screenFactory.CreateUserEditorScreen(SelectedUser, _mainViewModel);
             
             // Перевіряємо, чи не відкритий вже цей екран (за допомогою ScreenId)
             var existingScreen = _mainViewModel.OpenScreens

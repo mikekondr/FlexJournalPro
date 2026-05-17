@@ -16,6 +16,8 @@ namespace FlexJournalPro.ViewModels
         private readonly ITemplateService _templateService;
         private readonly IAuthService _authService;
         private readonly IKeyManagementService _keyManagementService;
+        private readonly IScreenFactory _screenFactory;
+        private readonly IAppLifecycleService _appLifecycleService;
 
         private bool _isSidebarExpanded = true;
         private ScreenBase? _currentScreen;
@@ -24,12 +26,20 @@ namespace FlexJournalPro.ViewModels
         private bool _canScrollRight;
         private ScrollViewer? _screensPanelScrollViewer;
 
-        public MainViewModel(IDatabaseService dbService, ITemplateService templateService, IAuthService authService, IKeyManagementService keyManagementService)
+        public MainViewModel(IDatabaseService dbService, 
+            ITemplateService templateService, 
+            IAuthService authService, 
+            IKeyManagementService keyManagementService, 
+            IScreenFactory screenFactory,
+            IAppLifecycleService appLifecycleService
+            )
         {
             _dbService = dbService;
             _templateService = templateService;
             _authService = authService;
             _keyManagementService = keyManagementService;
+            _screenFactory = screenFactory;
+            _appLifecycleService = appLifecycleService;
 
             OpenScreens = new ObservableCollection<ScreenBase>();
 
@@ -49,12 +59,6 @@ namespace FlexJournalPro.ViewModels
 
             // Підписка на зміну колекції екранів
             OpenScreens.CollectionChanged += (s, e) => UpdateScrollButtons();
-
-            // Встановимо ім'я користувача, якщо він залогінений
-            //if (App.CurrentUser != null)
-            //{
-            //    CurrentUserFullName = App.CurrentUser.FullName;
-            //}
         }
 
         #region Properties
@@ -147,17 +151,17 @@ namespace FlexJournalPro.ViewModels
 
         private void OpenJournalsList()
         {
-            OpenOrActivateScreen(() => new Screens.JournalsListScreen(_dbService, this));
+            OpenOrActivateScreen(() => _screenFactory.CreateJournalsListScreen(this));
         }
 
         private void OpenTemplatesList()
         {
-            OpenOrActivateScreen(() => new Screens.TemplatesListScreen(_templateService, this));
+            OpenOrActivateScreen(() => _screenFactory.CreateTemplatesListScreen(this));
         }
 
         private async void OpenUsersList()
         {
-            OpenOrActivateScreen(() => new Screens.UsersListScreen(_dbService, _keyManagementService, _authService, this));
+            OpenOrActivateScreen(() => _screenFactory.CreateUsersListScreen(this));
         }
 
         private void CloseScreen(object? parameter)
@@ -198,37 +202,7 @@ namespace FlexJournalPro.ViewModels
 
         private void Logout()
         {
-            // Скидаємо користувача
-            App.CurrentUser = null;
-
-            // Змінюємо режим зупинки
-            System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
-
-            // Закриваємо головне вікно
-            if (System.Windows.Application.Current.MainWindow != null)
-            {
-                System.Windows.Application.Current.MainWindow.Close();
-            }
-
-            // ОТРИМУЄМО КОНТЕЙНЕР DI З НАШОГО ДОДАТКУ
-            var app = (App)System.Windows.Application.Current;
-
-            // Створюємо та відкриваємо вікно авторизації через DI!
-            var loginWindow = app.ServiceProvider.GetRequiredService<LoginWindow>();
-
-            if (loginWindow.ShowDialog() == true)
-            {
-                System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnMainWindowClose;
-
-                // Якщо залогінились - знову беремо MainWindow з DI
-                var mainWindow = app.ServiceProvider.GetRequiredService<MainWindow>();
-                System.Windows.Application.Current.MainWindow = mainWindow;
-                mainWindow.Show();
-            }
-            else
-            {
-                System.Windows.Application.Current.Shutdown();
-            }
+            _appLifecycleService.LogoutAndRestart();
         }
 
         #endregion
