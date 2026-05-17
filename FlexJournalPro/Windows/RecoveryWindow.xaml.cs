@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,12 +13,18 @@ namespace FlexJournalPro.Windows
     /// </summary>
     public partial class RecoveryWindow : Window
     {
-        private readonly KeyManagementService _keyManager;
+        // Використовуємо інтерфейси замість конкретних класів
+        private readonly IKeyManagementService _keyManager;
+        private readonly IDatabaseService _dbService;
+        private readonly IAuthService _authService;
 
-        public RecoveryWindow(KeyManagementService keyManager)
+        // Впроваджуємо залежності через конструктор
+        public RecoveryWindow(IKeyManagementService keyManager, IDatabaseService dbService, IAuthService authService)
         {
             InitializeComponent();
             _keyManager = keyManager;
+            _dbService = dbService;
+            _authService = authService;
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -56,15 +64,17 @@ namespace FlexJournalPro.Windows
 
                 string base64Dek = Convert.ToBase64String(keyBytes);
 
-                // 1. Ініціалізуємо БД за допомогою введеного ключа.
-                // Якщо ключ недійсний, конструктор/Open викине виключення (зазвичай SqliteException).
-                App.Database = new DatabaseService(base64Dek);
+                // 1. Встановлюємо введений майстер-ключ у пам'ять KeyManager'а
+                _keyManager.SetMasterKeyInMemory(base64Dek);
+
+                // 2. Ініціалізуємо підключення до БД через єдиний сервіс.
+                // Якщо ключ недійсний, Connect() (або SqliteConnection.Open) викине виключення
+                _dbService.Connect();
 
                 // Якщо ми дійшли сюди - база розшифрована успішно!
 
-                // 2. Отримуємо РЕАЛЬНОГО адміністратора (перший користувач з Id=1)
-                var authService = new AuthService(App.Database);
-                var adminUser = authService.FindUserById(1);
+                // 3. Отримуємо РЕАЛЬНОГО адміністратора (перший користувач з Id=1)
+                var adminUser = _dbService.FindUserById(1);
 
                 if (adminUser == null)
                 {
@@ -72,14 +82,15 @@ namespace FlexJournalPro.Windows
                     return;
                 }
 
-                // 3. Очищуємо Keystore від старих / помилкових записів
+                // 4. Очищуємо Keystore від старих / помилкових записів
                 _keyManager.ClearKeystore();
 
-                // 4. Обертаємо DEK новим паролем і зберігаємо під РЕАЛЬНИМ логіном
-                _keyManager.RecoverWithMasterKey(base64Dek, adminUser.Login, newPassword);
+                // 5. Зберігаємо ключ, обгорнутий новим паролем
+                // (ми вже завантажили DEK в пам'ять, тому просто викликаємо оновлення ключа користувача)
+                _keyManager.SetOrUpdateUserKey(adminUser.Login, newPassword);
 
-                // 5. Оновлюємо PasswordHash адміністратора в базі даних
-                authService.UpdateUserPassword(adminUser, newPassword);
+                // 6. Оновлюємо PasswordHash адміністратора в базі даних
+                _authService.UpdateUserPassword(adminUser, newPassword);
 
                 DialogResult = true;
                 Close();

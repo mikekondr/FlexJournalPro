@@ -2,7 +2,6 @@ using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 
 namespace FlexJournalPro.ViewModels.Screens
@@ -15,8 +14,10 @@ namespace FlexJournalPro.ViewModels.Screens
 
     public class UserEditorScreen : ScreenBase
     {
-        private readonly DatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
+        private readonly IDatabaseService _dbService;
+        private readonly IKeyManagementService _keyManagementService;
+        private readonly IAuthService _authService;
         
         public AppUser? UserToEdit { get; }
         
@@ -58,11 +59,13 @@ namespace FlexJournalPro.ViewModels.Screens
             }
         }
 
-        public UserEditorScreen(AppUser? userToEdit, DatabaseService dbService, MainViewModel mainViewModel)
+        public UserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel, IDatabaseService dbService, IKeyManagementService keyManagementService, IAuthService authService)
         {
-            _dbService = dbService;
-            _mainViewModel = mainViewModel;
             UserToEdit = userToEdit;
+            _mainViewModel = mainViewModel;
+            _dbService = dbService;
+            _keyManagementService = keyManagementService;
+            _authService = authService;
             
             IsEditing = userToEdit != null;
 
@@ -262,13 +265,13 @@ namespace FlexJournalPro.ViewModels.Screens
                     string? newPasswordHash = null;
                     if (!string.IsNullOrWhiteSpace(Password))
                     {
-                        newPasswordHash = AuthService.HashPassword(Password);
+                        newPasswordHash = _authService.HashPassword(Password);
                     }
 
                     _dbService.UpdateUser(UserToEdit, newPasswordHash);
                     if (!string.IsNullOrWhiteSpace(Password))
                     {
-                        App.KeyManager.SetOrUpdateUserKey(UserToEdit.Login, Password);
+                        _keyManagementService.SetOrUpdateUserKey(UserToEdit.Login, Password);
                     }
                 }
                 else
@@ -281,15 +284,15 @@ namespace FlexJournalPro.ViewModels.Screens
                         AllowedJournalIds = selectedIds
                     };
 
-                    string passwordHash = AuthService.HashPassword(Password);
+                    string passwordHash = _authService.HashPassword(Password);
 
                     _dbService.CreateUser(newUser, passwordHash);
-                    App.KeyManager.SetOrUpdateUserKey(newUser.Login, Password);
+                    _keyManagementService.SetOrUpdateUserKey(newUser.Login, Password);
                 }
 
                 _mainViewModel.CloseScreenCommand.Execute(this);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 await DialogService.ShowErrorAsync($"Помилка збереження користувача: {ex.Message}");
             }

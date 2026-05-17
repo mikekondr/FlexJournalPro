@@ -12,11 +12,11 @@ namespace FlexJournalPro.ViewModels.Screens
     /// </summary>
     public class TemplatesListScreen : ScreenBase
     {
-        private readonly TemplateService _templateService;
+        private readonly ITemplateService _templateService;
         private readonly MainViewModel _mainViewModel;
         private TemplateMetadata? _selectedTemplate;
 
-        public TemplatesListScreen(TemplateService templateService, MainViewModel mainViewModel)
+        public TemplatesListScreen(ITemplateService templateService, MainViewModel mainViewModel)
         {
             _templateService = templateService;
             _mainViewModel = mainViewModel;

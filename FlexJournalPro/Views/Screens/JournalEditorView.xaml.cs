@@ -1,4 +1,5 @@
 using FlexJournalPro.Helpers;
+using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels.Screens;
 using FlexJournalPro.Views;
 using System;
@@ -43,7 +44,7 @@ namespace FlexJournalPro.Views.Screens
 
             // Завантажуємо дані
             SmartTable.SetVirtualDataSource(
-                new Services.DatabaseService(), 
+                viewModel.DatabaseService,
                 viewModel.Journal.TableName,
                 viewModel.Journal.NumberStart);
         }
@@ -78,26 +79,6 @@ namespace FlexJournalPro.Views.Screens
             }
         }
 
-        private void BtnSaveConstants_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is not JournalEditorScreen viewModel) return;
-
-            try
-            {
-                string json = JsonSerializer.Serialize(viewModel.AutoFillValues);
-                var dbService = new Services.DatabaseService();
-                dbService.UpdateJournalAutoFillConfig(viewModel.Journal.Id, json);
-
-                MessageBox.Show("Параметри збережено!", "Успіх",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Помилка збереження параметрів: {ex.Message}",
-                    "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         private void BtnAddRow_Click(object sender, RoutedEventArgs e)
         {
             SmartTable.AddNewRow();
@@ -105,20 +86,12 @@ namespace FlexJournalPro.Views.Screens
 
         private void SmartTable_RowSaved(object sender, RowSavedEventArgs e)
         {
-            if (DataContext is not JournalEditorScreen viewModel) return;
-
-            try
+            if (DataContext is JournalEditorScreen viewModel)
             {
-                var dbService = new Services.DatabaseService();
-                dbService.UpsertDictionaryRow(
-                    viewModel.Journal.TableName,
-                    e.RowData,
-                    viewModel.Template!.Columns);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Помилка збереження: {ex.Message}",
-                    "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (viewModel.SaveRowCommand.CanExecute(e.RowData))
+                {
+                    viewModel.SaveRowCommand.Execute(e.RowData);
+                }
             }
         }
     }

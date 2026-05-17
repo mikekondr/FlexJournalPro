@@ -133,7 +133,7 @@ namespace FlexJournalPro.Views
         /// <summary>
         /// Встановлює віртуальне джерело даних для таблиці.
         /// </summary>
-        public void SetVirtualDataSource(DatabaseService dbService, string tableName, long startNumber = 1)
+        public void SetVirtualDataSource(IDatabaseService dbService, string tableName, long startNumber = 1)
         {
             _viewModel.SetVirtualDataSource(dbService, tableName, startNumber);
         }

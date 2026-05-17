@@ -15,14 +15,14 @@ namespace FlexJournalPro.ViewModels.Screens
     /// </summary>
     public class NewJournalScreen : ScreenBase
     {
-        private readonly DatabaseService _dbService;
+        private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
         private TemplateMetadata? _selectedTemplate;
         private string _journalTitle = string.Empty;
         private long _startNumber = 1;
         private bool _isStartNumberEnabled = true;
 
-        public NewJournalScreen(DatabaseService dbService, MainViewModel mainViewModel)
+        public NewJournalScreen(IDatabaseService dbService, MainViewModel mainViewModel)
         {
             _dbService = dbService;
             _mainViewModel = mainViewModel;

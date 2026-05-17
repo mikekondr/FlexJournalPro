@@ -1,8 +1,9 @@
 using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
-using System.Collections.Generic;
-using System.Linq;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Input;
 
 namespace FlexJournalPro.ViewModels.Screens
 {
@@ -12,12 +13,16 @@ namespace FlexJournalPro.ViewModels.Screens
     public class JournalEditorScreen : ScreenBase
     {
         private readonly JournalMetadata _journal;
-        private readonly DatabaseService _dbService;
+        private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
         private TableTemplate? _template;
         private Dictionary<string, object> _autoFillValues = new Dictionary<string, object>();
+        public IDatabaseService DatabaseService => _dbService;
 
-        public JournalEditorScreen(JournalMetadata journal, DatabaseService dbService, MainViewModel mainViewModel)
+        public ICommand SaveConstantsCommand { get; }
+        public ICommand SaveRowCommand { get; }
+
+        public JournalEditorScreen(JournalMetadata journal, IDatabaseService dbService, MainViewModel mainViewModel)
         {
             _journal = journal;
             _dbService = dbService;
@@ -25,6 +30,9 @@ namespace FlexJournalPro.ViewModels.Screens
 
             Title = journal.Title;
             Icon = PackIconKind.BookEdit;
+
+            SaveConstantsCommand = new RelayCommand(SaveConstants);
+            SaveRowCommand = new RelayCommand<BindableRow>(SaveRow);
 
             // Завантажуємо шаблон та дані
             LoadTemplate();
@@ -131,6 +139,36 @@ namespace FlexJournalPro.ViewModels.Screens
                         Type = ColumnType.Text
                     });
                 }
+            }
+        }
+
+        public void SaveConstants()
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(AutoFillValues);
+                _dbService.UpdateJournalAutoFillConfig(Journal.Id, json);
+
+                // В ідеалі тут має бути _dialogService.ShowMessage(...), але поки залишимо MessageBox
+                MessageBox.Show("Параметри збережено!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Помилка збереження параметрів: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void SaveRow(BindableRow rowData)
+        {
+            if (rowData == null || Template == null) return;
+
+            try
+            {
+                _dbService.UpsertDictionaryRow(Journal.TableName, rowData, Template.Columns);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Помилка збереження: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

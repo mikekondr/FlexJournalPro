@@ -6,14 +6,26 @@ using FlexJournalPro.Views;
 
 namespace FlexJournalPro.Services
 {
+    public interface ITemplateService
+    {
+        void CreateTemplate(TableTemplate template);
+        void UpdateTemplate(TableTemplate template);
+        TableTemplate GetTemplate(string templateId);
+        string GetTemplateJsonConfig(string templateId);
+        List<TemplateMetadata> GetAllTemplates();
+        void DeleteTemplate(string templateId);
+        JournalMetadata CreateJournalFromTemplate(string templateId, string journalTitle);
+        void ImportDefaultTemplates();
+    }
+
     /// <summary>
     /// Сервіс для роботи з шаблонами (фасад для DatabaseService)
     /// </summary>
-    public class TemplateService
+    public class TemplateService : ITemplateService
     {
-        private readonly DatabaseService _dbService;
+        private readonly IDatabaseService _dbService;
 
-        public TemplateService(DatabaseService dbService)
+        public TemplateService(IDatabaseService dbService)
         {
             _dbService = dbService;
         }

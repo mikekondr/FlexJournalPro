@@ -84,7 +84,7 @@
                         Content="Зберегти параметри"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Margin="16"
-                        Click="BtnSaveConstants_Click"/>
+                        x:Name="BtnSaveConstants" Command="{Binding SaveConstantsCommand}"/>
             </Grid>
         </materialDesign:Card>
     </Grid>

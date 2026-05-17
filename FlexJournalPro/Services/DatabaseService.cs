@@ -8,62 +8,101 @@ using Microsoft.Data.Sqlite;
 
 namespace FlexJournalPro.Services
 {
-    public class DatabaseService
+    public interface IDatabaseService
     {
-        private readonly string _connectionString;
-        private readonly AppConfig _config = AppConfig.Instance;
+        // База даних
+        void Connect();
+
+        // Реєстр журналів
+        List<JournalMetadata> GetAllJournals(AppUser? currentUser = null);
+        void CreateNewJournal(JournalMetadata meta, List<ColumnConfig> columns);
+        DataTable LoadJournalData(string tableName);
+        DataTable LoadJournalPage(string tableName, int offset, int limit);
+        int GetJournalCount(string tableName);
+        long GetNextRegistrationNumber(string tableName, long startNumber);
+        IList<BindableRow> FetchRange(string tableName, int startIndex, int count, List<ColumnConfig> columns);
+        void UpsertDictionaryRow(string tableName, BindableRow rowData, List<ColumnConfig> columns);
+
+        // Шаблони
+        void SaveTemplate(TableTemplate template);
+        TableTemplate GetTemplate(string templateId);
+        string GetTemplateJson(string templateId);
+        List<TemplateMetadata> GetAllTemplates();
+        void DeactivateTemplate(string templateId);
+        void UpdateJournalAutoFillConfig(long journalId, string autoFillConfigJson);
+        void DeleteJournal(long journalId);
+
+        // Користувачі
+        List<AppUser> GetAllUsers();
+        void CreateUser(AppUser user, string passwordHash);
+        void UpdateUser(AppUser user, string? newPasswordHash = null);
+        void DeleteUser(long userId);
+        List<int> GetUserAllowedJournalIds(int userId);
+        (AppUser? User, string? PasswordHash) GetUserWithHashByLogin(string login);
+        public AppUser FindUserById(int id);
+    }
+
+    public class DatabaseService : IDatabaseService
+    {
+        private string _connectionString = string.Empty;
         private readonly bool _useCipher;
+
+        private readonly AppConfig _config;
+        private readonly IKeyManagementService _keyManager;
 
         public string ConnectionString => _connectionString;
 
-        public DatabaseService(string? decryptedDek = null)
+        public DatabaseService(IKeyManagementService keyManager, AppConfig config)
         {
-            // Завантажимо конфігурацію
+            _keyManager = keyManager;
+            _config = config;
             _useCipher = _config.Database.UseCipher;
+        }
 
-            // БД створюється поряд з .exe файлом
-            string dbPath = AppConfig.DatabasePath;
+        public void Connect()
+        {
+            string dbPath = _config.DatabasePath;
 
             if (_useCipher)
             {
-                // SQLite-Cipher
+                // Беремо розшифрований DEK безпосередньо з KeyManager
+                string decryptedDek = _keyManager.GetDecryptedDekString();
                 if (string.IsNullOrWhiteSpace(decryptedDek))
                 {
-                    throw new InvalidOperationException("DEK ключ не передано для шифрованої бази даних.");
+                    throw new InvalidOperationException("DEK ключ не отримано для шифрованої бази даних.");
                 }
                 _connectionString = $"Data Source={dbPath};Password={decryptedDek};";
             }
             else
             {
-                // Звичайний SQLite
                 _connectionString = $"Data Source={dbPath};";
             }
 
-            InitializeDatabase();
+            InitializeDatabase(); // Створює таблиці, якщо їх немає
         }
 
         private void InitializeDatabase()
         {
-            // Створюємо файл БД якщо його немає
-            if (!File.Exists(AppConfig.DatabasePath))
-            {
-                if (_useCipher)
-                {
-                    // Для SQLCipher створюємо через відкриття з'єднання
-                    using (var conn = new SqliteConnection(_connectionString))
-                    {
-                        conn.Open();
-                    }
-                }
-                else
-                {
-                    // SqliteConnection буде автоматично створювати файл, якщо його немає
-                    using (var conn = new SqliteConnection(_connectionString))
-                    {
-                        conn.Open();
-                    }
-                }
-            }
+            //// TODO: Створюємо файл БД якщо його немає
+            //if (!File.Exists(_config.DatabasePath))
+            //{
+            //    if (_useCipher)
+            //    {
+            //        // Для SQLCipher створюємо через відкриття з'єднання
+            //        using (var conn = new SqliteConnection(_connectionString))
+            //        {
+            //            conn.Open();
+            //        }
+            //    }
+            //    else
+            //    {
+            //        // SqliteConnection буде автоматично створювати файл, якщо його немає
+            //        using (var conn = new SqliteConnection(_connectionString))
+            //        {
+            //            conn.Open();
+            //        }
+            //    }
+            //}
 
             using (var conn = new SqliteConnection(_connectionString))
             {
@@ -994,6 +1033,36 @@ namespace FlexJournalPro.Services
             return users.Values.ToList();
         }
 
+        public AppUser FindUserById(int id)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Id = @Id";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new AppUser
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                Login = reader["Login"].ToString(),
+                                PasswordHash = reader["PasswordHash"].ToString(),
+                                FullName = reader["FullName"].ToString(),
+                                Role = (UserRole)Convert.ToInt32(reader["Role"])
+                            };
+
+                            return user;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// Створює нового користувача та призначає йому права доступу до журналів.
         /// </summary>
@@ -1215,6 +1284,43 @@ namespace FlexJournalPro.Services
             }
             return ids;
         }
+
+        public (AppUser? User, string? PasswordHash) GetUserWithHashByLogin(string login)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Login = @Login";
+
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Login", login);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new AppUser
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                Login = reader["Login"]?.ToString() ?? string.Empty,
+                                FullName = reader["FullName"]?.ToString() ?? string.Empty,
+                                Role = (UserRole)Convert.ToInt32(reader["Role"])
+                                // Примітка: AllowedJournalIds можна завантажити тут або окремим методом
+                            };
+
+                            string hash = reader["PasswordHash"]?.ToString() ?? string.Empty;
+
+                            // Завантажуємо дозволи
+                            user.AllowedJournalIds = GetUserAllowedJournalIds(user.Id);
+
+                            return (user, hash);
+                        }
+                    }
+                }
+            }
+            return (null, null);
+        }
     }
 
     // Интерфейс провайдера елементів для віртуалізації
@@ -1226,11 +1332,11 @@ namespace FlexJournalPro.Services
 
     public class JournalDataProvider : IItemsProvider
     {
-        private readonly DatabaseService _dbService;
+        private readonly IDatabaseService _dbService;
         private readonly string _tableName;
         private readonly List<ColumnConfig> _columns;
 
-        public JournalDataProvider(DatabaseService dbService, string tableName, List<ColumnConfig> columns)
+        public JournalDataProvider(IDatabaseService dbService, string tableName, List<ColumnConfig> columns)
         {
             _dbService = dbService;
             _tableName = tableName;

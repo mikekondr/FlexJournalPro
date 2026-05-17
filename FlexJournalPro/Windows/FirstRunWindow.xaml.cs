@@ -3,6 +3,7 @@ using FlexJournalPro.Services;
 using Microsoft.Win32;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -17,14 +18,24 @@ namespace FlexJournalPro.Windows
         // Тимчасове зберігання згенерованого ключа між натисканнями
         private string? _tempMasterKey;
 
-        private KeyManagementService? _keyService = App.KeyManager;
-        private AppConfig? _config;
-        private DatabaseService? _databaseService;
-        private AuthService? _auth;
+        // 1. ВИКОРИСТОВУЄМО ІНТЕРФЕЙСИ ТА DI
+        private readonly IKeyManagementService _keyService;
+        private readonly IDatabaseService _databaseService;
+        private readonly AppConfig _config;
+        private readonly IAuthService _authService;
 
-        public FirstRunWindow()
+        // 2. Впроваджуємо залежності через конструктор
+        public FirstRunWindow(
+            IKeyManagementService keyService,
+            IDatabaseService databaseService,
+            IAuthService authService,
+            AppConfig config)
         {
             InitializeComponent();
+            _keyService = keyService;
+            _databaseService = databaseService;
+            _authService = authService;
+            _config = config;
         }
 
         // Перетягування вікна
@@ -67,7 +78,6 @@ namespace FlexJournalPro.Windows
             {
                 try
                 {
-                    // Формуємо гарний файл з інструкціями для користувача
                     string fileContent = $"ЖурналПро - Майстер-ключ відновлення\r\n" +
                                          $"Створено: {DateTime.Now}\r\n" +
                                          $"Логін адміністратора: {LoginTextBox.Text.Trim()}\r\n" +
@@ -97,7 +107,7 @@ namespace FlexJournalPro.Windows
             string passwordConfirm = PasswordBox2.Password;
             bool useEncryption = UseEncryptionSwitch.IsChecked == true;
 
-            // 0. Базова валідація
+            // 0. Валідація
             if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(password))
             {
                 ShowMessage("Будь ласка, заповніть всі поля.", isError: true);
@@ -110,66 +120,64 @@ namespace FlexJournalPro.Windows
                 return;
             }
 
-            // ЕТАП 1: Генерація ключа і зупинка для його збереження (тільки якщо є шифрування)
+            // ЕТАП 1: Генерація ключа і зупинка для його збереження
             if (useEncryption && !_isWaitingForKeyBackup)
             {
-                // Генеруємо візуальне представлення ключа (Recovery Key / KEK)
                 _tempMasterKey = GenerateRecoveryKeyFormat();
                 MasterDekTextBlock.Text = _tempMasterKey;
 
-                // Показуємо блок з ключем
                 MasterKeyBlock.Visibility = Visibility.Visible;
 
-                // Змінюємо UI, щоб користувач не міг змінити дані на цьому етапі
                 UseEncryptionSwitch.IsEnabled = false;
                 LoginTextBox.IsEnabled = false;
                 PasswordBox.IsEnabled = false;
                 PasswordBox2.IsEnabled = false;
 
-                // Змінюємо кнопку
-                var btn = (System.Windows.Controls.Button)sender;
-                btn.Content = "Я ЗБЕРІГ КЛЮЧ - ЗАВЕРШИТИ";
+                var btnStage1 = (System.Windows.Controls.Button)sender;
+                btnStage1.Content = "Я ЗБЕРІГ КЛЮЧ - ЗАВЕРШИТИ";
 
                 ShowMessage("Будь ласка, збережіть ключ перед продовженням.", isError: false);
 
                 _isWaitingForKeyBackup = true;
-                return; // Зупиняємо виконання, чекаємо другого натискання
+                return;
             }
 
-            // ЕТАП 2: Фінальне створення системи (Або Етап 1, якщо шифрування вимкнено)
+            // ЕТАП 2: Фінальне створення системи
             try
             {
-                // Деактивуємо кнопку, щоб уникнути подвійного кліка під час завантаження
-                var btn = (System.Windows.Controls.Button)sender;
-                btn.IsEnabled = false;
-                btn.Content = "НАЛАШТУВАННЯ...";
+                var btnStage2 = (System.Windows.Controls.Button)sender;
+                btnStage2.IsEnabled = false;
+                btnStage2.Content = "НАЛАШТУВАННЯ...";
 
-                // Виконуємо важкі задачі асинхронно, щоб не блокувати інтерфейс
+                // Виконуємо задачі асинхронно
                 await Task.Run(() =>
                 {
-                    // 1. Створює файл конфігурації
+                    // 1. Оновлюємо конфігурацію 
                     CreateConfiguration(useEncryption);
 
                     if (useEncryption)
                     {
-                        // 2. Генерує ключ DEK з використанням ключа KEK та пароля
+                        // 2. Зберігаємо ключі користувача (Шифруємо DEK паролем і пишемо в Keystore)
                         SaveEncryptionKeys(login, password);
                     }
 
-                    // 4. Створює базу даних
-                    CreateDatabase(useEncryption);
+                    // 3. СТВОРЕННЯ БАЗИ ДАНИХ (Більше жодних new DatabaseService!)
+                    // Оскільки DEK вже в пам'яті (_keyService.GenerateMasterKeyInMemory()),
+                    // метод Connect зчитає його і створить файл БД.
+                    CreateDatabase();
 
-                    // 5. Створює користувача
-                    CreateAdminUser(login, password, useEncryption);
+                    // 4. Створюємо першого адміністратора
+                    CreateAdminUser(login, password);
                 });
+
                 DialogResult = true;
             }
             catch (Exception ex)
             {
                 ShowMessage($"Помилка налаштування: {ex.Message}", isError: true);
-                var btn = (System.Windows.Controls.Button)sender;
-                btn.IsEnabled = true;
-                btn.Content = _isWaitingForKeyBackup ? "Я ЗБЕРІГ КЛЮЧ - ЗАВЕРШИТИ" : "РОЗПОЧАТИ";
+                var btnError = (System.Windows.Controls.Button)sender;
+                btnError.IsEnabled = true;
+                btnError.Content = _isWaitingForKeyBackup ? "Я ЗБЕРІГ КЛЮЧ - ЗАВЕРШИТИ" : "РОЗПОЧАТИ";
             }
         }
 
@@ -180,7 +188,7 @@ namespace FlexJournalPro.Windows
             ErrorTextBlock.Text = message;
             ErrorTextBlock.Foreground = isError ?
                 System.Windows.Media.Brushes.Red :
-                new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#4CAF50")); // Зелений
+                new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#4CAF50"));
             ErrorTextBlock.Visibility = Visibility.Visible;
         }
 
@@ -191,23 +199,15 @@ namespace FlexJournalPro.Windows
 
         #endregion
 
-        #region Заглушки для вашої бізнес-логіки (Ваші 5 пунктів)
+        #region Бізнес-логіка (Оновлена для DI)
 
         private string GenerateRecoveryKeyFormat()
         {
-            //_keyService = new KeyManagementService();
             _keyService.GenerateMasterKeyInMemory();
-
-            // Отримуємо сирий Base64
             string base64Key = _keyService.ExportMasterRecoveryKey();
-
-            // Конвертуємо Base64 назад у байти
             byte[] keyBytes = Convert.FromBase64String(base64Key);
-
-            // Конвертуємо байти у суцільний Hex-рядок (напр. 4A3B8C9D...)
             string hexString = BitConverter.ToString(keyBytes).Replace("-", "");
 
-            // Розбиваємо дефісами кожні 4 символи для зручності читання
             var formattedGroups = Enumerable.Range(0, hexString.Length / 4)
                                             .Select(i => hexString.Substring(i * 4, 4));
 
@@ -216,29 +216,30 @@ namespace FlexJournalPro.Windows
 
         private void CreateConfiguration(bool useEncryption)
         {
-            _config = AppConfig.Instance;
             _config.Database.UseCipher = useEncryption;
             _config.Save();
         }
 
         private void SaveEncryptionKeys(string login, string password)
         {
-            _keyService.SetOrUpdateUserKey(login, password); 
+            _keyService.SetOrUpdateUserKey(login, password);
         }
 
-        private void CreateDatabase(bool useEncryption)
+        private void CreateDatabase()
         {
-            _databaseService = new DatabaseService(_keyService.GetDecryptedDekString());
+            // DI-контейнер дав нам єдиний екземпляр бази.
+            // Нам потрібно лише викликати Connect(), щоб створити файл та таблиці.
+            _databaseService.Connect();
         }
 
-        private void CreateAdminUser(string login, string password, bool isEncryptedDb)
+        private void CreateAdminUser(string login, string password)
         {
-            string passwordHash = AuthService.HashPassword(password);
+            // Припускаємо, що HashPassword - статичний метод у вашому коді
+            string passwordHash = _authService.HashPassword(password);
 
             Models.AppUser adminUser = new Models.AppUser
             {
                 Login = login,
-                PasswordHash = passwordHash,
                 Role = Models.UserRole.Admin,
                 FullName = "Адміністратор"
             };

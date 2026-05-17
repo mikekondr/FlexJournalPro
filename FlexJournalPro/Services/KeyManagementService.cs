@@ -1,3 +1,4 @@
+using System.Configuration;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -5,7 +6,21 @@ using FlexJournalPro.Config;
 
 namespace FlexJournalPro.Services
 {
-    public class KeyManagementService
+    public interface IKeyManagementService
+    {
+        bool HasDpapiError();
+        string GetDecryptedDekString();
+        bool UnlockDekWithPassword(string login, string password);
+        void SetOrUpdateUserKey(string login, string userPassword);
+        string ExportMasterRecoveryKey();
+        //void RecoverWithMasterKey(string base64Dek, string login, string newPassword);
+        void RemoveUserKey(string login);
+        void ClearKeystore();
+        void GenerateMasterKeyInMemory();
+        void SetMasterKeyInMemory(string base64Dek);
+    }
+
+    public class KeyManagementService : IKeyManagementService
     {
         // Структура для збереження ключа конкретного користувача
         public class UserKeyEntry
@@ -15,7 +30,7 @@ namespace FlexJournalPro.Services
             public string EncryptedDekBase64 { get; set; } = string.Empty;
         }
 
-        private readonly string _keyStorePath = AppConfig.KeystorePath;
+        private readonly string _keyStorePath = string.Empty;
         private byte[]? _currentDecryptedDek = null;
 
         private bool _dpapiErrorDetected = false;
@@ -24,8 +39,9 @@ namespace FlexJournalPro.Services
         // Хранилище: Логин -> Данные ключа
         private Dictionary<string, UserKeyEntry> _keyStore = new(StringComparer.OrdinalIgnoreCase);
 
-        public KeyManagementService()
+        public KeyManagementService(AppConfig config)
         {
+            _keyStorePath = config.KeystorePath;
             LoadKeyStore();
         }
 
@@ -223,29 +239,29 @@ namespace FlexJournalPro.Services
         /// та обгортає (шифрує) його новим паролем для вказаного користувача (admin).
         /// Викликається ТІЛЬКИ ПІСЛЯ перевірки ключа через DatabaseService.
         /// </summary>
-        public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
-        {
-            byte[] dekBytes;
-            try
-            {
-                dekBytes = Convert.FromBase64String(base64Dek);
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException("Майстер-ключ має невірний формат.");
-            }
+        //public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
+        //{
+        //    byte[] dekBytes;
+        //    try
+        //    {
+        //        dekBytes = Convert.FromBase64String(base64Dek);
+        //    }
+        //    catch (FormatException)
+        //    {
+        //        throw new ArgumentException("Майстер-ключ має невірний формат.");
+        //    }
 
-            if (dekBytes.Length != 32)
-            {
-                throw new ArgumentException("Невірна довжина Майстер-ключа.");
-            }
+        //    if (dekBytes.Length != 32)
+        //    {
+        //        throw new ArgumentException("Невірна довжина Майстер-ключа.");
+        //    }
 
-            // Встановлюємо в пам'ять
-            _currentDecryptedDek = dekBytes;
+        //    // Встановлюємо в пам'ять
+        //    _currentDecryptedDek = dekBytes;
 
-            // Шифруємо і записуємо для адміністратора (що призведе до перестворення або оновлення keystore.json)
-            SetOrUpdateUserKey(login, newPassword);
-        }
+        //    // Шифруємо і записуємо для адміністратора (що призведе до перестворення або оновлення keystore.json)
+        //    SetOrUpdateUserKey(login, newPassword);
+        //}
 
         // При удалении пользователя
         public void RemoveUserKey(string login)
@@ -306,6 +322,23 @@ namespace FlexJournalPro.Services
             byte[] dek = new byte[32];
             using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(dek);
             _currentDecryptedDek = dek;
+        }
+
+        public void SetMasterKeyInMemory(string base64Dek)
+        {
+            try
+            {
+                byte[] dekBytes = Convert.FromBase64String(base64Dek);
+                if (dekBytes.Length != 32)
+                {
+                    throw new ArgumentException("Невірна довжина Майстер-ключа.");
+                }
+                _currentDecryptedDek = dekBytes;
+            }
+            catch (FormatException)
+            {
+                throw new ArgumentException("Майстер-ключ має невірний формат.");
+            }
         }
     }
 }

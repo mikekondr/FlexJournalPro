@@ -1,8 +1,9 @@
 using FlexJournalPro.Services;
+using FlexJournalPro.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Input;
-using FlexJournalPro.Windows;
 
 namespace FlexJournalPro.ViewModels
 {
@@ -11,8 +12,11 @@ namespace FlexJournalPro.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        private readonly DatabaseService _dbService = App.Database;
-        private readonly TemplateService _templateService;
+        private readonly IDatabaseService _dbService;
+        private readonly ITemplateService _templateService;
+        private readonly IAuthService _authService;
+        private readonly IKeyManagementService _keyManagementService;
+
         private bool _isSidebarExpanded = true;
         private ScreenBase? _currentScreen;
         private ScreenBase? _selectedScreen;
@@ -20,9 +24,13 @@ namespace FlexJournalPro.ViewModels
         private bool _canScrollRight;
         private ScrollViewer? _screensPanelScrollViewer;
 
-        public MainViewModel()
+        public MainViewModel(IDatabaseService dbService, ITemplateService templateService, IAuthService authService, IKeyManagementService keyManagementService)
         {
-            _templateService = new TemplateService(_dbService);
+            _dbService = dbService;
+            _templateService = templateService;
+            _authService = authService;
+            _keyManagementService = keyManagementService;
+
             OpenScreens = new ObservableCollection<ScreenBase>();
 
             // Імпортуємо шаблони з JSON файлів
@@ -149,7 +157,7 @@ namespace FlexJournalPro.ViewModels
 
         private async void OpenUsersList()
         {
-            OpenOrActivateScreen(() => new Screens.UsersListScreen(this));
+            OpenOrActivateScreen(() => new Screens.UsersListScreen(_dbService, _keyManagementService, _authService, this));
         }
 
         private void CloseScreen(object? parameter)
@@ -192,32 +200,33 @@ namespace FlexJournalPro.ViewModels
         {
             // Скидаємо користувача
             App.CurrentUser = null;
-            
-             // Змінюємо режим зупинки, щоб програма не завершилася під час закриття головного вікна
+
+            // Змінюємо режим зупинки
             System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
 
-            // Отримуємо поточне головне вікно та закриваємо його
+            // Закриваємо головне вікно
             if (System.Windows.Application.Current.MainWindow != null)
             {
                 System.Windows.Application.Current.MainWindow.Close();
             }
 
-            // Створюємо та відкриваємо вікно авторизації наново
-            var loginWindow = new LoginWindow(App.KeyManager);
-            
+            // ОТРИМУЄМО КОНТЕЙНЕР DI З НАШОГО ДОДАТКУ
+            var app = (App)System.Windows.Application.Current;
+
+            // Створюємо та відкриваємо вікно авторизації через DI!
+            var loginWindow = app.ServiceProvider.GetRequiredService<LoginWindow>();
+
             if (loginWindow.ShowDialog() == true)
             {
-                // Повертаємо режим закриття програми за замовчуванням
                 System.Windows.Application.Current.ShutdownMode = System.Windows.ShutdownMode.OnMainWindowClose;
-                
-                // Якщо користувач знову залогінився, відкриваємо його вікно
-                var mainWindow = new MainWindow();
+
+                // Якщо залогінились - знову беремо MainWindow з DI
+                var mainWindow = app.ServiceProvider.GetRequiredService<MainWindow>();
                 System.Windows.Application.Current.MainWindow = mainWindow;
                 mainWindow.Show();
             }
             else
             {
-                // Якщо закрили вікно авторизації
                 System.Windows.Application.Current.Shutdown();
             }
         }

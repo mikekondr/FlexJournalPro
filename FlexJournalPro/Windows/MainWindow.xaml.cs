@@ -9,10 +9,10 @@ namespace FlexJournalPro.Windows
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
+            DataContext = viewModel;
             Loaded += MainWindow_Loaded;
             StateChanged += MainWindow_StateChanged;
         }

@@ -4,76 +4,60 @@ using System.Text.Json;
 
 namespace FlexJournalPro.Config
 {
+    public class AppSettingsData
+    {
+        public DatabaseConfig Database { get; set; } = new DatabaseConfig();
+    }
+
     public class AppConfig
     {
-        private static AppConfig? _instance;
-        private static readonly object _lock = new object();
-        
-        public static readonly string ConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_settings.json");
-        public static readonly string DatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_database.db");
-        public static readonly string KeystorePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_keystore.dat");
+        public string ConfigPath { get; private set; } = string.Empty;
+        public string DatabasePath { get; private set; } = string.Empty;
+        public string KeystorePath { get; private set; } = string.Empty;
 
-        public DatabaseConfig Database { get; set; } = new DatabaseConfig();
-        
-        public AppConfig() { }
+        public AppSettingsData Settings { get; private set; } = new AppSettingsData();
 
-        public static AppConfig Instance
-        {
-            get
+        public DatabaseConfig Database => Settings.Database;
+
+        public AppConfig() {
+            // Ініціалізація шляхів
+            //string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            //string appFolder = Path.Combine(appData, "FlexJournalPro");
+            string appFolder = AppDomain.CurrentDomain.BaseDirectory;
+
+            if (!Directory.Exists(appFolder))
             {
-                if (_instance == null)
+                Directory.CreateDirectory(appFolder);
+            }
+
+            DatabasePath = Path.Combine(appFolder, "app_database.db");
+            ConfigPath = Path.Combine(appFolder, "app_settings.json");
+            KeystorePath = Path.Combine(appFolder, "app_keystore.dat");
+
+            Load();
+        }
+
+        public void Load()
+        {
+            if (File.Exists(ConfigPath))
+            {
+                try
                 {
-                    lock (_lock)
+                    string json = File.ReadAllText(ConfigPath);
+                    var loadedConfig = JsonSerializer.Deserialize<AppSettingsData>(json);
+                    
+                    // Копіюємо налаштування з завантаженого об'єкта
+                    if (loadedConfig != null)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = Load();
-                        }
+                        this.Settings = loadedConfig;
+                        // Копіювання інших секцій конфігурації
                     }
                 }
-                return _instance;
-            }
-        }
-
-        private static AppConfig Load()
-        {
-            try
-            {
-                if (File.Exists(ConfigPath))
+                catch (Exception ex)
                 {
-                    // Файл існує, читаємо його
-                    string json = File.ReadAllText(ConfigPath);
-                    return JsonSerializer.Deserialize<AppConfig>(json) ?? CreateDefaultAndSave();
-                }
-                else
-                {
-                    // Файлу немає, створюємо і зберігаємо на диск
-                    return CreateDefaultAndSave();
+                    System.Diagnostics.Debug.WriteLine($"Помилка завантаження конфігу: {ex.Message}");
                 }
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Помилка завантаження конфігурації: {ex.Message}");
-                return new AppConfig();
-            }
-        }
-
-        private static AppConfig CreateDefaultAndSave()
-        {
-            var defaultConfig = new AppConfig();
-
-            try
-            {
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string json = JsonSerializer.Serialize(defaultConfig, options);
-                File.WriteAllText(ConfigPath, json);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Помилка збереження конфігурації за замовчуванням: {ex.Message}");
-            }
-
-            return defaultConfig;
         }
 
         // За необхідності, ви можете викликати цей метод з будь-якого місця програми, 
@@ -82,22 +66,18 @@ namespace FlexJournalPro.Config
         {
             try
             {
-                lock (_lock)
-                {
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    string json = JsonSerializer.Serialize(this, options);
-                    File.WriteAllText(ConfigPath, json);
-                }
+                string json = JsonSerializer.Serialize(this.Settings, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(ConfigPath, json);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Помилка збереження оновленої конфігурації: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Помилка збереження конфігу: {ex.Message}");
             }
         }
     }
 
     public class DatabaseConfig
     {
-        public bool UseCipher { get; set; } = false;
+        public bool UseCipher { get; set; } = true;
     }
 }

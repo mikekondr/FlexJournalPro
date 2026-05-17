@@ -1,68 +1,98 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using FlexJournalPro.Services;
 using FlexJournalPro.Models;
 using FlexJournalPro.Config;
 using FlexJournalPro.Windows;
+using FlexJournalPro.ViewModels;
 
 namespace FlexJournalPro
 {
     /// <summary>
-    /// Основной класс приложения с управлением потоком запуска
+    /// Основний клас додатка з управлінням потоком запуску через DI-контейнер
     /// </summary>
     public partial class App : Application
     {
+        // Поточний авторизований користувач (поки залишаємо тут, 
+        // згодом його можна буде перенести в окремий AuthService)
         public static AppUser? CurrentUser { get; set; }
-        
-        // Глобальные сервисы
-        public static KeyManagementService KeyManager { get; private set; } = null!;
-        public static DatabaseService Database { get; set; } = null!;
+
+        // Посилання на DI-контейнер
+        public IServiceProvider ServiceProvider { get; private set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Устанавливаем режим завершения в явный (контролируем сами)
+            // 1. Ініціалізація DI-контейнера та реєстрація залежностей
+            var serviceCollection = new ServiceCollection();
+            ConfigureServices(serviceCollection);
+            ServiceProvider = serviceCollection.BuildServiceProvider();
+
+            // Установлюємо режим завершення в явний (контролюємо процес до моменту відкриття MainWindow)
             Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             try
             {
-                // Проверяем аргументы командной строки
+                // Перевіряємо аргументи командного рядка
                 bool needsRecovery = e.Args.Contains("-recover");
 
-                // Этап 1: Инициализация KeyManager (выявляет ошибки DPAPI)
-                KeyManager = new KeyManagementService();
+                // Отримуємо базові сервіси з контейнера
+                var keyManager = ServiceProvider.GetRequiredService<IKeyManagementService>();
+                var dbService = ServiceProvider.GetRequiredService<IDatabaseService>();
 
-                // Этап 2: Проверяем необходимость восстановления
-                if (needsRecovery || KeyManager.HasDpapiError())
+                // Етап 1: Перевіряємо необхідність відновлення (виявляє помилки DPAPI)
+                if (needsRecovery || keyManager.HasDpapiError())
                 {
-                    if (!HandleRecoveryFlow())
+                    // Запитуємо вікно відновлення з DI-контейнера
+                    var recoveryWindow = ServiceProvider.GetRequiredService<RecoveryWindow>();
+                    if (recoveryWindow.ShowDialog() != true)
                     {
                         Shutdown();
                         return;
                     }
                 }
 
-                // Этап 3: Проверяем первый запуск
+                // Етап 2: Перевіряємо перший запуск
                 if (!HandleFirstRunIfNeeded())
                 {
                     Shutdown();
                     return;
                 }
 
-                // Этап 4: Показываем окно входа
-                if (!HandleLoginFlow())
+                // Етап 3: Показуємо вікно входу (створюється через DI з усіма залежностями)
+                var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
+                if (loginWindow.ShowDialog() != true)
                 {
                     Shutdown();
                     return;
                 }
+
+                // Етап 4: ІНІЦІАЛІЗАЦІЯ ПІДКЛЮЧЕННЯ ДО БД
+                // Користувач успішно увійшов, DEK розшифровано в оперативній пам'яті.
+                // Тепер ми можемо безпечно ініціалізувати рядок підключення!
+                // ПІДКЛЮЧЕННЯ ВИКОНУЄ LoginWindow для перевірки пароля
+                // dbService.Connect();
+
+                // Етап 5: Переходимо на головне вікно
+                // Повертаємо стандартний режим завершення додатку (при закритті головного вікна)
+                Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+                // Запитуємо MainWindow з контейнера. 
+                // DI автоматично створить MainViewModel та передасть туди вже підключений DatabaseService!
+                var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+                Current.MainWindow = mainWindow;
+                mainWindow.Show();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка инициализации приложения: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Помилка ініціалізації додатка: {ex.Message}");
                 MessageBox.Show(
-                    $"Критическая ошибка при запуске приложения:\n\n{ex.Message}",
-                    "Ошибка инициализации",
+                    $"Критична помилка при запуску додатка:\n\n{ex.Message}",
+                    "Помилка ініціалізації",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 Shutdown();
@@ -70,61 +100,46 @@ namespace FlexJournalPro
         }
 
         /// <summary>
-        /// Обработка потока восстановления доступа
+        /// Реєстрація всіх сервісів, ViewModels та вікон додатку
         /// </summary>
-        private bool HandleRecoveryFlow()
+        private void ConfigureServices(IServiceCollection services)
         {
-            // Показываем окно восстановления
-            // RecoveryWindow сам будет проверять ключ через DatabaseService.VerifyRecoveryKey(base64Dek)
-            var recoveryWindow = new RecoveryWindow(KeyManager);
-            
-            if (recoveryWindow.ShowDialog() != true)
-            {
-                return false; // Пользователь отменил восстановление
-            }
+            // Реєструємо Singleton-конфігурацію
+            services.AddSingleton<AppConfig>();
 
-            return true;
+            // Реєструємо основні сервіси через їхні інтерфейси
+            services.AddSingleton<IKeyManagementService, KeyManagementService>();
+            services.AddSingleton<IDatabaseService, DatabaseService>();
+            services.AddSingleton<ITemplateService, TemplateService>();
+            services.AddTransient<IAuthService, AuthService>();
+
+            // Реєструємо ViewModels (зазвичай Transient або Scoped)
+            services.AddTransient<MainViewModel>();
+
+            // Реєструємо Windows (як Transient, щоб отримувати новий екземпляр при кожному запиті)
+            services.AddTransient<LoginWindow>();
+            services.AddTransient<MainWindow>();
+            services.AddTransient<RecoveryWindow>();
+            services.AddTransient<FirstRunWindow>();
         }
 
         /// <summary>
-        /// Обработка первого запуска приложения
+        /// Обробка першого запуска додатка
         /// </summary>
         private bool HandleFirstRunIfNeeded()
         {
-            string dbFilePath = AppConfig.DatabasePath;
-            string configFilePath = AppConfig.ConfigPath;
+            var config = ServiceProvider.GetRequiredService<AppConfig>();
 
-            // Проверяем наличие конфигурации и базы данных
+            string dbFilePath = config.DatabasePath;
+            string configFilePath = config.ConfigPath;
+
             if (File.Exists(dbFilePath) && File.Exists(configFilePath))
             {
-                return true; // Все есть, первый запуск не требуется
+                return true;
             }
 
-            // Показываем окно первого запуска
-            var firstRunWindow = new FirstRunWindow();
+            var firstRunWindow = ServiceProvider.GetRequiredService<FirstRunWindow>();
             return firstRunWindow.ShowDialog() == true;
-        }
-
-        /// <summary>
-        /// Обработка потока входа в приложение
-        /// </summary>
-        private bool HandleLoginFlow()
-        {
-            var loginWindow = new LoginWindow(KeyManager);
-            
-            if (loginWindow.ShowDialog() != true)
-            {
-                return false; // Пользователь не вошел
-            }
-
-            // Успешный вход - переходим на главное окно
-            Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
-
-            var mainWindow = new MainWindow();
-            Current.MainWindow = mainWindow;
-            mainWindow.Show();
-
-            return true;
         }
     }
 }

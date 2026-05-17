@@ -24,7 +24,7 @@ namespace FlexJournalPro.ViewModels
         private TableTemplate _currentTemplate;
         private AsyncVirtualizingCollection _virtualData;
         private DataTable _calculationEngine;
-        private DatabaseService _dbService; // Store reference
+        private IDatabaseService _dbService; // Store reference
         private string _tableName;          // Store reference
         private long _initialStartNumber = 1; // Default
 
@@ -135,7 +135,7 @@ namespace FlexJournalPro.ViewModels
         /// <summary>
         /// Завантажує шаблон з бази даних (з кешуванням)
         /// </summary>
-        public void LoadTemplateFromDatabase(DatabaseService dbService, string templateId)
+        public void LoadTemplateFromDatabase(IDatabaseService dbService, string templateId)
         {
             if (!_jsonTemplateCache.ContainsKey(templateId))
             {
@@ -168,7 +168,7 @@ namespace FlexJournalPro.ViewModels
         /// <summary>
         /// Встановлює віртуальне джерело даних
         /// </summary>
-        public void SetVirtualDataSource(DatabaseService dbService, string tableName, long startNumber = 1)
+        public void SetVirtualDataSource(IDatabaseService dbService, string tableName, long startNumber = 1)
         {
             if (CurrentTemplate == null)
             {

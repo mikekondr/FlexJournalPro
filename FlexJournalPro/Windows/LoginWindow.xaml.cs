@@ -6,12 +6,24 @@ namespace FlexJournalPro.Windows
 {
     public partial class LoginWindow : Window
     {
-        private readonly KeyManagementService _keyManager;
+        private readonly IKeyManagementService _keyManager;
+        private readonly IDatabaseService _dbService;
+        private readonly IAuthService _authService;
+        private readonly AppConfig _config;
 
-        public LoginWindow(KeyManagementService keyManager)
+        // Впроваджуємо залежності через конструктор
+        public LoginWindow(
+            IKeyManagementService keyManager,
+            IDatabaseService dbService,
+            IAuthService authService,
+            AppConfig config)
         {
             InitializeComponent();
             _keyManager = keyManager;
+            _dbService = dbService;
+            _authService = authService;
+            _config = config;
+
             LoginTextBox.Focus();
         }
 
@@ -37,8 +49,7 @@ namespace FlexJournalPro.Windows
                 return;
             }
 
-            bool useCipher = AppConfig.Instance.Database.UseCipher;
-            DatabaseService? dbService = null;
+            bool useCipher = _config.Database.UseCipher;
 
             if (useCipher)
             {
@@ -47,46 +58,31 @@ namespace FlexJournalPro.Windows
 
                 if (!isKeyUnlocked)
                 {
-                    // Якщо ні дефолтний, ні введений пароль не підійшли
                     ShowError("Невірний логін або пароль");
                     return;
                 }
-                else
-                {
-                    try
-                    {
-                        dbService = new DatabaseService(_keyManager.GetDecryptedDekString());
-                    }
-                    catch (System.Exception)
-                    {
-                        ShowError("Неможливо відкрити базу даних. Помилка шифрування.");
-                        return;
-                    }
-
-                }
-            } else
-            {
-                try
-                {
-                    dbService = new DatabaseService();
-                }
-                catch (System.Exception)
-                {
-                    ShowError("Неможливо відкрити базу даних. Файл пошкоджено або зашифровано.");
-                    return;
-                }
-
             }
 
-            var authService = new AuthService(dbService);
-            var user = authService.Authenticate(login, password);
+            try
+            {
+                // Ключ успішно розблоковано в пам'яті (або шифрування вимкнено).
+                // ТЕПЕР ініціалізуємо підключення єдиного екземпляра БД!
+                _dbService.Connect();
+            }
+            catch (Exception)
+            {
+                ShowError("Неможливо відкрити базу даних. Помилка шифрування або файл пошкоджено.");
+                return;
+            }
+
+            // Перевіряємо користувача в БД
+            var user = _authService.Authenticate(login, password);
 
             if (user != null)
             {
-                // Успішний вхід. Зберігаємо ініціалізовану БД в App, щоб не створювати знову
-                App.Database = dbService;
+                // Успішний вхід. Зберігаємо поточного користувача.
                 App.CurrentUser = user;
-                
+
                 DialogResult = true;
             }
             else

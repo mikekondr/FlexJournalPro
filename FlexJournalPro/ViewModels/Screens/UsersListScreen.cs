@@ -8,7 +8,9 @@ namespace FlexJournalPro.ViewModels.Screens
 {
     public class UsersListScreen : ScreenBase
     {
-        private readonly DatabaseService _databaseService;
+        private readonly IDatabaseService _databaseService;
+        private readonly IKeyManagementService _keyManagementService;
+        private readonly IAuthService _authService;
         private readonly MainViewModel _mainViewModel;
 
         public override string ScreenId => "UsersList";
@@ -34,10 +36,12 @@ namespace FlexJournalPro.ViewModels.Screens
         public ICommand DeleteUserCommand { get; }
         public ICommand RefreshCommand { get; }
 
-        public UsersListScreen(MainViewModel mainViewModel)
+        public UsersListScreen(IDatabaseService databaseService, IKeyManagementService keyManagementService, IAuthService authService, MainViewModel mainViewModel)
         {
-            _databaseService = App.Database;
             _mainViewModel = mainViewModel;
+            _databaseService = databaseService;
+            _keyManagementService = keyManagementService;
+            _authService = authService;
 
             Users = new ObservableCollection<AppUser>();
 
@@ -73,7 +77,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private void CreateNewUser()
         {
             // Відкриваємо екран створення нового користувача (передаємо null замість наявного юзера)
-            var userEditorScreen = new UserEditorScreen(null, _databaseService, _mainViewModel);
+            var userEditorScreen = new UserEditorScreen(null, _mainViewModel, _databaseService, _keyManagementService, _authService);
             
             _mainViewModel.OpenScreens.Add(userEditorScreen);
             _mainViewModel.SelectedScreen = userEditorScreen;
@@ -84,7 +88,7 @@ namespace FlexJournalPro.ViewModels.Screens
             if (SelectedUser == null) return;
 
             // Відкриваємо екран редагування існуючого користувача
-            var editorScreen = new UserEditorScreen(SelectedUser, _databaseService, _mainViewModel);
+            var editorScreen = new UserEditorScreen(SelectedUser, _mainViewModel, _databaseService, _keyManagementService, _authService);
             
             // Перевіряємо, чи не відкритий вже цей екран (за допомогою ScreenId)
             var existingScreen = _mainViewModel.OpenScreens
@@ -125,7 +129,7 @@ namespace FlexJournalPro.ViewModels.Screens
                     }
 
                     // Видаляємо ключ шифрування
-                    App.KeyManager.RemoveUserKey(SelectedUser.Login);
+                    _keyManagementService.RemoveUserKey(SelectedUser.Login);
                     // Видаляємо користувача з бази даних
                     _databaseService.DeleteUser(SelectedUser.Id);
 

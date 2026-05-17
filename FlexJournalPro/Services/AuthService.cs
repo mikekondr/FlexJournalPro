@@ -1,19 +1,25 @@
 using System.Security.Cryptography;
-using Microsoft.Data.Sqlite;
 using FlexJournalPro.Models;
 
 namespace FlexJournalPro.Services
 {
-    public class AuthService
+    public interface IAuthService
     {
-        private readonly DatabaseService _dbService;
+        AppUser? Authenticate(string login, string password);
+        string HashPassword(string password);
+        public void UpdateUserPassword(AppUser user, string newPassword);
+    }
 
-        public AuthService(DatabaseService dbService)
+    public class AuthService : IAuthService
+    {
+        private readonly IDatabaseService _dbService;
+
+        public AuthService(IDatabaseService dbService)
         {
             _dbService = dbService;
         }
 
-        public static string HashPassword(string password)
+        public string HashPassword(string password)
         {
             byte[] salt = new byte[16];
             using (var rng = RandomNumberGenerator.Create())
@@ -31,135 +37,69 @@ namespace FlexJournalPro.Services
             }
         }
 
-        public bool VerifyPassword(string inputPassword, string storedHash)
+        public bool VerifyPassword(string password, string storedHash)
         {
-            if (string.IsNullOrEmpty(storedHash)) return false;
-
-            byte[] hashBytes = Convert.FromBase64String(storedHash);
-            byte[] salt = new byte[16];
-            Array.Copy(hashBytes, 0, salt, 0, 16);
-
-            using (var pbkdf2 = new Rfc2898DeriveBytes(inputPassword, salt, 600000, HashAlgorithmName.SHA256))
+            try
             {
-                byte[] hash = pbkdf2.GetBytes(32);
-                for (int i = 0; i < 32; i++)
+                // 1. Конвертуємо збережений хеш назад у масив байтів
+                byte[] hashBytes = Convert.FromBase64String(storedHash);
+
+                // Перевіряємо, чи має масив очікувану довжину (16 байт сіль + 32 байти хеш)
+                if (hashBytes.Length != 48)
                 {
-                    if (hashBytes[i + 16] != hash[i])
-                        return false;
+                    return false;
                 }
-                return true;
+
+                // 2. Витягуємо сіль (перші 16 байт)
+                byte[] salt = new byte[16];
+                Array.Copy(hashBytes, 0, salt, 0, 16);
+
+                // 3. Витягуємо сам хеш (наступні 32 байти)
+                byte[] actualStoredHash = new byte[32];
+                Array.Copy(hashBytes, 16, actualStoredHash, 0, 32);
+
+                // 4. Хешуємо введений пароль з використанням ВИТЯГНУТОЇ солі
+                using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA256))
+                {
+                    byte[] computedHash = pbkdf2.GetBytes(32);
+
+                    // 5. Порівнюємо хеші. 
+                    // Використовуємо FixedTimeEquals для захисту від таймінг-атак
+                    return CryptographicOperations.FixedTimeEquals(computedHash, actualStoredHash);
+                }
+            }
+            catch
+            {
+                // Якщо storedHash має невірний формат Base64 тощо
+                return false;
             }
         }
 
         public AppUser? Authenticate(string login, string password)
         {
-            using (var conn = new SqliteConnection(_dbService.ConnectionString))
-            {
-                conn.Open();
-                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Login = @Login";
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Login", login);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            var user = new AppUser
-                            {
-                                Id = Convert.ToInt32(reader["Id"]),
-                                Login = reader["Login"].ToString(),
-                                PasswordHash = reader["PasswordHash"].ToString(),
-                                FullName = reader["FullName"].ToString(),
-                                Role = (UserRole)Convert.ToInt32(reader["Role"])
-                            };
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+                return null;
 
-                            if (VerifyPassword(password, user.PasswordHash))
-                            {
-                                // Завантажуємо дозволи!
-                                user.AllowedJournalIds = _dbService.GetUserAllowedJournalIds(user.Id);
-                                return user;
-                            }
-                        }
-                    }
-                }
+            var (user, dbPasswordHash) = _dbService.GetUserWithHashByLogin(login);
+
+            if (user == null || string.IsNullOrEmpty(dbPasswordHash))
+            {
+                return null; // Користувача не знайдено або пароль не збережено
             }
-            return null;
+
+            // Замість прямого порівняння рядків викликаємо метод перевірки
+            if (VerifyPassword(password, dbPasswordHash))
+            {
+                return user; // Авторизація успішна
+            }
+
+            return null; // Пароль невірний
         }
 
         public void UpdateUserPassword(AppUser user, string newPassword)
         {
-            user.PasswordHash = HashPassword(newPassword);
-            using (var conn = new SqliteConnection(_dbService.ConnectionString))
-            {
-                conn.Open();
-                string sql = "UPDATE App_Users SET PasswordHash = @Hash WHERE Id = @Id";
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Hash", user.PasswordHash);
-                    cmd.Parameters.AddWithValue("@Id", user.Id);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        internal AppUser FindUserByLogin(string login)
-        {
-            using (var conn = new SqliteConnection(_dbService.ConnectionString))
-            {
-                conn.Open();
-                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Login = @Login";
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Login", login);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            var user = new AppUser
-                            {
-                                Id = Convert.ToInt32(reader["Id"]),
-                                Login = reader["Login"].ToString(),
-                                PasswordHash = reader["PasswordHash"].ToString(),
-                                FullName = reader["FullName"].ToString(),
-                                Role = (UserRole)Convert.ToInt32(reader["Role"])
-                            };
-
-                            return user;
-                        }
-                    }
-                }
-            }
-            return null;
-        }
-
-        internal AppUser FindUserById(int id)
-        {
-            using (var conn = new SqliteConnection(_dbService.ConnectionString))
-            {
-                conn.Open();
-                string sql = "SELECT Id, Login, PasswordHash, FullName, Role FROM App_Users WHERE Id = @Id";
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", id);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            var user = new AppUser
-                            {
-                                Id = Convert.ToInt32(reader["Id"]),
-                                Login = reader["Login"].ToString(),
-                                PasswordHash = reader["PasswordHash"].ToString(),
-                                FullName = reader["FullName"].ToString(),
-                                Role = (UserRole)Convert.ToInt32(reader["Role"])
-                            };
-
-                            return user;
-                        }
-                    }
-                }
-            }
-            return null;
+            var PasswordHash = HashPassword(newPassword);
+            _dbService.UpdateUser(user, PasswordHash);
         }
     }
 }

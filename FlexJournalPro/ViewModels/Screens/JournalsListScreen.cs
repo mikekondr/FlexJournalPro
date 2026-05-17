@@ -11,11 +11,11 @@ namespace FlexJournalPro.ViewModels.Screens
     /// </summary>
     public class JournalsListScreen : ScreenBase
     {
-        private readonly DatabaseService _dbService;
+        private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
         private JournalMetadata? _selectedJournal;
 
-        public JournalsListScreen(DatabaseService dbService, MainViewModel mainViewModel)
+        public JournalsListScreen(IDatabaseService dbService, MainViewModel mainViewModel)
         {
             _dbService = dbService;
             _mainViewModel = mainViewModel;
