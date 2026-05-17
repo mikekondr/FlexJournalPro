@@ -224,6 +224,15 @@
                                                        Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                            Command="{Binding OpenLogsCommand}" HorizontalContentAlignment="Left" Padding="16,8"
+                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="TextBoxSearchOutline" Width="24" Height="24" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Журнал логів" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

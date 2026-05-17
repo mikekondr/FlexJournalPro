@@ -13,6 +13,7 @@ namespace FlexJournalPro.Services
         ScreenBase CreateNewJournalScreen(MainViewModel mainViewModel);
         ScreenBase CreateJournalEditorScreen(JournalMetadata journal, MainViewModel mainViewModel);
         ScreenBase CreateUserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel);
+        ScreenBase CreateLogsScreen(MainViewModel mainViewModel);
     }
 
     public class ScreenFactory : IScreenFactory
@@ -52,6 +53,11 @@ namespace FlexJournalPro.Services
         public ScreenBase CreateUserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel)
         {
             return ActivatorUtilities.CreateInstance<UserEditorScreen>(_serviceProvider, userToEdit, mainViewModel);
+        }
+
+        public ScreenBase CreateLogsScreen(MainViewModel mainViewModel)
+        {
+            return ActivatorUtilities.CreateInstance<LogsScreen>(_serviceProvider, mainViewModel);
         }
     }
 }

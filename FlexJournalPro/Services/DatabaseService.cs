@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using System.Data;
 using System.Text;
 using System.Text.Json;
+using System.Transactions;
 
 namespace FlexJournalPro.Services
 {
@@ -11,6 +12,14 @@ namespace FlexJournalPro.Services
     {
         // База даних
         void Connect();
+
+        // Система логування
+        void EnsureSystemLogTableExists();
+        void EnsureJournalLogTableExists(string tableName, SqliteConnection? connection = null, SqliteTransaction? transaction = null);
+        void InsertLogEntry(string tableName, LogEntry entry);
+        IEnumerable<string> GetAuditTableNames();
+        IEnumerable<LogEntry> GetLogsFromTable(string tableName, int limit = 1000);
+        IEnumerable<LogEntry> GetAllAggregatedLogs(int limit = 1000);
 
         // Реєстр журналів
         List<JournalMetadata> GetAllJournals(AppUser? currentUser = null);
@@ -58,6 +67,8 @@ namespace FlexJournalPro.Services
             _useCipher = _config.Database.UseCipher;
         }
 
+        #region Загальні методи для роботи з базою даних
+
         public void Connect()
         {
             string dbPath = _config.DatabasePath;
@@ -68,6 +79,7 @@ namespace FlexJournalPro.Services
                 string decryptedDek = _keyManager.GetDecryptedDekString();
                 if (string.IsNullOrWhiteSpace(decryptedDek))
                 {
+                    AppLogger.LogSystemError(LogAction.DatabaseOpenError, "DEK ключ не отримано для шифрованої бази даних.", new Exception("DEK ключ не отримано для шифрованої бази даних."));
                     throw new InvalidOperationException("DEK ключ не отримано для шифрованої бази даних.");
                 }
                 _connectionString = $"Data Source={dbPath};Password={decryptedDek};";
@@ -82,27 +94,6 @@ namespace FlexJournalPro.Services
 
         private void InitializeDatabase()
         {
-            //// TODO: Створюємо файл БД якщо його немає
-            //if (!File.Exists(_config.DatabasePath))
-            //{
-            //    if (_useCipher)
-            //    {
-            //        // Для SQLCipher створюємо через відкриття з'єднання
-            //        using (var conn = new SqliteConnection(_connectionString))
-            //        {
-            //            conn.Open();
-            //        }
-            //    }
-            //    else
-            //    {
-            //        // SqliteConnection буде автоматично створювати файл, якщо його немає
-            //        using (var conn = new SqliteConnection(_connectionString))
-            //        {
-            //            conn.Open();
-            //        }
-            //    }
-            //}
-
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
@@ -174,9 +165,69 @@ namespace FlexJournalPro.Services
                     cmd.ExecuteNonQuery();
                 }
             }
+
+            EnsureSystemLogTableExists();
+
+            AppLogger.LogSystemInfo(LogAction.DatabaseConnected, "База даних підключена та ініціалізована.");
         }
 
-        // --- МЕТОДИ ДЛЯ РЕЄСТРУ ---
+        public void EnsureSystemLogTableExists()
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = @"
+                    CREATE TABLE IF NOT EXISTS SystemLogs (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Timestamp TEXT NOT NULL,
+                        Level TEXT NOT NULL,
+                        Action TEXT NOT NULL,
+                        Message TEXT NOT NULL,
+                        UserName TEXT,
+                        Details TEXT
+                    )";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void EnsureJournalLogTableExists(string tableName, SqliteConnection? existingConn = null, SqliteTransaction? transaction = null)
+        {
+            string sql = $@"CREATE TABLE IF NOT EXISTS {tableName} (
+                                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Timestamp TEXT NOT NULL,
+                                Level TEXT NOT NULL,
+                                Action TEXT NOT NULL,
+                                Message TEXT NOT NULL,
+                                UserName TEXT,
+                                Details TEXT
+                        )";
+
+            if (existingConn != null)
+            {
+                using (var cmd = new SqliteCommand(sql, existingConn, transaction))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            else
+            {
+                using (var conn = new SqliteConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqliteCommand(sql, conn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Реєстр журналів та робота з даними
 
         public List<JournalMetadata> GetAllJournals(AppUser? currentUser = null)
         {
@@ -241,6 +292,9 @@ namespace FlexJournalPro.Services
 
         public void CreateNewJournal(JournalMetadata meta, List<ColumnConfig> columns)
         {
+            // 1. Генеруємо унікальне ім'я таблиці (напр. journal_638301239...)
+            string tableName = $"journal_{DateTime.Now.Ticks}";
+
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
@@ -248,8 +302,6 @@ namespace FlexJournalPro.Services
                 {
                     try
                     {
-                        // 1. Генеруємо унікальне ім'я таблиці (напр. journal_638301239...)
-                        string tableName = $"journal_{DateTime.Now.Ticks}";
                         meta.TableName = tableName;
                         meta.CreatedAt = DateTime.Now;
 
@@ -287,60 +339,20 @@ namespace FlexJournalPro.Services
                             }
                         }
 
+                        EnsureJournalLogTableExists(meta.TableName, conn, transaction);
+
                         transaction.Commit();
+                        AppLogger.LogSystemInfo(LogAction.TableCreated, $"Створено таблицю для Журналу '{meta.Title}'.", "Ім'я таблиці: '{meta.TableName}'");
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         transaction.Rollback();
+                        AppLogger.LogSystemError(LogAction.DatabaseWriteError, $"Не вдалося створити таблицю для Журналу '{meta.Title}'.", ex);
                         throw;
                     }
                 }
             }
         }
-
-        // --- ДИНАМІЧНИЙ SQL ---
-
-        private string BuildCreateTableSql(string tableName, List<ColumnConfig> columns)
-        {
-            var sb = new StringBuilder();
-            sb.Append($"CREATE TABLE [{tableName}] (");
-
-            // Системне поле ID (завжди створюється автоматично)
-            sb.Append("Id INTEGER PRIMARY KEY AUTOINCREMENT");
-
-            foreach (var col in columns)
-            {
-                // Пропускаємо поле Id з шаблону (воно системне і створюється автоматично)
-                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
-
-                // Пропускаємо заголовки секцій (вони тільки для краси)
-                if (col.Type == ColumnType.SectionHeader) continue;
-
-                sb.Append(", ");
-                sb.Append($"[{col.FieldName}] {GetSqlType(col.Type)}");
-            }
-
-            sb.Append(")");
-            return sb.ToString();
-        }
-
-        private string GetSqlType(ColumnType type)
-        {
-            switch (type)
-            {
-                case ColumnType.Number:
-                case ColumnType.RegNumber: // Реєстраційний номер - ціле число
-                case ColumnType.Boolean: // SQLite використовує 0/1
-                case ColumnType.Lock:    // Блокування - boolean
-                    return "INTEGER";
-                case ColumnType.Currency:
-                    return "REAL";
-                default:
-                    return "TEXT"; // Всі інші типи (Date, Dropdown) зберігаємо як текст
-            }
-        }
-
-        // --- РОБОТА З ДАНИМИ ---
 
         public DataTable LoadJournalData(string tableName)
         {
@@ -488,86 +500,6 @@ namespace FlexJournalPro.Services
             return list;
         }
 
-        /// <summary>
-        /// Читає значення з SqliteDataReader використовуючи типізовані методи (без ToString + парсингу)
-        /// </summary>
-        private object ReadTypedValue(SqliteDataReader reader, int columnIndex, ColumnType targetType)
-        {
-            switch (targetType)
-            {
-                case ColumnType.Number:
-                case ColumnType.RegNumber:
-                    // Пряме читання INTEGER з SQLite
-                    return reader.GetInt64(columnIndex);
-
-                case ColumnType.Currency:
-                    // Пряме читання REAL як decimal
-                    return reader.GetDecimal(columnIndex);
-
-                case ColumnType.Boolean:
-                case ColumnType.Lock:
-                    // SQLite зберігає bool як INTEGER (0/1)
-                    return reader.GetInt64(columnIndex) != 0;
-
-                case ColumnType.Date:
-                    // Читаємо як рядок (SQLite не має нативного Date)
-                    var dateStr = reader.GetString(columnIndex);
-                    if (DateTime.TryParseExact(dateStr,
-                        new[] { "yyyy-MM-dd", "dd.MM.yyyy" },
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.None,
-                        out var parsedDate))
-                    {
-                        return DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified);
-                    }
-                    return DateTime.TryParse(dateStr, out parsedDate)
-                        ? (object)DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified)
-                        : DBNull.Value;
-
-                case ColumnType.DateTime:
-                    var dtStr = reader.GetString(columnIndex);
-                    var formats = new[] { "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm" };
-                    if (DateTime.TryParseExact(dtStr, formats,
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.None,
-                        out var parsedDt))
-                    {
-                        return DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified);
-                    }
-                    return DateTime.TryParse(dtStr, out parsedDt)
-                        ? (object)DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified)
-                        : DBNull.Value;
-
-                case ColumnType.Time:
-                    var timeStr = reader.GetString(columnIndex);
-                    if (TimeSpan.TryParseExact(timeStr, "c",
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        out var ts))
-                    {
-                        return ts;
-                    }
-                    if (TimeSpan.TryParseExact(timeStr, @"hh\:mm\:ss",
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        out ts))
-                    {
-                        return ts;
-                    }
-                    // Fallback: парсинг як DateTime
-                    if (DateTime.TryParse(timeStr, out var dtForTime))
-                    {
-                        return dtForTime.TimeOfDay;
-                    }
-                    return DBNull.Value;
-
-                case ColumnType.Text:
-                case ColumnType.Dropdown:
-                case ColumnType.DropdownEditable:
-                default:
-                    // Пряме читання рядка (без ToString())
-                    return reader.GetString(columnIndex);
-            }
-        }
-
         public void UpsertDictionaryRow(string tableName, BindableRow rowData, List<ColumnConfig> columns)
         {
             using (var conn = new SqliteConnection(_connectionString))
@@ -583,10 +515,12 @@ namespace FlexJournalPro.Services
                 if (id > 0)
                 {
                     ExecuteUpdate(conn, tableName, rowData, columns, id);
+                    AppLogger.LogJournalAction(tableName, LogAction.JournalRecordUpdated, $"Оновлено запис з Id = {rowData["Id"]}");
                 }
                 else
                 {
                     ExecuteInsert(conn, tableName, rowData, columns);
+                    AppLogger.LogJournalAction(tableName, LogAction.JournalRecordAdded, $"Створено новий запис з Id = {rowData["Id"]}");
                 }
 
                 // Позначаємо рядок як збережений після успішного запису в БД
@@ -673,6 +607,381 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
+        /// Оновлює параметри заповнення для журналу
+        /// </summary>
+        public void UpdateJournalAutoFillConfig(long journalId, string autoFillConfigJson)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                string sql = "UPDATE App_Journals SET AutoFillConfigJson = @Json WHERE Id = @Id";
+
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", journalId);
+                    cmd.Parameters.AddWithValue("@Json", autoFillConfigJson ?? "{}");
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Видаляє журнал з реєстру та його фізичну таблицю з бази даних
+        /// </summary>
+        /// <param name="journalId">ID журналу для видалення</param>
+        public void DeleteJournal(long journalId)
+        {
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Отримуємо назву таблиці журналу
+                        string tableName = string.Empty;
+                        using (var cmd = new SqliteCommand("SELECT TableName FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", journalId);
+                            var result = cmd.ExecuteScalar();
+                            if (result != null)
+                            {
+                                tableName = result.ToString() ?? string.Empty;
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(tableName))
+                        {
+                            throw new InvalidOperationException($"Журнал з ID {journalId} не знайдено");
+                        }
+
+                        // 2. Видаляємо запис з реєстру журналів
+                        // (Робимо це спочатку, щоб уникнути ситуації, коли таблиця видалена, а запис залишився)
+                        using (var cmd = new SqliteCommand("DELETE FROM App_Journals WHERE Id = @Id", conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", journalId);
+                            int rowsAffected = cmd.ExecuteNonQuery();
+
+                            if (rowsAffected == 0)
+                            {
+                                throw new InvalidOperationException($"Не вдалося видалити запис журналу з ID {journalId}");
+                            }
+                        }
+
+                        // 3. Видаляємо фізичну таблицю з даними
+                        using (var cmd = new SqliteCommand($"DROP TABLE IF EXISTS [{tableName}]", conn, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+
+                        AppLogger.LogSystemInfo(LogAction.TableDeleted, $"Журнал з ID {journalId} та таблицею '{tableName}' успішно видалено.");
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        AppLogger.LogSystemError(LogAction.DatabaseWriteError, $"Не вдалося видалити журнал з ID {journalId}.", ex);
+                        throw;
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region LogService
+
+        public void InsertLogEntry(string tableName, LogEntry entry)
+        {
+            string sql = $@"INSERT INTO {tableName} (Timestamp, Level, Action, Message, UserName, Details) 
+                            VALUES (@Timestamp, @Level, @Action, @Message, @UserName, @Details)";
+
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Timestamp", entry.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fff"));
+
+                    // Зберігаємо Enum як рядки (TEXT)
+                    cmd.Parameters.AddWithValue("@Level", entry.Level.ToString());
+                    cmd.Parameters.AddWithValue("@Action", entry.Action.ToString());
+
+                    cmd.Parameters.AddWithValue("@Message", entry.Message);
+                    cmd.Parameters.AddWithValue("@UserName", entry.UserName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Details", entry.Details ?? (object)DBNull.Value);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public IEnumerable<string> GetAuditTableNames()
+        {
+            var tables = new List<string>();
+            string query = "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'journal_%_audit'";
+
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                using (var cmd = new SqliteCommand(query, conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        tables.Add(reader.GetString(0));
+                    }
+                }
+            }
+            return tables;
+        }
+
+        public IEnumerable<LogEntry> GetLogsFromTable(string tableName, int limit = 1000)
+        {
+            var logs = new List<LogEntry>();
+
+            try
+            {
+                // tableName отримується з наших внутрішніх методів, тому це безпечно
+                string query = $"SELECT Id, Timestamp, Level, Action, Message, UserName, Details FROM {tableName} ORDER BY Timestamp DESC LIMIT @Limit";
+
+                using (var conn = new SqliteConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new SqliteCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Limit", limit);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                logs.Add(new LogEntry
+                                {
+                                    Id = Convert.ToInt32(reader["Id"]),
+                                    Timestamp = DateTime.Parse(reader["Timestamp"].ToString()!),
+
+                                    // Парсимо текстові значення назад у Enum
+                                    Level = Enum.Parse<LogLevel>(reader["Level"].ToString()!),
+                                    Action = Enum.Parse<LogAction>(reader["Action"].ToString()!),
+
+                                    Message = reader["Message"].ToString()!,
+                                    UserName = reader["UserName"] != DBNull.Value ? reader["UserName"].ToString() : null,
+                                    Details = reader["Details"] != DBNull.Value ? reader["Details"].ToString() : null
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Якщо таблиці ще не існує (наприклад, SystemLogs при першому запуску), 
+                // просто повертаємо порожній список
+                System.Diagnostics.Debug.WriteLine($"Помилка читання з таблиці {tableName}: {ex.Message}");
+            }
+
+            return logs;
+        }
+
+        public IEnumerable<LogEntry> GetAllAggregatedLogs(int limit = 1000)
+        {
+            var logs = new List<LogEntry>();
+            var existingTables = new List<string>();
+
+            try
+            {
+                using (var conn = new SqliteConnection(_connectionString))
+                {
+                    conn.Open();
+
+                    // 1. Отримуємо імена ВСІХ існуючих таблиць логів (SystemLogs + аудити)
+                    string findTablesQuery = "SELECT name FROM sqlite_master WHERE type='table' AND (name = 'SystemLogs' OR name LIKE 'journal_%_audit')";
+                    using (var cmd = new SqliteCommand(findTablesQuery, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            existingTables.Add(reader.GetString(0));
+                        }
+                    }
+
+                    // Якщо таблиць логів взагалі ще немає, повертаємо порожній список
+                    if (existingTables.Count == 0)
+                    {
+                        return logs;
+                    }
+
+                    // 2. Будуємо динамічний запит через UNION ALL
+                    var selectQueries = new List<string>();
+                    foreach (var table in existingTables)
+                    {
+                        selectQueries.Add($"SELECT Id, Timestamp, Level, Action, Message, UserName, Details FROM {table}");
+                    }
+
+                    // З'єднуємо запити та додаємо сортування й ліміт у самий кінець
+                    string combinedQuery = string.Join(" UNION ALL ", selectQueries) +
+                                           " ORDER BY Timestamp DESC LIMIT @Limit";
+
+                    // 3. Виконуємо загальний запит
+                    using (var cmd = new SqliteCommand(combinedQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Limit", limit);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                logs.Add(new LogEntry
+                                {
+                                    Id = Convert.ToInt32(reader["Id"]),
+                                    Timestamp = DateTime.Parse(reader["Timestamp"].ToString()!),
+                                    Level = Enum.Parse<LogLevel>(reader["Level"].ToString()!),
+                                    Action = Enum.Parse<LogAction>(reader["Action"].ToString()!),
+                                    Message = reader["Message"].ToString()!,
+                                    UserName = reader["UserName"] != DBNull.Value ? reader["UserName"].ToString() : null,
+                                    Details = reader["Details"] != DBNull.Value ? reader["Details"].ToString() : null
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Помилка агрегованого запиту логів: {ex.Message}");
+            }
+
+            return logs;
+        }
+
+
+        #endregion
+
+        #region Dynamic SQL
+
+        private string BuildCreateTableSql(string tableName, List<ColumnConfig> columns)
+        {
+            var sb = new StringBuilder();
+            sb.Append($"CREATE TABLE [{tableName}] (");
+
+            // Системне поле ID (завжди створюється автоматично)
+            sb.Append("Id INTEGER PRIMARY KEY AUTOINCREMENT");
+
+            foreach (var col in columns)
+            {
+                // Пропускаємо поле Id з шаблону (воно системне і створюється автоматично)
+                if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
+
+                // Пропускаємо заголовки секцій (вони тільки для краси)
+                if (col.Type == ColumnType.SectionHeader) continue;
+
+                sb.Append(", ");
+                sb.Append($"[{col.FieldName}] {GetSqlType(col.Type)}");
+            }
+
+            sb.Append(")");
+            return sb.ToString();
+        }
+
+        private string GetSqlType(ColumnType type)
+        {
+            switch (type)
+            {
+                case ColumnType.Number:
+                case ColumnType.RegNumber: // Реєстраційний номер - ціле число
+                case ColumnType.Boolean: // SQLite використовує 0/1
+                case ColumnType.Lock:    // Блокування - boolean
+                    return "INTEGER";
+                case ColumnType.Currency:
+                    return "REAL";
+                default:
+                    return "TEXT"; // Всі інші типи (Date, Dropdown) зберігаємо як текст
+            }
+        }
+
+        /// <summary>
+        /// Читає значення з SqliteDataReader використовуючи типізовані методи (без ToString + парсингу)
+        /// </summary>
+        private object ReadTypedValue(SqliteDataReader reader, int columnIndex, ColumnType targetType)
+        {
+            switch (targetType)
+            {
+                case ColumnType.Number:
+                case ColumnType.RegNumber:
+                    // Пряме читання INTEGER з SQLite
+                    return reader.GetInt64(columnIndex);
+
+                case ColumnType.Currency:
+                    // Пряме читання REAL як decimal
+                    return reader.GetDecimal(columnIndex);
+
+                case ColumnType.Boolean:
+                case ColumnType.Lock:
+                    // SQLite зберігає bool як INTEGER (0/1)
+                    return reader.GetInt64(columnIndex) != 0;
+
+                case ColumnType.Date:
+                    // Читаємо як рядок (SQLite не має нативного Date)
+                    var dateStr = reader.GetString(columnIndex);
+                    if (DateTime.TryParseExact(dateStr,
+                        new[] { "yyyy-MM-dd", "dd.MM.yyyy" },
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out var parsedDate))
+                    {
+                        return DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified);
+                    }
+                    return DateTime.TryParse(dateStr, out parsedDate)
+                        ? (object)DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified)
+                        : DBNull.Value;
+
+                case ColumnType.DateTime:
+                    var dtStr = reader.GetString(columnIndex);
+                    var formats = new[] { "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm" };
+                    if (DateTime.TryParseExact(dtStr, formats,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out var parsedDt))
+                    {
+                        return DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified);
+                    }
+                    return DateTime.TryParse(dtStr, out parsedDt)
+                        ? (object)DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified)
+                        : DBNull.Value;
+
+                case ColumnType.Time:
+                    var timeStr = reader.GetString(columnIndex);
+                    if (TimeSpan.TryParseExact(timeStr, "c",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var ts))
+                    {
+                        return ts;
+                    }
+                    if (TimeSpan.TryParseExact(timeStr, @"hh\:mm\:ss",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out ts))
+                    {
+                        return ts;
+                    }
+                    // Fallback: парсинг як DateTime
+                    if (DateTime.TryParse(timeStr, out var dtForTime))
+                    {
+                        return dtForTime.TimeOfDay;
+                    }
+                    return DBNull.Value;
+
+                case ColumnType.Text:
+                case ColumnType.Dropdown:
+                case ColumnType.DropdownEditable:
+                default:
+                    // Пряме читання рядка (без ToString())
+                    return reader.GetString(columnIndex);
+            }
+        }
+
+        /// <summary>
         /// Створює типізований SqliteParameter без ToString() конвертації
         /// </summary>
         private SqliteParameter CreateTypedParameter(string paramName, object value, ColumnType columnType)
@@ -726,7 +1035,9 @@ namespace FlexJournalPro.Services
             }
         }
 
-        // --- МЕТОДИ ДЛЯ ШАБЛОНІВ ---
+        #endregion
+
+        #region Шаблони
 
         /// <summary>
         /// Зберегти або оновити шаблон у БД
@@ -900,86 +1211,9 @@ namespace FlexJournalPro.Services
             }
         }
 
-        /// <summary>
-        /// Оновлює параметри заповнення для журналу
-        /// </summary>
-        public void UpdateJournalAutoFillConfig(long journalId, string autoFillConfigJson)
-        {
-            using (var conn = new SqliteConnection(_connectionString))
-            {
-                conn.Open();
-                string sql = "UPDATE App_Journals SET AutoFillConfigJson = @Json WHERE Id = @Id";
+        #endregion
 
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", journalId);
-                    cmd.Parameters.AddWithValue("@Json", autoFillConfigJson ?? "{}");
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Видаляє журнал з реєстру та його фізичну таблицю з бази даних
-        /// </summary>
-        /// <param name="journalId">ID журналу для видалення</param>
-        public void DeleteJournal(long journalId)
-        {
-            using (var conn = new SqliteConnection(_connectionString))
-            {
-                conn.Open();
-                using (var transaction = conn.BeginTransaction())
-                {
-                    try
-                    {
-                        // 1. Отримуємо назву таблиці журналу
-                        string tableName = string.Empty;
-                        using (var cmd = new SqliteCommand("SELECT TableName FROM App_Journals WHERE Id = @Id", conn, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@Id", journalId);
-                            var result = cmd.ExecuteScalar();
-                            if (result != null)
-                            {
-                                tableName = result.ToString() ?? string.Empty;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(tableName))
-                        {
-                            throw new InvalidOperationException($"Журнал з ID {journalId} не знайдено");
-                        }
-
-                        // 2. Видаляємо запис з реєстру журналів
-                        // (Робимо це спочатку, щоб уникнути ситуації, коли таблиця видалена, а запис залишився)
-                        using (var cmd = new SqliteCommand("DELETE FROM App_Journals WHERE Id = @Id", conn, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@Id", journalId);
-                            int rowsAffected = cmd.ExecuteNonQuery();
-
-                            if (rowsAffected == 0)
-                            {
-                                throw new InvalidOperationException($"Не вдалося видалити запис журналу з ID {journalId}");
-                            }
-                        }
-
-                        // 3. Видаляємо фізичну таблицю з даними
-                        using (var cmd = new SqliteCommand($"DROP TABLE IF EXISTS [{tableName}]", conn, transaction))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-
-                        transaction.Commit();
-                    }
-                    catch
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
-                }
-            }
-        }
-
-        // --- КЕРУВАННЯ КОРИСТУВАЧАМИ ---
+        #region Користувачі
 
         /// <summary>
         /// Отримує список усіх користувачів разом з їхніми правами доступу до журналів.
@@ -1121,6 +1355,8 @@ namespace FlexJournalPro.Services
                         }
 
                         transaction.Commit();
+
+                        AppLogger.LogSystemInfo(LogAction.UserCreated, $"Створено користувача '{user.Login}' (ID: {user.Id})", $"Рівень доступу: {user.Role}\nПрава доступу до журналів: {string.Join(", ", user.AllowedJournalIds)}.");
                     }
                     catch
                     {
@@ -1202,6 +1438,10 @@ namespace FlexJournalPro.Services
                         }
 
                         transaction.Commit();
+                        AppLogger.LogSystemInfo(LogAction.UserUpdated, $"Оновлено користувача '{user.Login}' (ID: {user.Id})", $"Рівень доступу: {user.Role}\nПрава доступу до журналів: {string.Join(", ", user.AllowedJournalIds)}.");
+                        if (newPasswordHash != null) {
+                            AppLogger.LogSystemInfo(LogAction.PasswordChanged, $"Змінено пароль користувача '{user.Login}' (ID: {user.Id})");
+                        }
                     }
                     catch
                     {
@@ -1252,6 +1492,7 @@ namespace FlexJournalPro.Services
                         }
 
                         transaction.Commit();
+                        AppLogger.LogSystemInfo(LogAction.UserDeleted, $"Видалено користувача з ID {userId}");
                     }
                     catch
                     {
@@ -1320,16 +1561,18 @@ namespace FlexJournalPro.Services
             }
             return (null, null);
         }
+
+        #endregion
     }
 
     // Интерфейс провайдера елементів для віртуалізації
-    public interface IItemsProvider
+    public interface IJournalItemsProvider
     {
         int FetchCount();
         IList<BindableRow> FetchRange(int startIndex, int count);
     }
 
-    public class JournalDataProvider : IItemsProvider
+    public class JournalDataProvider : IJournalItemsProvider
     {
         private readonly IDatabaseService _dbService;
         private readonly string _tableName;

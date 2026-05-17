@@ -11,7 +11,7 @@ namespace FlexJournalPro.Models
     /// </summary>
     public class AsyncVirtualizingCollection : IList, INotifyCollectionChanged, INotifyPropertyChanged
     {
-        private readonly IItemsProvider _itemsProvider;
+        private readonly IJournalItemsProvider _itemsProvider;
         private readonly int _pageSize = 50; // Розмір порції
         private readonly int _loadTimeout = 3000; // Час життя сторінки в кеші (мс)
 
@@ -31,7 +31,7 @@ namespace FlexJournalPro.Models
         /// Ініціалізує нову віртуальну колекцію з вказаним провайдером даних.
         /// </summary>
         /// <param name="itemsProvider">Провайдер даних для завантаження елементів.</param>
-        public AsyncVirtualizingCollection(IItemsProvider itemsProvider)
+        public AsyncVirtualizingCollection(IJournalItemsProvider itemsProvider)
         {
             _itemsProvider = itemsProvider;
             _newRowPlaceholder = new NewRowPlaceholder();

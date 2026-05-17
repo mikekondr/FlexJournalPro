@@ -29,6 +29,9 @@ namespace FlexJournalPro
             ConfigureServices(serviceCollection);
             ServiceProvider = serviceCollection.BuildServiceProvider();
 
+            var logService = ServiceProvider.GetRequiredService<ILogService>();
+            AppLogger.Initialize(logService);
+
             // Установлюємо режим завершення в явний (контролюємо процес до моменту відкриття MainWindow)
             Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -50,6 +53,14 @@ namespace FlexJournalPro
             }
         }
 
+        protected override void OnExit(ExitEventArgs e)
+        {
+            var logger = ServiceProvider.GetService<ILogService>();
+            logger?.LogSystemInfo(LogAction.SystemHalted, "Завершення роботи додатку");
+
+            base.OnExit(e);
+        }
+
         /// <summary>
         /// Реєстрація всіх сервісів, ViewModels та вікон додатку
         /// </summary>
@@ -64,6 +75,7 @@ namespace FlexJournalPro
             services.AddSingleton<IDatabaseService, DatabaseService>();
             services.AddSingleton<ITemplateService, TemplateService>();
             services.AddTransient<IAuthService, AuthService>();
+            services.AddSingleton<ILogService, LogService>();
 
             // Реєструємо фабрику для створення вікон
             services.AddSingleton<IScreenFactory, ScreenFactory>();

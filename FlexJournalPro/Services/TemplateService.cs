@@ -42,6 +42,8 @@ namespace FlexJournalPro.Services
 
             _dbService.SaveTemplate(template);
 
+            AppLogger.LogSystemInfo(LogAction.TemplateCreated, $"Додано новий шаблон: {template.Title}");
+
             // Очищаємо кеш для цього шаблону (на випадок оновлення)
             DynamicTableView.ClearTemplateCache(template.Id);
         }
@@ -52,6 +54,8 @@ namespace FlexJournalPro.Services
         public void UpdateTemplate(TableTemplate template)
         {
             _dbService.SaveTemplate(template);
+
+            AppLogger.LogSystemInfo(LogAction.TemplateUpdated, $"Оновлено шаблон: {template.Title}");
 
             // Очищаємо кеш, щоб застосувати зміни
             DynamicTableView.ClearTemplateCache(template.Id);
@@ -89,6 +93,8 @@ namespace FlexJournalPro.Services
         {
             _dbService.DeactivateTemplate(templateId);
 
+            AppLogger.LogSystemInfo(LogAction.TemplateDeleted, $"Деактивовано шаблон: {templateId}");
+
             // Очищаємо кеш
             DynamicTableView.ClearTemplateCache(templateId);
         }
@@ -125,6 +131,8 @@ namespace FlexJournalPro.Services
             };
 
             _dbService.CreateNewJournal(journal, template.Columns);
+
+            AppLogger.LogSystemInfo(LogAction.JournalCreated, $"Створено журнал '{journalTitle}' на основі шаблону '{template.Title}'");
 
             return journal;
         }

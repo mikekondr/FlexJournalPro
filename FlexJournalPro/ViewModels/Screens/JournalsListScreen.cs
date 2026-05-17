@@ -122,6 +122,7 @@ namespace FlexJournalPro.ViewModels.Screens
             {
                 _mainViewModel.OpenScreens.Add(editorScreen);
                 _mainViewModel.SelectedScreen = editorScreen;
+                AppLogger.LogJournalAction(SelectedJournal.TableName, LogAction.JournalOpened, $"Журнал '{SelectedJournal.Title}' відкрито для редагування.");
             }
         }
 
@@ -149,6 +150,8 @@ namespace FlexJournalPro.ViewModels.Screens
 
                     // Видаляємо журнал з бази даних
                     _dbService.DeleteJournal(SelectedJournal.Id);
+                    
+                    AppLogger.LogSystemInfo(LogAction.JournalDeleted, $"Журнал '{SelectedJournal.Title}' (ID: {SelectedJournal.Id}) видалено.");
 
                     // Видаляємо з локального списку
                     Journals.Remove(SelectedJournal);

@@ -175,7 +175,7 @@ namespace FlexJournalPro.ViewModels.Screens
 
         public override void OnClosing()
         {
-            // Можна додати логіку збереження перед закриттям
+            AppLogger.LogJournalAction(Journal.TableName, LogAction.JournalClosed, $"Закриття редактора журналу: {Journal.Title}");
             base.OnClosing();
         }
 

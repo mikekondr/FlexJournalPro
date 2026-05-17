@@ -49,6 +49,7 @@ namespace FlexJournalPro.ViewModels
             OpenJournalsListCommand = new RelayCommand(OpenJournalsList);
             OpenTemplatesListCommand = new RelayCommand(OpenTemplatesList);
             OpenUsersListCommand = new RelayCommand(OpenUsersList);
+            OpenLogsCommand = new RelayCommand(OpenLogs);
             CloseScreenCommand = new RelayCommand(CloseScreen);
             ScrollLeftCommand = new RelayCommand(ScrollLeft, () => CanScrollLeft);
             ScrollRightCommand = new RelayCommand(ScrollRight, () => CanScrollRight);
@@ -133,8 +134,7 @@ namespace FlexJournalPro.ViewModels
         public ICommand CloseScreenCommand { get; }
         public ICommand ScrollLeftCommand { get; }
         public ICommand ScrollRightCommand { get; }
-
-        // Команди
+        public ICommand OpenLogsCommand { get; }
         public ICommand ChangePasswordCommand { get; private set; }
         public ICommand LogoutCommand { get; private set; }
 
@@ -201,6 +201,11 @@ namespace FlexJournalPro.ViewModels
         private void Logout()
         {
             _appLifecycleService.LogoutAndRestart();
+        }
+
+        private void OpenLogs()
+        {
+            OpenOrActivateScreen(() => _screenFactory.CreateLogsScreen(this));
         }
 
         #endregion

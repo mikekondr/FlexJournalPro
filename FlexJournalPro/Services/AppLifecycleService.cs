@@ -1,4 +1,5 @@
 using FlexJournalPro.Config;
+using FlexJournalPro.Models;
 using FlexJournalPro.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
@@ -17,18 +18,23 @@ namespace FlexJournalPro.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IKeyManagementService _keyManager;
         private readonly AppConfig _config;
+        private readonly ILogService _logger;
 
         public AppLifecycleService(IServiceProvider serviceProvider,
             IKeyManagementService keyManager,
-            AppConfig config)
+            AppConfig config,
+            ILogService logService)
         {
             _serviceProvider = serviceProvider;
             _keyManager = keyManager;
             _config = config;
+            _logger = logService;
         }
 
         public void Startup(string[] args)
         {
+            AppLogger.LogSystemInfo(LogAction.SystemStarted, "Запуск додатку", args.Count() > 0 ? "Аргументи: " + string.Join(", ", args) : null);
+
             bool needsRecovery = args.Contains("-recover");
 
             // Етап 1: Перевіряємо необхідність відновлення (виявляє помилки DPAPI)
@@ -63,6 +69,8 @@ namespace FlexJournalPro.Services
             // Закриваємо головне вікно, якщо воно відкрите
             Application.Current.MainWindow?.Close();
 
+            AppLogger.LogSystemInfo(LogAction.UserLogout, "Вихід із системи");
+
             // Перезапускаємо процес авторизації
             ShowLoginFlow();
         }
@@ -76,6 +84,14 @@ namespace FlexJournalPro.Services
 
             if (loginWindow.ShowDialog() == true)
             {
+                // БАЗА РОЗБЛОКОВАНА! 
+                // 1. Сигналізуємо, що можна писати в БД і переносимо накопичені помилки/входи
+                _logger.FlushPendingLogsToDatabase();
+
+                // 2. Записуємо сам факт успішного входу
+                AppLogger.LogSystemInfo(LogAction.UserLogin, "Вхід в систему");
+
+
                 // Повертаємо стандартний режим після успішного входу
                 Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
 

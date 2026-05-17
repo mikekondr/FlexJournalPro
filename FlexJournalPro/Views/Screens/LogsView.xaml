@@ -1,0 +1,66 @@
+<UserControl x:Class="FlexJournalPro.Views.Screens.LogsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FlexJournalPro.ViewModels.Screens"
+             Background="White">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBlock Text="Джерело подій:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+            <ComboBox Width="150" SelectedValuePath="Tag" SelectedValue="{Binding SelectedMode}">
+                <ComboBoxItem Content="Всі події" Tag="{x:Static local:LogViewMode.AllEvents}" />
+                <ComboBoxItem Content="Системні події" Tag="{x:Static local:LogViewMode.SystemOnly}" />
+                <ComboBoxItem Content="Аудит журналу..." Tag="{x:Static local:LogViewMode.JournalOnly}" />
+            </ComboBox>
+
+            <ComboBox Width="180" Margin="10,0,0,0" 
+                      ItemsSource="{Binding AvailableJournals}" 
+                      SelectedItem="{Binding SelectedJournal}"
+                      DisplayMemberPath="Title">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsJournalSelectionVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
+
+            <Button Content="Оновити" Command="{Binding RefreshCommand}" Margin="15,0,0,0" Padding="10,2"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Logs}" 
+                  AutoGenerateColumns="False" IsReadOnly="True" 
+                  HeadersVisibility="Column" SelectionMode="Single"
+                  RowDetailsVisibilityMode="VisibleWhenSelected">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Час" Binding="{Binding Timestamp, StringFormat=\{0:dd.MM.yyyy HH:mm:ss\}}" Width="140"/>
+                <DataGridTextColumn Header="Рівень" Binding="{Binding Level}" Width="80"/>
+                <DataGridTextColumn Header="Дія" Binding="{Binding Action}" Width="130"/>
+                <DataGridTextColumn Header="Повідомлення" Binding="{Binding Message}" Width="*"/>
+                <DataGridTextColumn Header="Користувач" Binding="{Binding UserName}" Width="120"/>
+            </DataGrid.Columns>
+
+            <DataGrid.RowDetailsTemplate>
+                <DataTemplate>
+                    <Border Background="#F5F5F5" Padding="10" Margin="5" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Деталі:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding Details, TargetNullValue='Немає додаткових деталей.'}" 
+                                       TextWrapping="Wrap" 
+                                       FontFamily="Consolas" FontSize="11"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </DataGrid.RowDetailsTemplate>
+        </DataGrid>
+    </Grid>
+</UserControl>

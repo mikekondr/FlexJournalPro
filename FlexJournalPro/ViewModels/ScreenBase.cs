@@ -1,3 +1,4 @@
+using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
 
 namespace FlexJournalPro.ViewModels
@@ -38,7 +39,7 @@ namespace FlexJournalPro.ViewModels
         /// </summary>
         public virtual void OnClosing()
         {
-            // Можна додати логіку збереження даних перед закриттям
+            
         }
     }
 }

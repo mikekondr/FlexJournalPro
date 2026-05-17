@@ -22,6 +22,7 @@ namespace FlexJournalPro.Views
                     NewJournalScreen => CreateTemplate<NewJournalView>(element),
                     UsersListScreen => CreateTemplate<UsersListView>(element),
                     UserEditorScreen => CreateTemplate<UserEditorView>(element),
+                    LogsScreen => CreateTemplate<LogsView>(element),
                     _ => base.SelectTemplate(item, container)
                 };
             }

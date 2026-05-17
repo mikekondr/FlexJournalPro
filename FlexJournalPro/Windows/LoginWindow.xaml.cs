@@ -1,4 +1,5 @@
 using FlexJournalPro.Config;
+using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using System.Windows;
 
@@ -49,6 +50,8 @@ namespace FlexJournalPro.Windows
                 return;
             }
 
+            AppLogger.LogSystemInfo(LogAction.UserLoginAttempt, $"Спроба входу користувача '{login}'");
+
             bool useCipher = _config.Database.UseCipher;
 
             if (useCipher)
@@ -58,6 +61,7 @@ namespace FlexJournalPro.Windows
 
                 if (!isKeyUnlocked)
                 {
+                    AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Невдалий вхід користувача '{login}'", "Неправильний пароль для розблокування ключа");
                     ShowError("Невірний логін або пароль");
                     return;
                 }
@@ -71,6 +75,7 @@ namespace FlexJournalPro.Windows
             }
             catch (Exception)
             {
+                AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Невдалий вхід користувача '{login}'", "Неможливо відкрити базу даних. Помилка шифрування або файл пошкоджено.");
                 ShowError("Неможливо відкрити базу даних. Помилка шифрування або файл пошкоджено.");
                 return;
             }
@@ -81,12 +86,14 @@ namespace FlexJournalPro.Windows
             if (user != null)
             {
                 // Успішний вхід. Зберігаємо поточного користувача.
+                AppLogger.LogSystemInfo(LogAction.UserLogin, $"Успішний вхід користувача '{login}'");
                 App.CurrentUser = user;
 
                 DialogResult = true;
             }
             else
             {
+                AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Невдалий вхід користувача '{login}'", "Неправильний логін або пароль");
                 ShowError("Невірний логін або пароль");
             }
         }
