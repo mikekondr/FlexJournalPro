@@ -1,9 +1,6 @@
 using FlexJournalPro.Helpers;
 using FlexJournalPro.Models;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -414,7 +411,7 @@ namespace FlexJournalPro.Services
 
             if (col.Type == ColumnType.Boolean)
                 return GenerateBooleanViewXaml(col);
-            
+
             if (col.Type == ColumnType.Lock)
                 return GenerateLockControlXaml(col); // Always interactive
 
@@ -424,7 +421,7 @@ namespace FlexJournalPro.Services
         private string GenerateLockControlXaml(ColumnConfig col)
         {
             string bindingDef = $"Binding [{col.FieldName}], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={{StaticResource SafeBoolConverter}}, TargetNullValue=False, FallbackValue=False";
-            
+
             // Using ToggleButton style for Lock
             // Added Visibility trigger to hide when IsInitialized is False (new row not yet edited)
             return $@"<ToggleButton IsChecked=""{{{bindingDef}}}""

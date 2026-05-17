@@ -1,10 +1,8 @@
-using System;
-using System.Linq;
+using FlexJournalPro.Services;
+using Microsoft.Data.Sqlite;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using FlexJournalPro.Services;
-using Microsoft.Data.Sqlite;
 
 namespace FlexJournalPro.Windows
 {

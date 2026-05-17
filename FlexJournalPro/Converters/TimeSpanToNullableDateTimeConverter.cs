@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Windows.Data;
 
@@ -14,7 +13,7 @@ namespace FlexJournalPro.Converters
             {
                 return DateTime.Today.Add(ts);
             }
-            
+
             return null;
         }
 

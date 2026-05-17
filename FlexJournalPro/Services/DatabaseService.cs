@@ -1,10 +1,9 @@
-using System.Data;
-using System.IO;
-using System.Text;
-using System.Text.Json;
 using FlexJournalPro.Config;
 using FlexJournalPro.Models;
 using Microsoft.Data.Sqlite;
+using System.Data;
+using System.Text;
+using System.Text.Json;
 
 namespace FlexJournalPro.Services
 {
@@ -188,10 +187,10 @@ namespace FlexJournalPro.Services
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
-                
+
                 string sql;
                 bool filterByUser = currentUser != null && currentUser.Role != UserRole.Admin;
-                
+
                 if (filterByUser)
                 {
                     if (currentUser.AllowedJournalIds.Count == 0)
@@ -279,7 +278,7 @@ namespace FlexJournalPro.Services
                             cmd.Parameters.AddWithValue("@Json", meta.AutoFillConfigJson ?? "{}");
                             cmd.Parameters.AddWithValue("@TemplateJson", meta.TemplateConfigJson ?? "{}");
                             cmd.ExecuteNonQuery();
-                            
+
                             // Отримуємо згенерований ID для meta
                             using (var cmdId = new SqliteCommand("SELECT last_insert_rowid()", conn, transaction))
                             {
@@ -439,7 +438,7 @@ namespace FlexJournalPro.Services
                         while (reader.Read())
                         {
                             var row = new BindableRow();
-                        
+
                             // Завжди читаємо системне поле Id (незалежно від шаблону)
                             if (columnIndexMap.TryGetValue("Id", out int idIndex))
                             {
@@ -450,7 +449,7 @@ namespace FlexJournalPro.Services
                             foreach (var col in columns)
                             {
                                 if (col.Type == ColumnType.SectionHeader) continue;
-                                
+
                                 // Пропускаємо конфігурацію поля Id з шаблону (системне поле вже додано)
                                 if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
@@ -513,42 +512,42 @@ namespace FlexJournalPro.Services
                 case ColumnType.Date:
                     // Читаємо як рядок (SQLite не має нативного Date)
                     var dateStr = reader.GetString(columnIndex);
-                    if (DateTime.TryParseExact(dateStr, 
-                        new[] { "yyyy-MM-dd", "dd.MM.yyyy" }, 
-                        System.Globalization.CultureInfo.InvariantCulture, 
-                        System.Globalization.DateTimeStyles.None, 
+                    if (DateTime.TryParseExact(dateStr,
+                        new[] { "yyyy-MM-dd", "dd.MM.yyyy" },
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
                         out var parsedDate))
                     {
                         return DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified);
                     }
-                    return DateTime.TryParse(dateStr, out parsedDate) 
-                        ? (object)DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified) 
+                    return DateTime.TryParse(dateStr, out parsedDate)
+                        ? (object)DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Unspecified)
                         : DBNull.Value;
 
                 case ColumnType.DateTime:
                     var dtStr = reader.GetString(columnIndex);
                     var formats = new[] { "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm" };
-                    if (DateTime.TryParseExact(dtStr, formats, 
-                        System.Globalization.CultureInfo.InvariantCulture, 
-                        System.Globalization.DateTimeStyles.None, 
+                    if (DateTime.TryParseExact(dtStr, formats,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
                         out var parsedDt))
                     {
                         return DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified);
                     }
-                    return DateTime.TryParse(dtStr, out parsedDt) 
-                        ? (object)DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified) 
+                    return DateTime.TryParse(dtStr, out parsedDt)
+                        ? (object)DateTime.SpecifyKind(parsedDt, DateTimeKind.Unspecified)
                         : DBNull.Value;
 
                 case ColumnType.Time:
                     var timeStr = reader.GetString(columnIndex);
-                    if (TimeSpan.TryParseExact(timeStr, "c", 
-                        System.Globalization.CultureInfo.InvariantCulture, 
+                    if (TimeSpan.TryParseExact(timeStr, "c",
+                        System.Globalization.CultureInfo.InvariantCulture,
                         out var ts))
                     {
                         return ts;
                     }
-                    if (TimeSpan.TryParseExact(timeStr, @"hh\:mm\:ss", 
-                        System.Globalization.CultureInfo.InvariantCulture, 
+                    if (TimeSpan.TryParseExact(timeStr, @"hh\:mm\:ss",
+                        System.Globalization.CultureInfo.InvariantCulture,
                         out ts))
                     {
                         return ts;
@@ -609,7 +608,7 @@ namespace FlexJournalPro.Services
             foreach (var col in columns)
             {
                 if (col.Type == ColumnType.SectionHeader) continue;
-                
+
                 // Пропускаємо системне поле Id (його не можна змінювати)
                 if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
@@ -617,7 +616,7 @@ namespace FlexJournalPro.Services
                 sb.Append($"[{col.FieldName}] = @{col.FieldName}");
 
                 object value = col.FieldName != null && rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
-                
+
                 // Типізована конвертація
                 parameters.Add(CreateTypedParameter($"@{col.FieldName}", value, col.Type));
                 first = false;
@@ -647,7 +646,7 @@ namespace FlexJournalPro.Services
             foreach (var col in columns)
             {
                 if (col.Type == ColumnType.SectionHeader) continue;
-                
+
                 // Пропускаємо системне поле Id (воно генерується автоматично)
                 if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
@@ -655,7 +654,7 @@ namespace FlexJournalPro.Services
                 paramNames.Add($"@{col.FieldName}");
 
                 object value = col.FieldName != null && rowData.ContainsKey(col.FieldName) ? rowData[col.FieldName] : DBNull.Value;
-                
+
                 // Типізована конвертація
                 parameters.Add(CreateTypedParameter($"@{col.FieldName}", value, col.Type));
             }
@@ -956,7 +955,7 @@ namespace FlexJournalPro.Services
                         {
                             cmd.Parameters.AddWithValue("@Id", journalId);
                             int rowsAffected = cmd.ExecuteNonQuery();
-                            
+
                             if (rowsAffected == 0)
                             {
                                 throw new InvalidOperationException($"Не вдалося видалити запис журналу з ID {journalId}");

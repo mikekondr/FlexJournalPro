@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -105,7 +103,7 @@ namespace FlexJournalPro.Helpers
             try
             {
                 string originalText = tb.Text;
-                
+
                 // Залишаємо тільки цифри
                 string digits = new string(originalText.Where(char.IsDigit).ToArray());
 

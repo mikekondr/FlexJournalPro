@@ -97,7 +97,7 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             // Відкриваємо екран створення нового журналу
             var newJournalScreen = _screenFactory.CreateNewJournalScreen(_mainViewModel);
-            
+
             _mainViewModel.OpenScreens.Add(newJournalScreen);
             _mainViewModel.SelectedScreen = newJournalScreen;
         }
@@ -108,7 +108,7 @@ namespace FlexJournalPro.ViewModels.Screens
 
             // Відкриваємо екран редагування журналу
             var editorScreen = _screenFactory.CreateJournalEditorScreen(SelectedJournal, _mainViewModel);
-            
+
             // Перевіряємо, чи не відкритий вже цей журнал
             var existingScreen = _mainViewModel.OpenScreens
                 .OfType<JournalEditorScreen>()

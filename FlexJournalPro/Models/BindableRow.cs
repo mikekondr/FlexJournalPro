@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Data;
 
@@ -51,7 +49,7 @@ namespace FlexJournalPro.Models
                 {
                     _isDirty = value;
                     OnPropertyChanged(nameof(IsDirty));
-                    
+
                     // Сповіщаємо про зміну самого об'єкта для оновлення Row Header
                     OnPropertyChanged(string.Empty);
                 }

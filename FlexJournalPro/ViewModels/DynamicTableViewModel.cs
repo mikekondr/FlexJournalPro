@@ -1,12 +1,9 @@
 using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using FlexJournalPro.Views;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
@@ -181,7 +178,7 @@ namespace FlexJournalPro.ViewModels
 
             var provider = new JournalDataProvider(dbService, tableName, CurrentTemplate.Columns);
             VirtualData = new AsyncVirtualizingCollection(provider);
-            
+
             // Ініціалізуємо рядок-заглушку
             var placeholder = VirtualData.GetPlaceholder();
             InitializeNewRow(placeholder);
@@ -321,7 +318,7 @@ namespace FlexJournalPro.ViewModels
                     {
                         try
                         {
-                            row[col.FieldName] = Convert.ChangeType(rowData[col.FieldName], 
+                            row[col.FieldName] = Convert.ChangeType(rowData[col.FieldName],
                                 _calculationEngine.Columns[col.FieldName].DataType);
                         }
                         catch
@@ -419,7 +416,7 @@ namespace FlexJournalPro.ViewModels
             if (rowData is NewRowPlaceholder placeholder)
             {
                 var converted = VirtualData.ConvertPlaceholderToNewRow(placeholder);
-                
+
                 if (converted != null)
                 {
                     rowToSave = converted;
@@ -445,7 +442,7 @@ namespace FlexJournalPro.ViewModels
 
             // Скидаємо прапорець "змінено" після збереження
             rowToSave.MarkAsSaved();
-            
+
             OnRowSaved(new RowSavedEventArgs { RowData = rowToSave });
 
             // Оновлюємо віртуальну колекцію після збереження
@@ -454,7 +451,7 @@ namespace FlexJournalPro.ViewModels
                 if (isNewRow)
                 {
                     VirtualData.RefreshAfterSave();
-                    
+
                     // Ініціалізуємо новий рядок-заглушку після оновлення
                     var newPlaceholder = VirtualData.GetPlaceholder();
                     InitializeNewRow(newPlaceholder);
@@ -542,7 +539,7 @@ namespace FlexJournalPro.ViewModels
 
             if (e.PropertyName == Binding.IndexerName) return;
             if (sender is PlaceholderRow) return; // Пропускаємо PlaceholderRow для завантаження
-            
+
             // Allow NewRowPlaceholder to trigger logic
             // if (sender is NewRowPlaceholder) ... it falls through here, which is what we want now
 
@@ -644,11 +641,11 @@ namespace FlexJournalPro.ViewModels
                     if (!row.ContainsKey("RegPrefix") || row["RegPrefix"] == null)
                         row["RegPrefix"] = _autoFillValues["RegPrefix"];
                 }
-                
+
                 // Суфікс
                 if (CurrentTemplate.RegistrationParams.UseNumberSuffix && _autoFillValues.ContainsKey("RegSuffix"))
                 {
-                     if (!row.ContainsKey("RegSuffix") || row["RegSuffix"] == null)
+                    if (!row.ContainsKey("RegSuffix") || row["RegSuffix"] == null)
                         row["RegSuffix"] = _autoFillValues["RegSuffix"];
                 }
 
@@ -663,7 +660,7 @@ namespace FlexJournalPro.ViewModels
             }
 
             PerformCalculations(row);
-            
+
             // Mark as initialized so UI updates
             row.IsInitialized = true;
 
@@ -678,7 +675,7 @@ namespace FlexJournalPro.ViewModels
                 // Отримуємо наступний номер з БД, враховуючи початковий номер
                 return _dbService.GetNextRegistrationNumber(_tableName, _initialStartNumber);
             }
-            
+
             // Якщо немає доступу до БД (наприклад, ще не створено), повертаємо StartNumber
             return _initialStartNumber;
         }
@@ -686,7 +683,7 @@ namespace FlexJournalPro.ViewModels
         public bool IsRowLocked(BindableRow row)
         {
             if (CurrentTemplate?.RegistrationParams?.UseLocking != true) return false;
-            
+
             // Find lock column
             var lockCol = CurrentTemplate.Columns.FirstOrDefault(c => c.Type == ColumnType.Lock);
             string fieldName = lockCol?.FieldName ?? "IsLocked";
@@ -759,7 +756,7 @@ namespace FlexJournalPro.ViewModels
         {
             if (IsNumeric(val))
                 return string.Format(CultureInfo.InvariantCulture, "{0}", val);
-       
+
             if (val is bool bVal)
                 return bVal ? "1" : "0";
 

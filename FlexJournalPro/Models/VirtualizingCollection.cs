@@ -1,10 +1,7 @@
-using System;
+using FlexJournalPro.Services;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Threading.Tasks;
-using FlexJournalPro.Services;
 
 namespace FlexJournalPro.Models
 {
@@ -79,14 +76,14 @@ namespace FlexJournalPro.Models
                 {
                     return _newRowPlaceholder;
                 }
-                
+
                 // Перевіряємо, чи це індекс нового елементу
                 if (index >= newItemsStartIndex && index < placeholderIndex)
                 {
                     // Це новий елемент
                     return _newItems[index - newItemsStartIndex];
                 }
-                
+
                 // Визначаємо, яка сторінка нам треба (для елементів з БД)
                 int pageIndex = index / _pageSize;
                 int pageOffset = index % _pageSize;
@@ -208,22 +205,22 @@ namespace FlexJournalPro.Models
         }
 
         // --- Реалізація решти інтерфейсів (стандартна заглушка) ---
-        
+
         /// <summary>
         /// Отримує значення, що вказує, чи колекція доступна тільки для читання.
         /// </summary>
         public bool IsReadOnly => false; // Дозволяємо додавання
-        
+
         /// <summary>
         /// Отримує значення, що вказує, чи має колекція фіксований розмір.
         /// </summary>
         public bool IsFixedSize => false;
-        
+
         /// <summary>
         /// Отримує об'єкт для синхронізації доступу до колекції.
         /// </summary>
         public object SyncRoot => this;
-        
+
         /// <summary>
         /// Отримує значення, що вказує, чи синхронізований доступ до колекції.
         /// </summary>
@@ -233,7 +230,7 @@ namespace FlexJournalPro.Models
         /// Виникає при зміні колекції.
         /// </summary>
         public event NotifyCollectionChangedEventHandler CollectionChanged;
-        
+
         /// <summary>
         /// Виникає при зміні значення властивості.
         /// </summary>
@@ -244,7 +241,7 @@ namespace FlexJournalPro.Models
         /// </summary>
         /// <param name="e">Аргументи події.</param>
         private void OnCollectionChanged(NotifyCollectionChangedEventArgs e) => CollectionChanged?.Invoke(this, e);
-        
+
         /// <summary>
         /// Викликає подію PropertyChanged.
         /// </summary>
@@ -263,34 +260,34 @@ namespace FlexJournalPro.Models
                 int dbCount = _count == -1 ? 0 : _count;
                 _newItems.Add(newRow);
                 int newIndex = dbCount + _newItems.Count - 1;
-                
+
                 OnPropertyChanged(nameof(Count));
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Add, newRow, newIndex));
-                
+
                 return newIndex;
             }
             throw new ArgumentException("Елемент повинен бути типу BindableRow");
         }
-        
+
         /// <summary>
         /// Очищає всі елементи з колекції та перезавантажує дані.
         /// </summary>
-        public void Clear() 
-        { 
-            _count = 0; 
-            _pages.Clear(); 
+        public void Clear()
+        {
+            _count = 0;
+            _pages.Clear();
             _newItems.Clear();
-            LoadCount(); 
+            LoadCount();
         }
-        
+
         /// <summary>
         /// Визначає, чи містить колекція вказаний елемент.
         /// </summary>
         /// <param name="value">Елемент для пошуку.</param>
         /// <returns>True, якщо елемент знайдено в нових елементах.</returns>
         public bool Contains(object value) => value is BindableRow row && _newItems.Contains(row);
-        
+
         /// <summary>
         /// Визначає індекс вказаного елементу в колекції.
         /// </summary>
@@ -308,7 +305,7 @@ namespace FlexJournalPro.Models
             }
             return -1;
         }
-        
+
         /// <summary>
         /// Вставляє елемент у колекцію за вказаним індексом. Операція не підтримується.
         /// </summary>
@@ -316,7 +313,7 @@ namespace FlexJournalPro.Models
         /// <param name="value">Елемент для вставки.</param>
         /// <exception cref="NotImplementedException">Операція не підтримується для віртуальної колекції.</exception>
         public void Insert(int index, object value) => throw new NotImplementedException();
-        
+
         /// <summary>
         /// Видаляє перше входження вказаного елементу з колекції.
         /// </summary>
@@ -327,21 +324,21 @@ namespace FlexJournalPro.Models
             {
                 int index = _newItems.IndexOf(row);
                 _newItems.Remove(row);
-                
+
                 int dbCount = _count == -1 ? 0 : _count;
                 OnPropertyChanged(nameof(Count));
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Remove, row, dbCount + index));
             }
         }
-        
+
         /// <summary>
         /// Видаляє елемент за вказаним індексом. Операція не підтримується.
         /// </summary>
         /// <param name="index">Індекс елементу для видалення.</param>
         /// <exception cref="NotImplementedException">Операція не підтримується для віртуальної колекції.</exception>
         public void RemoveAt(int index) => throw new NotImplementedException();
-        
+
         /// <summary>
         /// Очищає список нових елементів після їх збереження в БД та перезавантажує дані
         /// </summary>
@@ -351,10 +348,10 @@ namespace FlexJournalPro.Models
             _pages.Clear();
             _pageTouchTimes.Clear();
             _count = -1;
-            
+
             // Створюємо новий рядок-заглушку
             _newRowPlaceholder = new NewRowPlaceholder();
-            
+
             LoadCount();
         }
 
@@ -368,7 +365,7 @@ namespace FlexJournalPro.Models
             // Додаємо поточний рядок-заглушку до списку нових елементів
             int dbCount = _count == -1 ? 0 : _count;
             int oldPlaceholderIndex = dbCount + _newItems.Count;
-            
+
             // Конвертуємо в звичайний BindableRow
             var newRow = new BindableRow();
             foreach (var key in placeholder.Keys)
@@ -378,7 +375,7 @@ namespace FlexJournalPro.Models
                     newRow[key] = placeholder[key];
                 }
             }
-            
+
             _newItems.Add(newRow);
 
             // Створюємо новий рядок-заглушку
@@ -403,14 +400,14 @@ namespace FlexJournalPro.Models
         {
             return _newRowPlaceholder;
         }
-        
+
         /// <summary>
         /// Копіює елементи колекції в масив. Операція не виконує дій для віртуальної колекції.
         /// </summary>
         /// <param name="array">Масив призначення.</param>
         /// <param name="index">Індекс початку копіювання.</param>
         public void CopyTo(Array array, int index) { }
-        
+
         /// <summary>
         /// Повертає перечислювач для ітерації по колекції.
         /// Не використовується DataGrid при увімкненій віртуалізації.

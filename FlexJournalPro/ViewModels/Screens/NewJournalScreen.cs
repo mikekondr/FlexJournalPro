@@ -1,10 +1,7 @@
 using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using MaterialDesignThemes.Wpf;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Text.Json;
 using System.Windows.Input;
 
@@ -427,17 +424,17 @@ namespace FlexJournalPro.ViewModels.Screens
             // 4. Lock Column
             if (r.UseLocking)
             {
-                 if (!template.Columns.Any(c => c.Type == ColumnType.Lock || c.FieldName == "IsLocked"))
-                 {
-                     template.Columns.Add(new ColumnConfig
-                     {
-                         FieldName = "IsLocked",
-                         HeaderText = "Блок",
-                         Type = ColumnType.Lock,
-                         Width = 50,
-                         Position = ColumnPosition.NewColumn
-                     });
-                 }
+                if (!template.Columns.Any(c => c.Type == ColumnType.Lock || c.FieldName == "IsLocked"))
+                {
+                    template.Columns.Add(new ColumnConfig
+                    {
+                        FieldName = "IsLocked",
+                        HeaderText = "Блок",
+                        Type = ColumnType.Lock,
+                        Width = 50,
+                        Position = ColumnPosition.NewColumn
+                    });
+                }
             }
         }
 

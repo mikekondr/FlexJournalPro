@@ -1,8 +1,7 @@
-using System.Configuration;
+using FlexJournalPro.Config;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
-using FlexJournalPro.Config;
 
 namespace FlexJournalPro.Services
 {
@@ -87,8 +86,8 @@ namespace FlexJournalPro.Services
             try
             {
                 // Записываем красиво, чтобы можно было прочитать структуру
-                var options = new JsonSerializerOptions 
-                { 
+                var options = new JsonSerializerOptions
+                {
                     WriteIndented = true,
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
@@ -293,7 +292,7 @@ namespace FlexJournalPro.Services
                 {
                     string backdoorPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dek_backdoor.txt");
                     string dekBase64 = Convert.ToBase64String(_currentDecryptedDek);
-                    
+
                     // Зберігаємо ключ, а також команду для підключення
                     string debugInfo = $"[УВАГА! БЕКДОР ДЛЯ НАЛАГОДЖЕННЯ]\r\n" +
                                        $"Не використовуйте у продакшені!\r\n\r\n" +
@@ -302,7 +301,7 @@ namespace FlexJournalPro.Services
                                        $"1. Оберіть базу 'app_data.db'\r\n" +
                                        $"2. Формат ключа: Raw key (або PRAGMA key)\r\n" +
                                        $"3. Вставте рядок вище.";
-                    
+
                     File.WriteAllText(backdoorPath, debugInfo);
                 }
                 catch

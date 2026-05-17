@@ -1,6 +1,6 @@
 using FlexJournalPro.ViewModels;
-using System.Windows;
 using MaterialDesignThemes.Wpf;
+using System.Windows;
 
 namespace FlexJournalPro.Windows
 {
@@ -54,8 +54,8 @@ namespace FlexJournalPro.Windows
 
         private void MaximizeButton_Click(object sender, RoutedEventArgs e)
         {
-            WindowState = WindowState == WindowState.Maximized 
-                ? WindowState.Normal 
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
                 : WindowState.Maximized;
         }
 

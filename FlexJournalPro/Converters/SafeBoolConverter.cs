@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Windows.Data;
 
@@ -39,7 +38,7 @@ namespace FlexJournalPro.Converters
         {
             if (value is bool b)
                 return b;
-            
+
             return false;
         }
     }

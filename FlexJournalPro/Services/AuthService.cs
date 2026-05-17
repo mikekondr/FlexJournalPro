@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
 using FlexJournalPro.Models;
+using System.Security.Cryptography;
 
 namespace FlexJournalPro.Services
 {

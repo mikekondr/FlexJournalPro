@@ -1,8 +1,8 @@
+using FlexJournalPro.Models;
+using FlexJournalPro.Views;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
-using FlexJournalPro.Models;
-using FlexJournalPro.Views;
 
 namespace FlexJournalPro.Services
 {
@@ -136,10 +136,10 @@ namespace FlexJournalPro.Services
         {
             // Прибираємо спецсимволи та робимо lowercase
             string cleanTitle = System.Text.RegularExpressions.Regex.Replace(title, @"[^a-zA-Z0-9_]", "").ToLower();
-            
+
             // Додаємо timestamp для унікальності
             string timestamp = DateTime.Now.Ticks.ToString().Substring(8);
-            
+
             return $"{cleanTitle}_{timestamp}";
         }
 

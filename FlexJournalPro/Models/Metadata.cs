@@ -1,5 +1,3 @@
-using System;
-
 namespace FlexJournalPro.Models
 {
     /// <summary>
@@ -32,7 +30,7 @@ namespace FlexJournalPro.Models
         public string Id { get; set; }             // Унікальний ID шаблону
         public string Name { get; set; }           // Назва шаблону
         public string Description { get; set; }    // Опис шаблону
-        
+
         // Поле JsonConfig видалено для оптимізації. 
         // Використовуйте TemplateService.GetTemplateJsonConfig(id)
 

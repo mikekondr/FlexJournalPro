@@ -80,7 +80,7 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             // Відкриваємо екран створення нового користувача (передаємо null замість наявного юзера)
             var userEditorScreen = _screenFactory.CreateUserEditorScreen(null, _mainViewModel);
-            
+
             _mainViewModel.OpenScreens.Add(userEditorScreen);
             _mainViewModel.SelectedScreen = userEditorScreen;
         }
@@ -91,7 +91,7 @@ namespace FlexJournalPro.ViewModels.Screens
 
             // Відкриваємо екран редагування існуючого користувача
             var editorScreen = _screenFactory.CreateUserEditorScreen(SelectedUser, _mainViewModel);
-            
+
             // Перевіряємо, чи не відкритий вже цей екран (за допомогою ScreenId)
             var existingScreen = _mainViewModel.OpenScreens
                 .OfType<UserEditorScreen>()

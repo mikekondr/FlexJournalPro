@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace FlexJournalPro.Models
 {
     public enum UserRole

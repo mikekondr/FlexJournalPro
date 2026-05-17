@@ -18,12 +18,12 @@ namespace FlexJournalPro.ViewModels.Screens
         private readonly IDatabaseService _dbService;
         private readonly IKeyManagementService _keyManagementService;
         private readonly IAuthService _authService;
-        
+
         public AppUser? UserToEdit { get; }
-        
+
         private bool _isEditing;
-        public bool IsEditing 
-        { 
+        public bool IsEditing
+        {
             get => _isEditing;
             private set => SetProperty(ref _isEditing, value);
         }
@@ -31,7 +31,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private string _login = string.Empty;
         private string _password = string.Empty;
         private string _fullName = string.Empty;
-        private UserRole _role = UserRole.Viewer; 
+        private UserRole _role = UserRole.Viewer;
 
         // Dual ListBox Collections
         public ObservableCollection<JournalAccessItem> AvailableJournals { get; } = new ObservableCollection<JournalAccessItem>();
@@ -66,7 +66,7 @@ namespace FlexJournalPro.ViewModels.Screens
             _dbService = dbService;
             _keyManagementService = keyManagementService;
             _authService = authService;
-            
+
             IsEditing = userToEdit != null;
 
             Title = IsEditing ? $"Редагування користувача: {userToEdit!.Login}" : "Новий користувач";
@@ -141,7 +141,7 @@ namespace FlexJournalPro.ViewModels.Screens
         #region Commands
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
-        
+
         public ICommand AddJournalCommand { get; }
         public ICommand RemoveJournalCommand { get; }
         public ICommand AddAllJournalsCommand { get; }
@@ -185,11 +185,11 @@ namespace FlexJournalPro.ViewModels.Screens
                 var item = SelectedAvailableJournal;
                 AvailableJournals.Remove(item);
                 SelectedJournals.Add(item);
-                
+
                 // Пересортування для красивого вигляду, якщо потрібно
                 var sorted = SelectedJournals.OrderBy(x => x.Title).ToList();
                 SelectedJournals.Clear();
-                foreach(var i in sorted) SelectedJournals.Add(i);
+                foreach (var i in sorted) SelectedJournals.Add(i);
 
                 UpdateCommandStates();
             }
@@ -205,7 +205,7 @@ namespace FlexJournalPro.ViewModels.Screens
 
                 var sorted = AvailableJournals.OrderBy(x => x.Title).ToList();
                 AvailableJournals.Clear();
-                foreach(var i in sorted) AvailableJournals.Add(i);
+                foreach (var i in sorted) AvailableJournals.Add(i);
 
                 UpdateCommandStates();
             }

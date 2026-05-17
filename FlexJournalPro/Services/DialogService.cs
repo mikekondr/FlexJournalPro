@@ -1,6 +1,4 @@
 using MaterialDesignThemes.Wpf;
-using System;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace FlexJournalPro.Services
@@ -116,7 +114,7 @@ namespace FlexJournalPro.Services
             {
                 System.Diagnostics.Debug.WriteLine($"Dialog error: {ex.Message}");
                 // Fallback до MessageBox при помилці
-                MessageBox.Show(content?.ToString() ?? "Помилка відображення діалогу", 
+                MessageBox.Show(content?.ToString() ?? "Помилка відображення діалогу",
                     "Діалог", MessageBoxButton.OK);
                 return null;
             }
@@ -126,9 +124,9 @@ namespace FlexJournalPro.Services
         /// Основний метод показу діалогу
         /// </summary>
         private static async Task<DialogResult> ShowDialogAsync(
-            string title, 
-            string message, 
-            DialogType type, 
+            string title,
+            string message,
+            DialogType type,
             DialogButtons buttons)
         {
             var viewModel = new DialogViewModel
@@ -142,12 +140,12 @@ namespace FlexJournalPro.Services
             try
             {
                 var result = await DialogHost.Show(viewModel, _dialogHostIdentifier);
-                
+
                 if (result is DialogResult dialogResult)
                 {
                     return dialogResult;
                 }
-                
+
                 return DialogResult.None;
             }
             catch (InvalidOperationException)
@@ -166,9 +164,9 @@ namespace FlexJournalPro.Services
         /// Fallback до стандартного MessageBox
         /// </summary>
         private static DialogResult ShowMessageBoxFallback(
-            string message, 
-            string title, 
-            DialogType type, 
+            string message,
+            string title,
+            DialogType type,
             DialogButtons buttons)
         {
             var mbButtons = buttons switch

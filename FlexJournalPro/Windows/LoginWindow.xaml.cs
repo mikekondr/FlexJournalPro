@@ -1,6 +1,6 @@
-using System.Windows;
-using FlexJournalPro.Services;
 using FlexJournalPro.Config;
+using FlexJournalPro.Services;
+using System.Windows;
 
 namespace FlexJournalPro.Windows
 {

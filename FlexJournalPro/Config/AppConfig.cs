@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Text.Json;
 
@@ -19,7 +18,8 @@ namespace FlexJournalPro.Config
 
         public DatabaseConfig Database => Settings.Database;
 
-        public AppConfig() {
+        public AppConfig()
+        {
             // Ініціалізація шляхів
             //string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             //string appFolder = Path.Combine(appData, "FlexJournalPro");
@@ -45,7 +45,7 @@ namespace FlexJournalPro.Config
                 {
                     string json = File.ReadAllText(ConfigPath);
                     var loadedConfig = JsonSerializer.Deserialize<AppSettingsData>(json);
-                    
+
                     // Копіюємо налаштування з завантаженого об'єкта
                     if (loadedConfig != null)
                     {

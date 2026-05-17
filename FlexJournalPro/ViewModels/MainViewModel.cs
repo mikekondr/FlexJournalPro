@@ -1,6 +1,4 @@
 using FlexJournalPro.Services;
-using FlexJournalPro.Windows;
-using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -26,10 +24,10 @@ namespace FlexJournalPro.ViewModels
         private bool _canScrollRight;
         private ScrollViewer? _screensPanelScrollViewer;
 
-        public MainViewModel(IDatabaseService dbService, 
-            ITemplateService templateService, 
-            IAuthService authService, 
-            IKeyManagementService keyManagementService, 
+        public MainViewModel(IDatabaseService dbService,
+            ITemplateService templateService,
+            IAuthService authService,
+            IKeyManagementService keyManagementService,
             IScreenFactory screenFactory,
             IAppLifecycleService appLifecycleService
             )
@@ -62,7 +60,7 @@ namespace FlexJournalPro.ViewModels
         }
 
         #region Properties
-        
+
         /// <summary>
         /// Чи розгорнуто sidebar
         /// </summary>
@@ -257,7 +255,7 @@ namespace FlexJournalPro.ViewModels
             }
 
             CanScrollLeft = _screensPanelScrollViewer.HorizontalOffset > 0;
-            CanScrollRight = _screensPanelScrollViewer.HorizontalOffset < 
+            CanScrollRight = _screensPanelScrollViewer.HorizontalOffset <
                 (_screensPanelScrollViewer.ScrollableWidth - 1);
         }
 

@@ -1,15 +1,10 @@
-using FlexJournalPro.Helpers;
 using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels;
 using MaterialDesignThemes.Wpf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -244,7 +239,7 @@ namespace FlexJournalPro.Views
                 {
                     string fieldName = group?.MainConfig?.FieldName ?? "Unknown";
                     string headerKey = $"{_viewModel.CurrentTemplate.Id}_Header_{fieldName}";
-                    templateCol.HeaderTemplate = _uiService.GetOrCreateTemplate(headerKey, 
+                    templateCol.HeaderTemplate = _uiService.GetOrCreateTemplate(headerKey,
                         () => _uiService.GenerateHeaderXaml(group));
                 }
                 catch (Exception ex)
@@ -418,14 +413,14 @@ namespace FlexJournalPro.Views
             if (row != null && _viewModel.IsRowLocked(row))
             {
                 // Дозволяємо редагувати тільки колонку блокування, щоб можна було розблокувати
-                var colConfig = _viewModel.CurrentTemplate.Columns.FirstOrDefault(c => 
-                    c.Type == ColumnType.Lock && 
-                    !string.IsNullOrEmpty(c.FieldName) && 
-                    // Need to match column to config. 
-                    // Usually we don't have direct mapping here locally, but we can match by SortMemberPath or Tag if set.
-                    // TableUIGenerationService sets Tag on controls, not Columns.
-                    // But DataGridColumn.Header usually matches HeaderText.
-                    // Safest is to check if SortMemberPath matches lock column FieldName
+                var colConfig = _viewModel.CurrentTemplate.Columns.FirstOrDefault(c =>
+                    c.Type == ColumnType.Lock &&
+                    !string.IsNullOrEmpty(c.FieldName) &&
+                     // Need to match column to config. 
+                     // Usually we don't have direct mapping here locally, but we can match by SortMemberPath or Tag if set.
+                     // TableUIGenerationService sets Tag on controls, not Columns.
+                     // But DataGridColumn.Header usually matches HeaderText.
+                     // Safest is to check if SortMemberPath matches lock column FieldName
                      e.Column.SortMemberPath == c.FieldName
                 );
 
@@ -436,10 +431,10 @@ namespace FlexJournalPro.Views
                 // However, our GenerateLockControlXaml sets Tag on the control.
                 // BUT here we are in BeginningEdit, we don't have the control yet easily.
                 // We can check if the column index or Header matches.
-                
+
                 // Better approach:
                 // Find if the current column corresponds to the Lock column.
-                
+
                 bool isLockColumn = false;
                 var lockCol = _viewModel.CurrentTemplate.Columns.FirstOrDefault(c => c.Type == ColumnType.Lock);
                 if (lockCol != null)
@@ -448,10 +443,10 @@ namespace FlexJournalPro.Views
                     // Or try to infer from data context if possible.
                     // Since we generate columns, binding paths are inside templates.
                     // But we set SortMemberPath logic? No, we set CanUserSort.
-                    
+
                     // Let's rely on finding the lock column field name from the column definition if possible?
                     // No.
-                    
+
                     // Let's assume user cannot edit locked row.
                     // BUT he MUST be able to unlock it.
                     // The Lock control is a ToggleButton in a TemplateColumn.
@@ -460,7 +455,7 @@ namespace FlexJournalPro.Views
                     // So BeginningEdit is triggered for TextBoxes, ComboBoxes, etc.
                     // So we can safely cancel BeginningEdit for ALL columns if row is locked.
                     // Clicking ToggleButton bypasses Edit mode.
-                    
+
                     e.Cancel = true;
                 }
             }

@@ -1,10 +1,10 @@
-using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
-using FlexJournalPro.Services;
-using FlexJournalPro.Models;
 using FlexJournalPro.Config;
-using FlexJournalPro.Windows;
+using FlexJournalPro.Models;
+using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels;
+using FlexJournalPro.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using System.Windows;
 
 namespace FlexJournalPro
 {

@@ -74,7 +74,7 @@ namespace FlexJournalPro.ViewModels.Screens
                 try
                 {
                     Template = System.Text.Json.JsonSerializer.Deserialize<TableTemplate>(_journal.TemplateConfigJson);
-                    
+
                     if (Template != null)
                     {
                         // Ensure system dynamic parameters are present (fixes older journals)

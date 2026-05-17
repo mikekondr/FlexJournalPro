@@ -1,6 +1,4 @@
 using FlexJournalPro.Models;
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,25 +15,25 @@ namespace FlexJournalPro.Helpers
         /// Створює UI панель для редагування параметрів заповнення
         /// </summary>
         public static void BuildAutoFillPanel(
-            Panel panel, 
-            List<AutoFillParameter> parameters, 
+            Panel panel,
+            List<AutoFillParameter> parameters,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged = null)
         {
             panel.Children.Clear();
-            
+
             // Save current values to preserve loaded data
             var currentValues = new Dictionary<string, object>(autoFillValues);
-            
+
             autoFillValues.Clear();
 
             if (parameters == null || parameters.Count == 0)
             {
-                panel.Children.Add(new TextBlock 
-                { 
-                    Text = "Немає параметрів заповнення", 
-                    Opacity = 0.5, 
-                    FontStyle = FontStyles.Italic 
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Немає параметрів заповнення",
+                    Opacity = 0.5,
+                    FontStyle = FontStyles.Italic
                 });
                 return;
             }
@@ -61,7 +59,7 @@ namespace FlexJournalPro.Helpers
         /// Створює контрол для одного параметра заповнення
         /// </summary>
         private static Control CreateParameterControl(
-            AutoFillParameter parameter, 
+            AutoFillParameter parameter,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged,
             object initialValue)
@@ -92,19 +90,19 @@ namespace FlexJournalPro.Helpers
         }
 
         private static CheckBox CreateBooleanControl(
-            AutoFillParameter parameter, 
+            AutoFillParameter parameter,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged,
             object initialValue)
         {
-            var checkBox = new CheckBox 
-            { 
-                Content = parameter.Label, 
-                Margin = new Thickness(0, 10, 0, 10) 
+            var checkBox = new CheckBox
+            {
+                Content = parameter.Label,
+                Margin = new Thickness(0, 10, 0, 10)
             };
 
             bool initVal = false;
-            
+
             if (initialValue is bool b) initVal = b;
             else if (initialValue is JsonElement je && (je.ValueKind == JsonValueKind.True || je.ValueKind == JsonValueKind.False))
                 initVal = je.GetBoolean();
@@ -130,15 +128,15 @@ namespace FlexJournalPro.Helpers
         }
 
         private static DatePicker CreateDateControl(
-            AutoFillParameter parameter, 
+            AutoFillParameter parameter,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged,
             object initialValue)
         {
-            var datePicker = new DatePicker 
-            { 
-                Width = Double.NaN, 
-                Margin = new Thickness(0, 0, 0, 15) 
+            var datePicker = new DatePicker
+            {
+                Width = Double.NaN,
+                Margin = new Thickness(0, 0, 0, 15)
             };
 
             MaterialDesignThemes.Wpf.HintAssist.SetHint(datePicker, parameter.Label);
@@ -167,7 +165,7 @@ namespace FlexJournalPro.Helpers
         }
 
         private static ComboBox CreateDropdownControl(
-            AutoFillParameter parameter, 
+            AutoFillParameter parameter,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged,
             object initialValue)
@@ -214,7 +212,7 @@ namespace FlexJournalPro.Helpers
         }
 
         private static TextBox CreateTextControl(
-            AutoFillParameter parameter, 
+            AutoFillParameter parameter,
             Dictionary<string, object> autoFillValues,
             Action? onValueChanged,
             object initialValue)
@@ -248,7 +246,7 @@ namespace FlexJournalPro.Helpers
                     case ColumnType.DateTime:
                     case ColumnType.Time:
                         string dateStr = jsonElement.ToString();
-                        if (jsonElement.ValueKind == JsonValueKind.String) 
+                        if (jsonElement.ValueKind == JsonValueKind.String)
                             dateStr = jsonElement.GetString();
 
                         if (dateStr?.ToUpper() == "NOW") return DateTime.Now;

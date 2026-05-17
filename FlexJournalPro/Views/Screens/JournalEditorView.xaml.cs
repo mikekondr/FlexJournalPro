@@ -1,9 +1,5 @@
 using FlexJournalPro.Helpers;
-using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels.Screens;
-using FlexJournalPro.Views;
-using System;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 
