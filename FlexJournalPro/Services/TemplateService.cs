@@ -19,7 +19,7 @@ namespace FlexJournalPro.Services
     }
 
     /// <summary>
-    /// Сервіс для роботи з шаблонами (фасад для DatabaseService)
+    /// Сервіс для роботи з шаблонами (фасад для SqliteDatabaseService)
     /// </summary>
     public class TemplateService : ITemplateService
     {

@@ -67,15 +67,29 @@ namespace FlexJournalPro
         private void ConfigureServices(IServiceCollection services)
         {
             // Реєструємо Singleton-конфігурацію
-            services.AddSingleton<AppConfig>();
+            var appConfig = new AppConfig();
+            services.AddSingleton(appConfig);
 
             // Реєструємо сервіси через їхні інтерфейси
             services.AddSingleton<IAppLifecycleService, AppLifecycleService>();
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
-            services.AddSingleton<IDatabaseService, DatabaseService>();
             services.AddSingleton<ITemplateService, TemplateService>();
             services.AddTransient<IAuthService, AuthService>();
             services.AddSingleton<ILogService, LogService>();
+
+            switch (appConfig.Database.Provider)
+            {
+                case DatabaseProvider.SQLite:
+                    services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
+                    break;
+
+                // case DatabaseProvider.PostgreSQL:
+                //     services.AddSingleton<IDatabaseService, PostgresDatabaseService>();
+                //     break;
+
+                default:
+                    throw new NotSupportedException($"Провайдер бази даних '{appConfig.Database.Provider}' не підтримується.");
+            }
 
             // Реєструємо фабрику для створення вікон
             services.AddSingleton<IScreenFactory, ScreenFactory>();

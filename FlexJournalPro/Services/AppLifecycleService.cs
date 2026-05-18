@@ -119,7 +119,28 @@ namespace FlexJournalPro.Services
 
             // Якщо файлів немає - показуємо вікно початкового налаштування
             var firstRunWindow = _serviceProvider.GetRequiredService<FirstRunWindow>();
-            return firstRunWindow.ShowDialog() == true;
+
+            // Чекаємо, поки користувач завершить дії і вікно ПОВНІСТЮ закриється
+            bool isSetupSuccessful = firstRunWindow.ShowDialog() == true;
+
+            // Якщо налаштування пройшло успішно (DialogResult == true) 
+            // І вікно просить перезапуск
+            if (isSetupSuccessful && firstRunWindow.RequiresRestart)
+            {
+                // 1. Запускаємо новий екземпляр програми
+                string? exePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    System.Diagnostics.Process.Start(exePath);
+                }
+
+                // 2. Повертаємо FALSE, щоб перервати подальше виконання поточного (старого) процесу.
+                // Це призведе до безпечного виклику Application.Current.Shutdown() у методі Startup().
+                return false;
+            }
+
+            // Якщо просто закрили вікно хрестиком (false) або все добре і без перезапуску (true)
+            return isSetupSuccessful;
         }
     }
 }

@@ -1,8 +1,17 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FlexJournalPro.Config
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum DatabaseProvider
+    {
+        SQLite
+        // PostgreSQL,
+        // SqlServer
+    }
+
     public class AppSettingsData
     {
         public DatabaseConfig Database { get; set; } = new DatabaseConfig();
@@ -50,7 +59,6 @@ namespace FlexJournalPro.Config
                     if (loadedConfig != null)
                     {
                         this.Settings = loadedConfig;
-                        // Копіювання інших секцій конфігурації
                     }
                 }
                 catch (Exception ex)
@@ -78,6 +86,9 @@ namespace FlexJournalPro.Config
 
     public class DatabaseConfig
     {
+        public DatabaseProvider Provider { get; set; } = DatabaseProvider.SQLite;
+
+        public string ConnectionString { get; set; } = string.Empty;
         public bool UseCipher { get; set; } = true;
     }
 }

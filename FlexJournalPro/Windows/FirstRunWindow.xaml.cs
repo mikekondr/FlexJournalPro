@@ -9,30 +9,33 @@ namespace FlexJournalPro.Windows
 {
     public partial class FirstRunWindow : Window
     {
+        public IEnumerable<DatabaseProvider> AvailableProviders { get; } = Enum.GetValues<DatabaseProvider>();
+        public DatabaseProvider? SelectedProvider { get; set; } = null;//DatabaseProvider.SQLite;
+
         // Стан: чи очікуємо ми від користувача підтвердження збереження ключа
         private bool _isWaitingForKeyBackup = false;
+
+        public bool RequiresRestart { get; private set; } = false;
 
         // Тимчасове зберігання згенерованого ключа між натисканнями
         private string? _tempMasterKey;
 
-        // 1. ВИКОРИСТОВУЄМО ІНТЕРФЕЙСИ ТА DI
         private readonly IKeyManagementService _keyService;
-        private readonly IDatabaseService _databaseService;
         private readonly AppConfig _config;
         private readonly IAuthService _authService;
+        private IDatabaseService? _databaseService;
 
-        // 2. Впроваджуємо залежності через конструктор
         public FirstRunWindow(
             IKeyManagementService keyService,
-            IDatabaseService databaseService,
             IAuthService authService,
             AppConfig config)
         {
             InitializeComponent();
             _keyService = keyService;
-            _databaseService = databaseService;
             _authService = authService;
             _config = config;
+
+            this.DataContext = this;
         }
 
         // Перетягування вікна
@@ -45,7 +48,7 @@ namespace FlexJournalPro.Windows
         // Закриття програми
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            Application.Current.Shutdown();
+            DialogResult = false;
         }
 
         // Копіювання ключа
@@ -95,21 +98,23 @@ namespace FlexJournalPro.Windows
         }
 
         // Головна логіка кнопки
-        private async void LoginButton_Click(object sender, RoutedEventArgs e)
+        private async void GoButton_Click(object sender, RoutedEventArgs e)
         {
             HideMessage();
 
             string login = LoginTextBox.Text.Trim();
             string password = PasswordBox.Password;
             string passwordConfirm = PasswordBox2.Password;
-            bool useEncryption = UseEncryptionSwitch.IsChecked == true;
 
             // 0. Валідація
-            if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(password) || DbProviderComboBox.SelectedItem == null)
             {
                 ShowMessage("Будь ласка, заповніть всі поля.", isError: true);
                 return;
             }
+
+            DatabaseProvider databaseProvider = (DatabaseProvider)DbProviderComboBox.SelectedItem;
+            bool useEncryption = databaseProvider == DatabaseProvider.SQLite && UseEncryptionSwitch.IsChecked == true;
 
             if (password != passwordConfirm)
             {
@@ -118,7 +123,7 @@ namespace FlexJournalPro.Windows
             }
 
             // ЕТАП 1: Генерація ключа і зупинка для його збереження
-            if (useEncryption && !_isWaitingForKeyBackup)
+            if (databaseProvider == DatabaseProvider.SQLite && useEncryption && !_isWaitingForKeyBackup)
             {
                 _tempMasterKey = GenerateRecoveryKeyFormat();
                 MasterDekTextBlock.Text = _tempMasterKey;
@@ -150,7 +155,7 @@ namespace FlexJournalPro.Windows
                 await Task.Run(() =>
                 {
                     // 1. Оновлюємо конфігурацію 
-                    CreateConfiguration(useEncryption);
+                    CreateConfiguration(databaseProvider, useEncryption);
 
                     if (useEncryption)
                     {
@@ -158,16 +163,17 @@ namespace FlexJournalPro.Windows
                         SaveEncryptionKeys(login, password);
                     }
 
-                    // 3. СТВОРЕННЯ БАЗИ ДАНИХ (Більше жодних new DatabaseService!)
-                    // Оскільки DEK вже в пам'яті (_keyService.GenerateMasterKeyInMemory()),
-                    // метод Connect зчитає його і створить файл БД.
+                    _databaseService = GetDatabaseService(databaseProvider);
+
+                    // 3. СТВОРЕННЯ БАЗИ ДАНИХ 
                     CreateDatabase();
 
                     // 4. Створюємо першого адміністратора
                     CreateAdminUser(login, password);
                 });
 
-                DialogResult = true;
+                this.RequiresRestart = true;
+                this.DialogResult = true;
             }
             catch (Exception ex)
             {
@@ -211,8 +217,9 @@ namespace FlexJournalPro.Windows
             return string.Join("-", formattedGroups);
         }
 
-        private void CreateConfiguration(bool useEncryption)
+        private void CreateConfiguration(DatabaseProvider databaseProvider, bool useEncryption)
         {
+            _config.Database.Provider = databaseProvider;
             _config.Database.UseCipher = useEncryption;
             _config.Save();
         }
@@ -224,14 +231,11 @@ namespace FlexJournalPro.Windows
 
         private void CreateDatabase()
         {
-            // DI-контейнер дав нам єдиний екземпляр бази.
-            // Нам потрібно лише викликати Connect(), щоб створити файл та таблиці.
             _databaseService.Connect();
         }
 
         private void CreateAdminUser(string login, string password)
         {
-            // Припускаємо, що HashPassword - статичний метод у вашому коді
             string passwordHash = _authService.HashPassword(password);
 
             Models.AppUser adminUser = new Models.AppUser
@@ -242,6 +246,20 @@ namespace FlexJournalPro.Windows
             };
 
             _databaseService.CreateUser(adminUser, passwordHash);
+        }
+
+        private IDatabaseService GetDatabaseService(DatabaseProvider databaseProvider)
+        {
+            if (databaseProvider == DatabaseProvider.SQLite)
+            {
+                // Передаємо існуючі _keyService та _config, які вже мають актуальні дані
+                return new SqliteDatabaseService(_keyService, _config);
+            }
+            else
+            {
+                // Заготовка для майбутніх СКБД
+                throw new NotSupportedException($"Провайдер {databaseProvider} ще не підтримується.");
+            }
         }
 
         #endregion

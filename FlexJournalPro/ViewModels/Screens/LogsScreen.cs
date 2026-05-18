@@ -72,7 +72,7 @@ namespace FlexJournalPro.ViewModels.Screens
         private void LoadJournals()
         {
             AvailableJournals.Clear();
-            // Припускаємо, що у DatabaseService є метод отримання всіх журналів
+            // Припускаємо, що у SqliteDatabaseService є метод отримання всіх журналів
             var journals = _dbService.GetAllJournals();
             foreach (var j in journals)
             {

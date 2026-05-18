@@ -236,7 +236,7 @@ namespace FlexJournalPro.Services
         /// <summary>
         /// Відновлює доступ за допомогою Майстер-ключа (DEK у форматі Base64)
         /// та обгортає (шифрує) його новим паролем для вказаного користувача (admin).
-        /// Викликається ТІЛЬКИ ПІСЛЯ перевірки ключа через DatabaseService.
+        /// Викликається ТІЛЬКИ ПІСЛЯ перевірки ключа через SqliteDatabaseService.
         /// </summary>
         //public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
         //{

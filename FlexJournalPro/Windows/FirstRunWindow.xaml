@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:config="clr-namespace:FlexJournalPro.Config"
         Title="ЖурналПро - Перший запуск" 
         Width="680"
         MinHeight="450"
@@ -86,49 +87,81 @@
                                      Margin="0,24,0,0" FontSize="16" />
                     </StackPanel>
 
-                    <!-- Права колонка: Безпека -->
+                    <!-- Права колонка: База даних -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="16,0,0,0">
-                        <TextBlock Text="Безпека даних" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0,0,0,8"/>
+                        <TextBlock Text="База даних" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0,0,0,8"/>
 
-                        <Grid Margin="0,8,0,16">
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ToggleButton Grid.Column="0"
+                            <!--<TextBlock Grid.Column="0" Text="Тип СКБД:" Margin="0,10,0,5" FontWeight="SemiBold" />-->
+                            <ComboBox Grid.Column="1"
+                                      x:Name="DbProviderComboBox"
+                                      ItemsSource="{Binding AvailableProviders}" 
+                                      SelectedItem="{Binding SelectedProvider, Mode=TwoWay}" 
+                                      Margin="0,8,0,0" Padding="5"
+                                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                      materialDesign:HintAssist.Hint="Тип СКБД"
+                                      materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                                      materialDesign:TextFieldAssist.LeadingIcon="Database"
+                                      materialDesign:TextFieldAssist.LeadingIconSize="22"
+                                      FontSize="16"/>
+                        </Grid>
+                        <StackPanel x:Name="SqliteParams" Margin="0,8,0,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedItem, ElementName=DbProviderComboBox}" 
+                                                     Value="{x:Static config:DatabaseProvider.SQLite}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <Grid Margin="0,8,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton Grid.Column="0"
                                           x:Name="UseEncryptionSwitch" 
                                           Style="{StaticResource MaterialDesignSwitchToggleButton}" 
                                           IsChecked="True" 
                                           VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                            <ToggleButton.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="0.75" ScaleY="0.75"/>
-                                </TransformGroup>
-                            </ToggleButton.RenderTransform>
-                        </ToggleButton>
-                        <TextBlock Grid.Column="1"
+                                    <ToggleButton.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="0.75" ScaleY="0.75"/>
+                                        </TransformGroup>
+                                    </ToggleButton.RenderTransform>
+                                </ToggleButton>
+                                <TextBlock Grid.Column="1"
                                    Text="Використовувати шифрування даних (рекомендовано)" 
                                    Margin="12,0,0,0" 
                                    FontSize="14" 
                                    VerticalAlignment="Center" 
                                    TextWrapping="Wrap"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,16"
-                          Visibility="{Binding IsChecked, ElementName=UseEncryptionSwitch, Converter={StaticResource BoolToVisConverter}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <materialDesign:PackIcon Grid.Column="0" Kind="ShieldAlert" Width="24" Height="24" Foreground="{DynamicResource MaterialDesign.Brush.Secondary}" Margin="0,0,8,0" VerticalAlignment="Top"/>
-                        <TextBlock Grid.Column="1" 
+                            </Grid>
+                            <Grid Margin="0,0,0,16"
+                                  Visibility="{Binding IsChecked, ElementName=UseEncryptionSwitch, Converter={StaticResource BoolToVisConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <materialDesign:PackIcon Grid.Column="0" Kind="ShieldAlert" Width="24" Height="24" Foreground="{DynamicResource MaterialDesign.Brush.Secondary}" Margin="0,0,8,0" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Column="1" 
                                    Text="При увімкненому шифруванні буде створено майстер-ключ. Це ЄДИНИЙ спосіб відновлення доступу до даних!" 
                                    FontSize="12" 
                                    Opacity="0.8" 
                                    TextWrapping="Wrap" 
                                    VerticalAlignment="Top"/>
-                    </Grid>
-                </StackPanel>
+                            </Grid>
+
+                        </StackPanel>
+
+                    </StackPanel>
                 </Grid>
 
                 <!-- Блок з ключем (Динамічно ховається/показується) -->
@@ -194,7 +227,7 @@
                                FontWeight="Bold"/>
 
                     <Button Content="РОЗПОЧАТИ" 
-                            Click="LoginButton_Click"
+                            Click="GoButton_Click"
                             Height="44"
                             IsDefault="True"
                             FontSize="14"

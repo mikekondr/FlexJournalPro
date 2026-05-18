@@ -110,7 +110,7 @@ namespace FlexJournalPro.Views
         /// <summary>
         /// Завантажує шаблон з бази даних (з кешуванням).
         /// </summary>
-        public void LoadTemplateFromDatabase(DatabaseService dbService, string templateId)
+        public void LoadTemplateFromDatabase(SqliteDatabaseService dbService, string templateId)
         {
             _viewModel.LoadTemplateFromDatabase(dbService, templateId);
             BuildGridStructure(_viewModel.CurrentTemplate.Columns);
