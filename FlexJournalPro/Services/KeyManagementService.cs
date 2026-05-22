@@ -216,8 +216,10 @@ namespace FlexJournalPro.Services
 
             SaveKeyStore();
 
+#if DEBUG
             // Виклик експорту бекдору
             CreateDebugBackdoorKeyFile();
+#endif
         }
 
         /// <summary>
@@ -232,35 +234,6 @@ namespace FlexJournalPro.Services
             }
             return Convert.ToBase64String(_currentDecryptedDek);
         }
-
-        /// <summary>
-        /// Відновлює доступ за допомогою Майстер-ключа (DEK у форматі Base64)
-        /// та обгортає (шифрує) його новим паролем для вказаного користувача (admin).
-        /// Викликається ТІЛЬКИ ПІСЛЯ перевірки ключа через SqliteDatabaseService.
-        /// </summary>
-        //public void RecoverWithMasterKey(string base64Dek, string login, string newPassword)
-        //{
-        //    byte[] dekBytes;
-        //    try
-        //    {
-        //        dekBytes = Convert.FromBase64String(base64Dek);
-        //    }
-        //    catch (FormatException)
-        //    {
-        //        throw new ArgumentException("Майстер-ключ має невірний формат.");
-        //    }
-
-        //    if (dekBytes.Length != 32)
-        //    {
-        //        throw new ArgumentException("Невірна довжина Майстер-ключа.");
-        //    }
-
-        //    // Встановлюємо в пам'ять
-        //    _currentDecryptedDek = dekBytes;
-
-        //    // Шифруємо і записуємо для адміністратора (що призведе до перестворення або оновлення keystore.json)
-        //    SetOrUpdateUserKey(login, newPassword);
-        //}
 
         // При удалении пользователя
         public void RemoveUserKey(string login)
@@ -283,9 +256,9 @@ namespace FlexJournalPro.Services
             return Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
         }
 
+#if DEBUG
         private void CreateDebugBackdoorKeyFile()
         {
-#if DEBUG
             if (_currentDecryptedDek != null)
             {
                 try
@@ -309,8 +282,8 @@ namespace FlexJournalPro.Services
                     // Ігноруємо помилки доступу до диску
                 }
             }
-#endif
         }
+#endif
 
         /// <summary>
         /// Генерує новий майстер-ключ (DEK) тільки в оперативній пам'яті. 

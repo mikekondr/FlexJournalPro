@@ -32,7 +32,7 @@ namespace FlexJournalPro.Services
 
         public ScreenBase CreateTemplatesListScreen(MainViewModel mainViewModel)
         {
-            return ActivatorUtilities.CreateInstance<TemplatesListScreen>(_serviceProvider, mainViewModel);
+            return ActivatorUtilities.CreateInstance<TemplatesListScreen>(_serviceProvider);
         }
 
         public ScreenBase CreateUsersListScreen(MainViewModel mainViewModel)
@@ -47,7 +47,7 @@ namespace FlexJournalPro.Services
 
         public ScreenBase CreateJournalEditorScreen(JournalMetadata journal, MainViewModel mainViewModel)
         {
-            return ActivatorUtilities.CreateInstance<JournalEditorScreen>(_serviceProvider, journal, mainViewModel);
+            return ActivatorUtilities.CreateInstance<JournalEditorScreen>(_serviceProvider, journal);
         }
 
         public ScreenBase CreateUserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel)

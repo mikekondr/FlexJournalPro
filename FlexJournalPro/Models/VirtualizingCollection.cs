@@ -80,7 +80,7 @@ namespace FlexJournalPro.Models
                 // Перевіряємо, чи це індекс рядка-заглушки
                 if (index == placeholderIndex)
                 {
-                    if (!IsReadOnly)
+                    if (IsReadOnly)
                         throw new IndexOutOfRangeException();
                     else
                         return _newRowPlaceholder;

@@ -1,3 +1,4 @@
+using FlexJournalPro.Models;
 using FlexJournalPro.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
@@ -11,6 +12,7 @@ namespace FlexJournalPro.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly IAuthService _authService;
+        private readonly IKeyManagementService _keyManagementService;
         private readonly IScreenFactory _screenFactory;
         private readonly IAppLifecycleService _appLifecycleService;
 
@@ -22,11 +24,13 @@ namespace FlexJournalPro.ViewModels
         private ScrollViewer? _screensPanelScrollViewer;
 
         public MainViewModel(IAuthService authService,
+            IKeyManagementService keyManagementService,
             IScreenFactory screenFactory,
             IAppLifecycleService appLifecycleService
             )
         {
             _authService = authService;
+            _keyManagementService = keyManagementService;
             _screenFactory = screenFactory;
             _appLifecycleService = appLifecycleService;
 
@@ -181,9 +185,38 @@ namespace FlexJournalPro.ViewModels
             UpdateScrollButtons();
         }
 
-        private void ChangePassword()
+        private async void ChangePassword()
         {
-            // TODO: Показати вікно зміни пароля
+            var vm = new ChangePasswordViewModel();
+            var dialog = new Views.ChangePasswordDialog { DataContext = vm };
+            
+            var result = await Services.DialogService.ShowCustomDialogAsync(dialog);
+
+            if (result is bool success && success)
+            {
+                var user = App.CurrentUser;
+
+                if (user != null)
+                {
+                    // Перевірка старого пароля
+                    if (_authService.Authenticate(user.Login, vm.OldPassword) == null)
+                    {
+                        AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Користувач {user.Login} спробував змінити пароль, але вказав невірний старий пароль.");
+                        await DialogService.ShowErrorAsync("Старий пароль невірний");
+                        return;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(vm.NewPassword))
+                    {
+                        _authService.UpdateUserPassword(user, vm.NewPassword);
+                        _keyManagementService.SetOrUpdateUserKey(user.Login, vm.NewPassword);
+                    }
+
+                    AppLogger.LogSystemInfo(LogAction.PasswordChanged, $"Користувач {user.Login} змінив пароль.");
+
+                    await DialogService.ShowSuccessAsync("Пароль успішно змінено.");
+                }
+            }
         }
 
         private void Logout()

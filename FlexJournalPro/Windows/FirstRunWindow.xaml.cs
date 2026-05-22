@@ -71,7 +71,8 @@ namespace FlexJournalPro.Windows
                 Filter = "Text files (*.txt)|*.txt|Key files (*.key)|*.key",
                 DefaultExt = ".txt",
                 FileName = "JournalPro_RecoveryKey.txt",
-                Title = "Збереження Майстер-ключа"
+                Title = "Збереження Майстер-ключа",
+                DefaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer)
             };
 
             if (saveFileDialog.ShowDialog() == true)
