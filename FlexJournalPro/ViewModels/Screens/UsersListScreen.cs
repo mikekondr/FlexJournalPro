@@ -10,7 +10,6 @@ namespace FlexJournalPro.ViewModels.Screens
     {
         private readonly IDatabaseService _databaseService;
         private readonly IKeyManagementService _keyManagementService;
-        private readonly IAuthService _authService;
         private readonly IScreenFactory _screenFactory;
         private readonly MainViewModel _mainViewModel;
 
@@ -37,12 +36,11 @@ namespace FlexJournalPro.ViewModels.Screens
         public ICommand DeleteUserCommand { get; }
         public ICommand RefreshCommand { get; }
 
-        public UsersListScreen(IDatabaseService databaseService, IKeyManagementService keyManagementService, IAuthService authService, IScreenFactory screenFactory, MainViewModel mainViewModel)
+        public UsersListScreen(IDatabaseService databaseService, IKeyManagementService keyManagementService, IScreenFactory screenFactory, MainViewModel mainViewModel)
         {
             _mainViewModel = mainViewModel;
             _databaseService = databaseService;
             _keyManagementService = keyManagementService;
-            _authService = authService;
             _screenFactory = screenFactory;
 
             Users = new ObservableCollection<AppUser>();

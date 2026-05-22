@@ -10,10 +10,7 @@ namespace FlexJournalPro.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        private readonly IDatabaseService _dbService;
-        private readonly ITemplateService _templateService;
         private readonly IAuthService _authService;
-        private readonly IKeyManagementService _keyManagementService;
         private readonly IScreenFactory _screenFactory;
         private readonly IAppLifecycleService _appLifecycleService;
 
@@ -24,32 +21,23 @@ namespace FlexJournalPro.ViewModels
         private bool _canScrollRight;
         private ScrollViewer? _screensPanelScrollViewer;
 
-        public MainViewModel(IDatabaseService dbService,
-            ITemplateService templateService,
-            IAuthService authService,
-            IKeyManagementService keyManagementService,
+        public MainViewModel(IAuthService authService,
             IScreenFactory screenFactory,
             IAppLifecycleService appLifecycleService
             )
         {
-            _dbService = dbService;
-            _templateService = templateService;
             _authService = authService;
-            _keyManagementService = keyManagementService;
             _screenFactory = screenFactory;
             _appLifecycleService = appLifecycleService;
 
             OpenScreens = new ObservableCollection<ScreenBase>();
 
-            // Імпортуємо шаблони з JSON файлів
-            _templateService.ImportDefaultTemplates();
-
             // Команди
             ToggleSidebarCommand = new RelayCommand(ToggleSidebar);
-            OpenJournalsListCommand = new RelayCommand(OpenJournalsList);
-            OpenTemplatesListCommand = new RelayCommand(OpenTemplatesList);
-            OpenUsersListCommand = new RelayCommand(OpenUsersList);
-            OpenLogsCommand = new RelayCommand(OpenLogs);
+            OpenJournalsListCommand = new RelayCommand(OpenJournalsList, () => _authService.UserCan("ViewJournalsList"));
+            OpenTemplatesListCommand = new RelayCommand(OpenTemplatesList, () => _authService.UserCan("ViewTemplates"));
+            OpenUsersListCommand = new RelayCommand(OpenUsersList, () => _authService.UserCan("ManageUsers"));
+            OpenLogsCommand = new RelayCommand(OpenLogs, () => _authService.UserCan("ViewLogs"));
             CloseScreenCommand = new RelayCommand(CloseScreen);
             ScrollLeftCommand = new RelayCommand(ScrollLeft, () => CanScrollLeft);
             ScrollRightCommand = new RelayCommand(ScrollRight, () => CanScrollRight);

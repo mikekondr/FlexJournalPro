@@ -52,6 +52,10 @@ namespace FlexJournalPro.Services
 
         public ScreenBase CreateUserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel)
         {
+            if (userToEdit == null)
+            {
+                return ActivatorUtilities.CreateInstance<UserEditorScreen>(_serviceProvider, new AppUser(), mainViewModel);
+            }
             return ActivatorUtilities.CreateInstance<UserEditorScreen>(_serviceProvider, userToEdit, mainViewModel);
         }
 

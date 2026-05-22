@@ -8,11 +8,30 @@ namespace FlexJournalPro.Services
         AppUser? Authenticate(string login, string password);
         string HashPassword(string password);
         public void UpdateUserPassword(AppUser user, string newPassword);
+        bool UserCan(string actionKey);
     }
 
     public class AuthService : IAuthService
     {
         private readonly IDatabaseService _dbService;
+
+        private readonly Dictionary<string, UserRole[]> _permissions = new()
+        {
+            { "ManageUsers", new[] { UserRole.Admin } },
+            { "ViewLogs", new[] { UserRole.Admin } },
+
+            { "ViewTemplates", new[] { UserRole.Admin, UserRole.Viewer, UserRole.Editor } },
+            { "ManageTemplates", new[] {UserRole.Admin }  },
+
+            { "ViewJournalsList", new[] { UserRole.Admin, UserRole.Viewer, UserRole.Editor } },
+
+            { "ManageJournals", new[] { UserRole.Admin } },
+
+            { "EditJournal", new[] { UserRole.Admin, UserRole.Editor } },
+
+            { "DeleteRecord", new[] { UserRole.Admin } }
+            // Додавайте нові дії сюди
+        };
 
         public AuthService(IDatabaseService dbService)
         {
@@ -98,6 +117,36 @@ namespace FlexJournalPro.Services
         {
             var PasswordHash = HashPassword(newPassword);
             _dbService.UpdateUser(user, PasswordHash);
+        }
+
+        public bool UserCan(string actionKey)
+        {
+            // Отримуємо поточного користувача (який зберігається глобально в App)
+            var currentUser = App.CurrentUser;
+
+            if (currentUser == null)
+                return false;
+
+            // Опціонально: Admin завжди має доступ до всього
+            if (currentUser.Role == UserRole.Admin)
+                return true;
+
+            // Перевіряємо, чи існує дія і чи має поточна роль до неї доступ
+            if (_permissions.TryGetValue(actionKey, out var allowedRoles))
+            {
+                if (actionKey == "ViewJournalsList")
+                {
+                    // Додаткове правило: може переглядати список журналів лише якщо є доступ хоча до одного журналу
+                    if (currentUser.AllowedJournalIds.Count == 0)
+                    {
+                        return false;
+                    }
+                }
+                return allowedRoles.Contains(currentUser.Role);
+            }
+
+            // Якщо дія не знайдена, за замовчуванням забороняємо доступ
+            return false;
         }
     }
 }

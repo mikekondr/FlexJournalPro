@@ -14,13 +14,18 @@ namespace FlexJournalPro.ViewModels.Screens
         private readonly IDatabaseService _dbService;
         private readonly MainViewModel _mainViewModel;
         private readonly IScreenFactory _screenFactory;
+        private readonly IAuthService _authService;
         private JournalMetadata? _selectedJournal;
 
-        public JournalsListScreen(IDatabaseService dbService, MainViewModel mainViewModel, IScreenFactory screenFactory)
+        public JournalsListScreen(IDatabaseService dbService, 
+                                  MainViewModel mainViewModel,
+                                  IScreenFactory screenFactory,
+                                  IAuthService authService)
         {
             _dbService = dbService;
             _mainViewModel = mainViewModel;
             _screenFactory = screenFactory;
+            _authService = authService;
 
             Title = "Всі журнали";
             Icon = PackIconKind.BookOpen;
@@ -28,9 +33,9 @@ namespace FlexJournalPro.ViewModels.Screens
             Journals = new ObservableCollection<JournalMetadata>();
 
             // Команди
-            CreateNewJournalCommand = new RelayCommand(CreateNewJournal);
+            CreateNewJournalCommand = new RelayCommand(CreateNewJournal, () => _authService.UserCan("ManageJournals"));
             OpenJournalCommand = new RelayCommand(OpenJournal, () => SelectedJournal != null);
-            DeleteJournalCommand = new RelayCommand(DeleteJournal, () => SelectedJournal != null);
+            DeleteJournalCommand = new RelayCommand(DeleteJournal, () => SelectedJournal != null && _authService.UserCan("ManageJournals"));
             RefreshCommand = new RelayCommand(LoadJournals);
 
             // Завантажити журнали
@@ -108,6 +113,7 @@ namespace FlexJournalPro.ViewModels.Screens
 
             // Відкриваємо екран редагування журналу
             var editorScreen = _screenFactory.CreateJournalEditorScreen(SelectedJournal, _mainViewModel);
+            editorScreen.IsReadOnly = !_authService.UserCan("EditJournals");
 
             // Перевіряємо, чи не відкритий вже цей журнал
             var existingScreen = _mainViewModel.OpenScreens

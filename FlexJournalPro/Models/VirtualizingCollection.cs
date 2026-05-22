@@ -25,16 +25,22 @@ namespace FlexJournalPro.Models
         private readonly List<BindableRow> _newItems = new List<BindableRow>();
 
         // Рядок-заглушка для введення нових даних
-        private NewRowPlaceholder _newRowPlaceholder;
+        private NewRowPlaceholder? _newRowPlaceholder;
 
         /// <summary>
         /// Ініціалізує нову віртуальну колекцію з вказаним провайдером даних.
         /// </summary>
         /// <param name="itemsProvider">Провайдер даних для завантаження елементів.</param>
-        public AsyncVirtualizingCollection(IJournalItemsProvider itemsProvider)
+        /// <param name="isReadOnly">При True - тільки читання, інакше - можливість редагування.</param>
+        public AsyncVirtualizingCollection(IJournalItemsProvider itemsProvider, bool isReadOnly = false)
         {
             _itemsProvider = itemsProvider;
-            _newRowPlaceholder = new NewRowPlaceholder();
+            IsReadOnly = isReadOnly;
+
+            if (!IsReadOnly)
+            {
+                _newRowPlaceholder = new NewRowPlaceholder();
+            }
         }
 
         // --- Властивості інтерфейсів ---
@@ -52,8 +58,8 @@ namespace FlexJournalPro.Models
                     _count = 0; // Тимчасово, поки вантажимо
                     LoadCount();
                 }
-                // Повертаємо кількість з БД + нові елементи + 1 рядок-заглушка
-                return _count + _newItems.Count + 1;
+                // Повертаємо кількість з БД + нові елементи + 1 рядок-заглушка (якщо дозволено редагувати)
+                return _count + _newItems.Count + (IsReadOnly ? 0 : 1); ;
             }
         }
 
@@ -74,7 +80,10 @@ namespace FlexJournalPro.Models
                 // Перевіряємо, чи це індекс рядка-заглушки
                 if (index == placeholderIndex)
                 {
-                    return _newRowPlaceholder;
+                    if (!IsReadOnly)
+                        throw new IndexOutOfRangeException();
+                    else
+                        return _newRowPlaceholder;
                 }
 
                 // Перевіряємо, чи це індекс нового елементу
@@ -204,12 +213,12 @@ namespace FlexJournalPro.Models
             }
         }
 
-        // --- Реалізація решти інтерфейсів (стандартна заглушка) ---
+        // --- Реалізація решти інтерфейсів ---
 
         /// <summary>
         /// Отримує значення, що вказує, чи колекція доступна тільки для читання.
         /// </summary>
-        public bool IsReadOnly => false; // Дозволяємо додавання
+        public bool IsReadOnly { get; set; }
 
         /// <summary>
         /// Отримує значення, що вказує, чи має колекція фіксований розмір.
@@ -350,7 +359,10 @@ namespace FlexJournalPro.Models
             _count = -1;
 
             // Створюємо новий рядок-заглушку
-            _newRowPlaceholder = new NewRowPlaceholder();
+            if (IsReadOnly)
+                _newRowPlaceholder = null;
+            else
+                _newRowPlaceholder = new NewRowPlaceholder();
 
             LoadCount();
         }
@@ -360,6 +372,7 @@ namespace FlexJournalPro.Models
         /// </summary>
         public BindableRow ConvertPlaceholderToNewRow(NewRowPlaceholder placeholder)
         {
+            if (IsReadOnly) return null;
             if (placeholder != _newRowPlaceholder) return null;
 
             // Додаємо поточний рядок-заглушку до списку нових елементів
@@ -396,7 +409,7 @@ namespace FlexJournalPro.Models
         /// <summary>
         /// Повертає рядок-заглушку для прокручування до нього
         /// </summary>
-        public NewRowPlaceholder GetPlaceholder()
+        public NewRowPlaceholder? GetPlaceholder()
         {
             return _newRowPlaceholder;
         }

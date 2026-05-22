@@ -7,6 +7,8 @@ namespace FlexJournalPro.Models
         UserLoginAttempt,
         UserLoginFailed,
         SystemHalted,
+        SystemError,
+        SystemWarning,
 
         // Шаблони
         TemplateCreated,

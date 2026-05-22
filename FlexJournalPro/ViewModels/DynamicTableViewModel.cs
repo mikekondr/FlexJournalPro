@@ -165,7 +165,7 @@ namespace FlexJournalPro.ViewModels
         /// <summary>
         /// Встановлює віртуальне джерело даних
         /// </summary>
-        public void SetVirtualDataSource(IDatabaseService dbService, string tableName, long startNumber = 1)
+        public void SetVirtualDataSource(IDatabaseService dbService, string tableName, long startNumber = 1, bool isReadOnly = false)
         {
             if (CurrentTemplate == null)
             {
@@ -177,7 +177,7 @@ namespace FlexJournalPro.ViewModels
             _initialStartNumber = startNumber;
 
             var provider = new JournalDataProvider(dbService, tableName, CurrentTemplate.Columns);
-            VirtualData = new AsyncVirtualizingCollection(provider);
+            VirtualData = new AsyncVirtualizingCollection(provider, isReadOnly);
 
             // Ініціалізуємо рядок-заглушку
             var placeholder = VirtualData.GetPlaceholder();

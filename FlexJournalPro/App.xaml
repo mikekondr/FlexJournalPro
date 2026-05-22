@@ -16,6 +16,7 @@
             <conv:TimeSpanToNullableDateTimeConverter x:Key="TimeSpanToNullableDateTimeConverter" />
             <conv:SafeBoolConverter x:Key="SafeBoolConverter" />
             <conv:EqualToVisibilityConverter x:Key="EqualToVisibilityConverter" />
+            <conv:ActionToVisibilityConverter x:Key="ActionToVisibilityConverter" />
             
             <!-- DataTemplate для DialogViewModel -->
             <DataTemplate DataType="{x:Type services:DialogViewModel}">

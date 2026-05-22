@@ -4,11 +4,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:local="clr-namespace:FlexJournalPro.Converters"
+             xmlns:conv="clr-namespace:FlexJournalPro.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
     <UserControl.Resources>
+        <conv:ActionToBooleanConverter x:Key="ActionToBooleanConverter" Invert="True" />
+        
         <!-- Стиль для заголовків колонок -->
         <Style x:Key="DynamicTableColumnHeaderStyle" 
                TargetType="{x:Type DataGridColumnHeader}"
@@ -94,7 +96,7 @@
     <DataGrid x:Name="DynamicGrid" 
                 AutoGenerateColumns="False" 
                 CanUserAddRows="False"
-                IsReadOnly="False"
+                IsReadOnly="{Binding Converter={StaticResource ActionToBooleanConverter}, ConverterParameter=EditJournal}"
                 HeadersVisibility="All"
                 SelectionMode="Single"
                 SelectionUnit="Cell"

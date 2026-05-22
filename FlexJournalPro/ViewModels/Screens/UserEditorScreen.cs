@@ -59,7 +59,8 @@ namespace FlexJournalPro.ViewModels.Screens
             }
         }
 
-        public UserEditorScreen(AppUser? userToEdit, MainViewModel mainViewModel, IDatabaseService dbService, IKeyManagementService keyManagementService, IAuthService authService)
+        public UserEditorScreen(AppUser userToEdit, MainViewModel mainViewModel, 
+            IDatabaseService dbService, IKeyManagementService keyManagementService, IAuthService authService)
         {
             UserToEdit = userToEdit;
             _mainViewModel = mainViewModel;
@@ -67,7 +68,7 @@ namespace FlexJournalPro.ViewModels.Screens
             _keyManagementService = keyManagementService;
             _authService = authService;
 
-            IsEditing = userToEdit != null;
+            IsEditing = userToEdit.Id != 0;
 
             Title = IsEditing ? $"Редагування користувача: {userToEdit!.Login}" : "Новий користувач";
             Icon = IsEditing ? PackIconKind.AccountEdit : PackIconKind.AccountPlus;

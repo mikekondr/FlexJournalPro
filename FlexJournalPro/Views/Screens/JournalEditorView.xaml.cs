@@ -1,4 +1,5 @@
 using FlexJournalPro.Helpers;
+using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels.Screens;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,7 +14,8 @@ namespace FlexJournalPro.Views.Screens
         public JournalEditorView()
         {
             InitializeComponent();
-            Loaded += JournalEditorView_Loaded;
+            
+            SmartTable.Loaded += JournalEditorView_Loaded;
             SmartTable.RowSaved += SmartTable_RowSaved;
         }
 
@@ -42,7 +44,8 @@ namespace FlexJournalPro.Views.Screens
             SmartTable.SetVirtualDataSource(
                 viewModel.DatabaseService,
                 viewModel.Journal.TableName,
-                viewModel.Journal.NumberStart);
+                viewModel.Journal.NumberStart,
+                viewModel.IsReadOnly);
         }
 
         private void BuildAutoFillPanel(JournalEditorScreen viewModel)

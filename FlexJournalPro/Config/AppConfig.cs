@@ -30,9 +30,7 @@ namespace FlexJournalPro.Config
         public AppConfig()
         {
             // Ініціалізація шляхів
-            //string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            //string appFolder = Path.Combine(appData, "FlexJournalPro");
-            string appFolder = AppDomain.CurrentDomain.BaseDirectory;
+            string appFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FlexJournalPro");
 
             if (!Directory.Exists(appFolder))
             {

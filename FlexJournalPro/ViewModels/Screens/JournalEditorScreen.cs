@@ -14,7 +14,7 @@ namespace FlexJournalPro.ViewModels.Screens
     {
         private readonly JournalMetadata _journal;
         private readonly IDatabaseService _dbService;
-        private readonly MainViewModel _mainViewModel;
+        private readonly IAuthService _authService;
 
         private TableTemplate? _template;
         private Dictionary<string, object> _autoFillValues = new Dictionary<string, object>();
@@ -23,17 +23,19 @@ namespace FlexJournalPro.ViewModels.Screens
         public ICommand SaveConstantsCommand { get; }
         public ICommand SaveRowCommand { get; }
 
-        public JournalEditorScreen(JournalMetadata journal, IDatabaseService dbService, MainViewModel mainViewModel)
+        public JournalEditorScreen(JournalMetadata journal,
+                                   IDatabaseService dbService,
+                                   IAuthService authService)
         {
             _journal = journal;
             _dbService = dbService;
-            _mainViewModel = mainViewModel;
+            _authService = authService;
 
             Title = journal.Title;
             Icon = PackIconKind.BookEdit;
 
             SaveConstantsCommand = new RelayCommand(SaveConstants);
-            SaveRowCommand = new RelayCommand<BindableRow>(SaveRow);
+            SaveRowCommand = new RelayCommand<BindableRow>(SaveRow, _ => _authService.UserCan("EditJournal"));
 
             // Завантажуємо шаблон та дані
             LoadTemplate();

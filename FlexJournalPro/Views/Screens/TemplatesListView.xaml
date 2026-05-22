@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:FlexJournalPro"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800">
@@ -19,7 +20,8 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8">
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
                         Command="{Binding ImportTemplateCommand}"
-                        Margin="0,0,8,0">
+                        Margin="0,0,8,0"
+                        Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ManageTemplates}">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="Import" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="Імпортувати шаблони" VerticalAlignment="Center"/>
@@ -56,12 +58,14 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Редагувати" Width="24" Height="24" Padding="4">
+                                                ToolTip="Редагувати" Width="24" Height="24" Padding="4"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ManageTemplates}">
                                         <materialDesign:PackIcon Kind="Edit" Width="16" Height="16"/>
                                     </Button>
                                     <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ToolTip="Видалити" Width="24" Height="24" Padding="4">
+                                                ToolTip="Видалити" Width="24" Height="24" Padding="4"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ManageTemplates}">
                                         <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                     </Button>
                                 </StackPanel>

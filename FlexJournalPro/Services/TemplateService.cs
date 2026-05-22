@@ -188,6 +188,7 @@ namespace FlexJournalPro.Services
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Помилка імпорту {Path.GetFileName(filePath)}: {ex.Message}");
+                    AppLogger.LogSystemError(LogAction.SystemError, $"Помилка імпорту шаблону з файлу {Path.GetFileName(filePath)}", ex);
                 }
             }
         }

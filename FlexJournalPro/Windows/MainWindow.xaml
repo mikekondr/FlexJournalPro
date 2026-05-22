@@ -7,7 +7,7 @@
         xmlns:converters="clr-namespace:FlexJournalPro.Converters"
         xmlns:behaviors="clr-namespace:FlexJournalPro.Behaviors"
         xmlns:views="clr-namespace:FlexJournalPro.Views"
-        mc:Ignorable="d"
+        xmlns:local="clr-namespace:FlexJournalPro" mc:Ignorable="d"
         Title="Журналро - Система управління журналами" 
         Height="700" 
         Width="1200"
@@ -189,7 +189,8 @@
 
                                     <Button Style="{StaticResource MaterialDesignFlatButton}"
                                             Command="{Binding OpenJournalsListCommand}" HorizontalContentAlignment="Left" Padding="16,8"
-                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
+                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ViewJournalsList}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="BookOpen" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="Всі журнали" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -207,7 +208,8 @@
 
                                     <Button Style="{StaticResource MaterialDesignFlatButton}"
                                             Command="{Binding OpenTemplatesListCommand}" HorizontalContentAlignment="Left" Padding="16,8"
-                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
+                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ViewTemplates}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="FileDocument" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="Шаблони" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -217,7 +219,8 @@
 
                                     <Button Style="{StaticResource MaterialDesignFlatButton}"
                                             Command="{Binding OpenUsersListCommand}" HorizontalContentAlignment="Left" Padding="16,8"
-                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
+                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ManageUsers}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="AccountGroupOutline" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="Користувачі" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -226,7 +229,8 @@
                                     </Button>
                                     <Button Style="{StaticResource MaterialDesignFlatButton}"
                                             Command="{Binding OpenLogsCommand}" HorizontalContentAlignment="Left" Padding="16,8"
-                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}">
+                                            Foreground="{DynamicResource MaterialDesign.Brush.Primary.Foreground}"
+                                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=ViewLogs}">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="TextBoxSearchOutline" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="Журнал логів" Margin="12,0,0,0" VerticalAlignment="Center"

@@ -13,13 +13,14 @@ namespace FlexJournalPro.ViewModels.Screens
     public class TemplatesListScreen : ScreenBase
     {
         private readonly ITemplateService _templateService;
-        private readonly MainViewModel _mainViewModel;
+        private readonly IAuthService _authService;
         private TemplateMetadata? _selectedTemplate;
 
-        public TemplatesListScreen(ITemplateService templateService, MainViewModel mainViewModel)
+        public TemplatesListScreen(ITemplateService templateService, 
+                                   IAuthService authService)
         {
             _templateService = templateService;
-            _mainViewModel = mainViewModel;
+            _authService = authService;
 
             Title = "Шаблони";
             Icon = PackIconKind.FileDocument;
@@ -27,11 +28,11 @@ namespace FlexJournalPro.ViewModels.Screens
             Templates = new ObservableCollection<TemplateMetadata>();
 
             // Команди
-            CreateTemplateCommand = new RelayCommand(CreateTemplate);
-            EditTemplateCommand = new RelayCommand(EditTemplate, () => SelectedTemplate != null);
-            DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => SelectedTemplate != null);
+            CreateTemplateCommand = new RelayCommand(CreateTemplate, () => _authService.UserCan("ManageTemplates"));
+            EditTemplateCommand = new RelayCommand(EditTemplate, () => SelectedTemplate != null && _authService.UserCan("ManageTemplates"));
+            DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => SelectedTemplate != null && _authService.UserCan("ManageTemplates"));
             RefreshCommand = new RelayCommand(LoadTemplates);
-            ImportTemplateCommand = new RelayCommand(ImportTemplate);
+            ImportTemplateCommand = new RelayCommand(ImportTemplate, () => _authService.UserCan("ManageTemplates"));
 
             // Завантажити шаблони
             LoadTemplates();

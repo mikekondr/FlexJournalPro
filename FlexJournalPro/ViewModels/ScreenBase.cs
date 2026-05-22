@@ -11,6 +11,8 @@ namespace FlexJournalPro.ViewModels
         private string _title = string.Empty;
         private PackIconKind _icon = PackIconKind.FileDocument;
 
+        public bool IsReadOnly { get; set; }
+
         /// <summary>
         /// Заголовок екрану (відображається у вкладці)
         /// </summary>

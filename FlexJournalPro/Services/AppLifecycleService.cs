@@ -90,7 +90,20 @@ namespace FlexJournalPro.Services
 
                 // 2. Записуємо сам факт успішного входу
                 AppLogger.LogSystemInfo(LogAction.UserLogin, "Вхід в систему");
-
+                
+                // 3. Запускаємо імпорт шаблонів у фоні, щоб не блокувати UI
+                var templateService = _serviceProvider.GetRequiredService<ITemplateService>();
+                Task.Run(() => 
+                {
+                    try
+                    {
+                        templateService.ImportDefaultTemplates();
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.LogSystemInfo(LogAction.SystemError, "Помилка імпорту шаблонів", ex.Message);
+                    }
+                });
 
                 // Повертаємо стандартний режим після успішного входу
                 Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
