@@ -75,7 +75,7 @@ namespace FlexJournalPro.ViewModels.Screens
             {
                 try
                 {
-                    Template = System.Text.Json.JsonSerializer.Deserialize<TableTemplate>(_journal.TemplateConfigJson);
+                    Template = JsonSerializer.Deserialize<TableTemplate>(_journal.TemplateConfigJson);
 
                     if (Template != null)
                     {
@@ -83,7 +83,7 @@ namespace FlexJournalPro.ViewModels.Screens
                         InjectSystemAutoFillParameters(Template);
                     }
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Помилка десеріалізації зліпка шаблону: {ex.Message}");
                 }
@@ -94,13 +94,13 @@ namespace FlexJournalPro.ViewModels.Screens
             {
                 try
                 {
-                    var autoFillParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(_journal.AutoFillConfigJson);
+                    var autoFillParams = JsonSerializer.Deserialize<Dictionary<string, object>>(_journal.AutoFillConfigJson);
                     if (autoFillParams != null)
                     {
                         _autoFillValues = new Dictionary<string, object>(autoFillParams);
                     }
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Помилка завантаження параметрів заповнення: {ex.Message}");
                 }
@@ -152,7 +152,7 @@ namespace FlexJournalPro.ViewModels.Screens
                 string json = JsonSerializer.Serialize(AutoFillValues);
                 _dbService.UpdateJournalAutoFillConfig(Journal.Id, json);
 
-                // В ідеалі тут має бути _dialogService.ShowMessage(...), але поки залишимо MessageBox
+                // TODO: В ідеалі тут має бути _dialogService.ShowMessage(...), але поки залишимо MessageBox
                 MessageBox.Show("Параметри збережено!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)

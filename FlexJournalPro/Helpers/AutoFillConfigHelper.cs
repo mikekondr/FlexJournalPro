@@ -1,4 +1,6 @@
 using FlexJournalPro.Models;
+using FlexJournalPro.Services;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,6 +13,18 @@ namespace FlexJournalPro.Helpers
     /// </summary>
     public static class AutoFillConfigHelper
     {
+        private static readonly List<string> SystemUsers = new List<string>();
+
+        static AutoFillConfigHelper()
+        {
+            var app = Application.Current as App;
+            if (app?.ServiceProvider != null)
+            {
+                var _db = app.ServiceProvider.GetRequiredService<IDatabaseService>();
+                _db.GetAllUsers().ForEach(u => SystemUsers.Add(u.FullName));
+            }
+        }
+
         /// <summary>
         /// Створює UI панель для редагування параметрів заповнення
         /// </summary>
@@ -172,11 +186,25 @@ namespace FlexJournalPro.Helpers
         {
             bool isEditable = (parameter.Type == ColumnType.DropdownEditable);
 
+            // Клонуємо базові опції з шаблону
+            var options = parameter.Options != null ? new List<string>(parameter.Options) : new List<string>();
+
+            // Підміна макросу %%ALL_USERS%% на реальний список користувачів
+            if (options.Contains("%%ALL_USERS%%"))
+            {
+                // Додаємо макрос для поточного користувача
+                options.Add("%%CURRENT_USER%%");
+
+                options.Remove("%%ALL_USERS%%");
+                if (SystemUsers != null) 
+                    options.AddRange(SystemUsers);
+            }
+
             var comboBox = new ComboBox
             {
                 Margin = new Thickness(0, 0, 0, 15),
                 IsEditable = isEditable,
-                ItemsSource = parameter.Options,
+                ItemsSource = options.Distinct().ToList(),
                 StaysOpenOnEdit = true
             };
 
@@ -252,6 +280,12 @@ namespace FlexJournalPro.Helpers
                         if (dateStr?.ToUpper() == "NOW") return DateTime.Now;
                         if (DateTime.TryParse(dateStr, out var d)) return d;
                         return dateStr;
+                    case ColumnType.Text:
+                        string textStr = jsonElement.ToString();
+                        if (jsonElement.ValueKind == JsonValueKind.String)
+                            textStr = jsonElement.GetString();
+                        if (textStr?.ToUpper() == "USERNAME") return App.CurrentUser?.FullName ?? App.CurrentUser?.Login ?? "Невідомий користувач";
+                        return textStr;
                     default:
                         return jsonElement.ToString();
                 }

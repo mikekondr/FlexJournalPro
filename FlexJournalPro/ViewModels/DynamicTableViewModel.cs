@@ -618,18 +618,27 @@ namespace FlexJournalPro.ViewModels
                 // Skip if already has value (e.g. partial edit)
                 if (row.ContainsKey(col.FieldName) && row[col.FieldName] != null) continue;
 
-                if (col.DefaultValue != null)
+                object rawValue = null;
+                // ПРІОРИТЕТ 1: Беремо СИРЕ значення з автозаповнення (може містити макрос)
+                if (!string.IsNullOrEmpty(col.BindAutoFillParam) 
+                    && _autoFillValues.ContainsKey(col.BindAutoFillParam)
+                    && Convert.ToString(_autoFillValues[col.BindAutoFillParam]) != String.Empty)
                 {
-                    row[col.FieldName] = col.DefaultValue;
+                    rawValue = _autoFillValues[col.BindAutoFillParam];
                 }
-                else if (!string.IsNullOrEmpty(col.BindAutoFillParam) && _autoFillValues.ContainsKey(col.BindAutoFillParam))
+                // ПРІОРИТЕТ 2: Беремо СИРЕ значення за замовчуванням із конфігурації
+                else if (col.DefaultValue != null)
                 {
-                    row[col.FieldName] = _autoFillValues[col.BindAutoFillParam];
+                    rawValue = col.DefaultValue;
                 }
+                // ПРІОРИТЕТ 3: Базове порожнє значення
                 else
                 {
-                    row[col.FieldName] = GetDefaultValueForType(col.Type);
+                    rawValue = GetDefaultValueForType(col.Type);
                 }
+
+                // ОБРОБКА МАКРОСІВ: Пропускаємо обране значення через резолвер
+                row[col.FieldName] = ResolveMacroValue(rawValue, col.Type);
             }
 
             // 2. Спеціальна логіка для RegistrationParams
@@ -666,6 +675,36 @@ namespace FlexJournalPro.ViewModels
 
             // Скидаємо статус "IsDirty" після ініціалізації (оскільки це дефолтні значення)
             row.MarkAsSaved();
+        }
+
+        private object ResolveMacroValue(object rawValue, ColumnType colType)
+        {
+            if (rawValue == null) return null;
+
+            string strValue = rawValue.ToString().Trim();
+
+            // 1. Макрос %%NOW%%
+            if (strValue.Equals("%%NOW%%", StringComparison.OrdinalIgnoreCase))
+            {
+                var ukCulture = CultureInfo.GetCultureInfo("uk-UA");
+
+                return colType switch
+                {
+                    ColumnType.Date => DateTime.Today,
+                    ColumnType.DateTime => DateTime.Now,
+                    ColumnType.Time => DateTime.Now.TimeOfDay,
+                    _ => DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", ukCulture)
+                };
+            }
+
+            // 2. Макрос %%CURRENT_USER%%
+            if (strValue.Equals("%%CURRENT_USER%%", StringComparison.OrdinalIgnoreCase))
+            {
+                return App.CurrentUser?.FullName ?? "<невідомо>";
+            }
+
+            // 3. Якщо це не макрос — конвертуємо до потрібного типу
+            return ConvertToTargetType(rawValue, colType);
         }
 
         private long GetNextRegistrationNumber()
