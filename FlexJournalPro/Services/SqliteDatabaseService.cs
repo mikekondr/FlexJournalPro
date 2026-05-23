@@ -381,14 +381,23 @@ namespace FlexJournalPro.Services
         }
 
         // Повернути список BindableRow для сторінки (LIMIT/OFFSET)
-        public IList<BindableRow> FetchRange(string tableName, int startIndex, int count, List<ColumnConfig> columns)
+        public IList<BindableRow> FetchRange(string tableName, int startIndex, int count, List<ColumnConfig> columns, string orderByColumn = "Id", bool sortDescending = true)
         {
             var list = new List<BindableRow>();
 
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
-                string sql = $"SELECT * FROM [{tableName}] ORDER BY Id DESC LIMIT @Limit OFFSET @Offset";
+
+                // Захист від SQL Injection для імені колонки сортування
+                string safeOrderColumn = "Id"; // За замовчуванням
+                if (!string.IsNullOrEmpty(orderByColumn) && (orderByColumn.Equals("Id", StringComparison.OrdinalIgnoreCase) || columns.Any(c => c.FieldName?.Equals(orderByColumn, StringComparison.OrdinalIgnoreCase) == true)))
+                {
+                    safeOrderColumn = orderByColumn;
+                }
+
+                string sortDirection = sortDescending ? "DESC" : "ASC";
+                string sql = $"SELECT * FROM [{tableName}] ORDER BY [{safeOrderColumn}] {sortDirection} LIMIT @Limit OFFSET @Offset";
 
                 using (var cmd = new SqliteCommand(sql, conn))
                 {
@@ -423,27 +432,27 @@ namespace FlexJournalPro.Services
                                 if (col.FieldName?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true) continue;
 
                                 if (col.FieldName == null || !columnIndexMap.TryGetValue(col.FieldName, out int columnIndex))
-                                    continue;
+                                        continue;
 
-                                try
-                                {
+                                    try
+                                    {
                                     // Швидка перевірка на NULL
                                     if (reader.IsDBNull(columnIndex))
-                                    {
+                                        {
                                         row[col.FieldName] = string.Empty; // замість null для уникнення помилок
                                         continue;
-                                    }
+                                        }
 
                                     // Типізоване читання замість ToString() + парсингу
                                     row[col.FieldName] = ReadTypedValue(reader, columnIndex, col.Type);
-                                }
-                                catch (Exception ex)
-                                {
+                                    }
+                                    catch (Exception ex)
+                                    {
                                     // Fallback на універсальний метод
-                                    System.Diagnostics.Debug.WriteLine($"Помилка читання {col.FieldName}: {ex.Message}");
-                                    row[col.FieldName] = reader.GetValue(columnIndex);
+                                        System.Diagnostics.Debug.WriteLine($"Помилка читання {col.FieldName}: {ex.Message}");
+                                        row[col.FieldName] = reader.GetValue(columnIndex);
+                                    }
                                 }
-                            }
 
                             // Позначаємо рядок як збережений (без змін)
                             row.MarkAsSaved();
@@ -1527,6 +1536,8 @@ namespace FlexJournalPro.Services
     {
         int FetchCount();
         IList<BindableRow> FetchRange(int startIndex, int count);
+        bool IsSortDescending { get; set; }
+        string SortColumn { get; set; }
     }
 
     public class JournalDataProvider : IJournalItemsProvider
@@ -1534,12 +1545,20 @@ namespace FlexJournalPro.Services
         private readonly IDatabaseService _dbService;
         private readonly string _tableName;
         private readonly List<ColumnConfig> _columns;
+        public bool IsSortDescending { get; set; } = true;
+        public string SortColumn { get; set; } = "Id";
 
         public JournalDataProvider(IDatabaseService dbService, string tableName, List<ColumnConfig> columns)
         {
             _dbService = dbService;
             _tableName = tableName;
             _columns = columns;
+
+            // Якщо є поле RegNumber, будемо сортувати за ним
+            if (columns.Any(c => c.FieldName == "RegNumber"))
+            {
+                SortColumn = "RegNumber";
+            }
         }
 
         public int FetchCount()
@@ -1549,7 +1568,7 @@ namespace FlexJournalPro.Services
 
         public IList<BindableRow> FetchRange(int startIndex, int count)
         {
-            return _dbService.FetchRange(_tableName, startIndex, count, _columns);
+            return _dbService.FetchRange(_tableName, startIndex, count, _columns, SortColumn, IsSortDescending);
         }
     }
 }

@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:conv="clr-namespace:FlexJournalPro.Converters"
+             xmlns:mdconv="clr-namespace:MaterialDesignThemes.Wpf.Converters;assembly=MaterialDesignThemes.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
@@ -18,6 +19,77 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type DataGridColumnHeader}">
+                        <ControlTemplate.Resources>
+                            <Storyboard x:Key="GoToVisible">
+                                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SortDirectionIndicator" Storyboard.TargetProperty="Width">
+                                    <EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="0" />
+                                    <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="8" />
+                                </DoubleAnimationUsingKeyFrames>
+                                <ThicknessAnimationUsingKeyFrames Storyboard.TargetName="HeaderContent" Storyboard.TargetProperty="Margin">
+                                    <EasingThicknessKeyFrame KeyTime="0:0:0.0" Value="0,0,0,0" />
+                                    <EasingThicknessKeyFrame KeyTime="0:0:0.2" Value="6,0,0,0" />
+                                </ThicknessAnimationUsingKeyFrames>
+                            </Storyboard>
+                            <Storyboard x:Key="GoToHidden">
+                                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SortDirectionIndicator"  Storyboard.TargetProperty="Width">
+                                    <EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="8" />
+                                    <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0" />
+                                </DoubleAnimationUsingKeyFrames>
+                                <ThicknessAnimationUsingKeyFrames Storyboard.TargetName="HeaderContent" Storyboard.TargetProperty="Margin">
+                                    <EasingThicknessKeyFrame KeyTime="0:0:0.0" Value="6,0,0,0" />
+                                    <EasingThicknessKeyFrame KeyTime="0:0:0.2" Value="0,0,0,0" />
+                                </ThicknessAnimationUsingKeyFrames>
+                            </Storyboard>
+                        </ControlTemplate.Resources>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="UIElement.IsMouseOver" Value="True">
+                                <Setter Value="{DynamicResource MaterialDesign.Brush.Foreground}" Property="Foreground" />
+                            </Trigger>
+                            <Trigger Property="DataGridColumnHeader.SortDirection" Value="Ascending">
+                                <Setter Value="{DynamicResource MaterialDesign.Brush.Foreground}" Property="Foreground" />
+                            </Trigger>
+                            <Trigger Property="DataGridColumnHeader.SortDirection" Value="Descending">
+                                <Setter Value="{DynamicResource MaterialDesign.Brush.Foreground}" Property="Foreground" />
+                            </Trigger>
+                            <Trigger SourceName="SortDirectionIndicator" Property="materialDesign:ListSortDirectionIndicator.IsNeutral" Value="False">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Name="GoToVisible" Storyboard="{StaticResource GoToVisible}" />
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <RemoveStoryboard BeginStoryboardName="GoToVisible" />
+                                    <BeginStoryboard Storyboard="{StaticResource GoToHidden}" />
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                        <Grid Background="Transparent">
+                            <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                                    <materialDesign:ListSortDirectionIndicator Name="SortDirectionIndicator" Width="0" Height="8" 
+                                                                               HorizontalAlignment="Left" VerticalAlignment="Center" IsTabStop="False" 
+                                                                               ListSortDirection="{TemplateBinding SortDirection}" Opacity="0.45"
+                                                                               Visibility="{Binding CanUserSortColumns , RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static mdconv:BooleanToVisibilityConverter.CollapsedInstance}}" />
+                                    <ContentPresenter Name="HeaderContent" 
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                                      RecognizesAccessKey="True" 
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                                        <ContentPresenter.Resources>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Setter Property="TextTrimming" Value="WordEllipsis" />
+                                                <Setter Property="materialDesign:TextBlockAssist.AutoToolTip" Value="True" />
+                                            </Style>
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                </Grid>
+                            </Border>
+                            <Thumb Name="PART_LeftHeaderGripper" HorizontalAlignment="Left" Style="{StaticResource MaterialDesignGridColumnHeaderGripper}" />
+                            <Thumb Name="PART_RightHeaderGripper" HorizontalAlignment="Right" Style="{StaticResource MaterialDesignGridColumnHeaderGripper}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Стиль для заголовків рядків з індикацією стану -->
@@ -44,15 +116,15 @@
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Item.IsPlaceholder, FallbackValue=False}" Value="True">
+                            <DataTrigger Binding="{Binding IsPlaceholder, FallbackValue=False}" Value="True">
                                 <Setter TargetName="StateIcon" Property="Text" Value="⏳"/>
                                 <Setter TargetName="StateIcon" Property="Foreground" Value="#9E9E9E"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Item.IsNewRowPlaceholder, FallbackValue=False}" Value="True">
+                            <DataTrigger Binding="{Binding IsNewRowPlaceholder, FallbackValue=False}" Value="True">    
                                 <Setter TargetName="StateIcon" Property="Text" Value="➕"/>
                                 <Setter TargetName="StateIcon" Property="Foreground" Value="#4CAF50"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Item.IsDirty, FallbackValue=False}" Value="True">
+                            <DataTrigger Binding="{Binding IsDirty, FallbackValue=False}" Value="True">
                                 <Setter TargetName="StateIcon" Property="Text" Value="✏️"/>
                                 <Setter TargetName="StateIcon" Property="Foreground" Value="#FF9800"/>
                             </DataTrigger>
@@ -111,6 +183,9 @@
                 VirtualizingPanel.IsVirtualizing="True"
                 VirtualizingPanel.VirtualizationMode="Recycling"
                 EnableRowVirtualization="True"
-                EnableColumnVirtualization="True">
+                EnableColumnVirtualization="True"
+              
+                VirtualizingPanel.ScrollUnit="Pixel"
+                ScrollViewer.IsDeferredScrollingEnabled="True">
     </DataGrid>
 </UserControl>

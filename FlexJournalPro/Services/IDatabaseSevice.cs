@@ -23,7 +23,7 @@ namespace FlexJournalPro.Services
         DataTable LoadJournalPage(string tableName, int offset, int limit);
         int GetJournalCount(string tableName);
         long GetNextRegistrationNumber(string tableName, long startNumber);
-        IList<BindableRow> FetchRange(string tableName, int startIndex, int count, List<ColumnConfig> columns);
+        IList<BindableRow> FetchRange(string tableName, int startIndex, int count, List<ColumnConfig> columns, string orderByColumn = "Id", bool sortDescending = true);
         void UpsertDictionaryRow(string tableName, BindableRow rowData, List<ColumnConfig> columns);
 
         // Шаблони

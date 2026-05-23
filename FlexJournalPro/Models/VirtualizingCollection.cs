@@ -17,6 +17,10 @@ namespace FlexJournalPro.Models
 
         private int _count = -1;
 
+        public IJournalItemsProvider Provider => _itemsProvider;
+
+        public bool IsSortDescending => _itemsProvider.IsSortDescending;
+
         // Кеш сторінок: Номер сторінки -> (Дані, Час останнього доступу)
         private readonly Dictionary<int, IList<BindableRow>> _pages = new Dictionary<int, IList<BindableRow>>();
         private readonly Dictionary<int, DateTime> _pageTouchTimes = new Dictionary<int, DateTime>();
@@ -53,13 +57,11 @@ namespace FlexJournalPro.Models
         {
             get
             {
-                if (_count == -1)
-                {
-                    _count = 0; // Тимчасово, поки вантажимо
-                    LoadCount();
-                }
-                // Повертаємо кількість з БД + нові елементи + 1 рядок-заглушка (якщо дозволено редагувати)
-                return _count + _newItems.Count + (IsReadOnly ? 0 : 1); ;
+                // Завантажуємо загальну кількість
+                if (_count == -1) LoadCount();
+                int baseCount = _count == -1 ? 0 : _count;
+                // Враховуємо "нові збережені" + можливий placeholder
+                return baseCount + _newItems.Count + (_newRowPlaceholder != null ? 1 : 0);
             }
         }
 
@@ -73,57 +75,45 @@ namespace FlexJournalPro.Models
         {
             get
             {
+                if (_count == -1) LoadCount();
                 int dbCount = _count == -1 ? 0 : _count;
-                int newItemsStartIndex = dbCount;
-                int placeholderIndex = dbCount + _newItems.Count;
-
-                // Перевіряємо, чи це індекс рядка-заглушки
-                if (index == placeholderIndex)
+                
+                bool isPlaceholderAtTop = IsSortDescending; // якщо DESC, нові записи зверху
+                
+                if (isPlaceholderAtTop && _newRowPlaceholder != null)
                 {
-                    if (IsReadOnly)
-                        throw new IndexOutOfRangeException();
-                    else
+                    if (index == 0) return _newRowPlaceholder;
+                    index -= 1; // Зсуваємо індекс для решти елементів
+                }
+                
+                // Перевірка, чи належить до нових елементів
+                if (index >= dbCount)
+                {
+                    int newItemIndex = index - dbCount;
+                    if (newItemIndex < _newItems.Count)
+                        return _newItems[newItemIndex];
+                    
+                    if (!isPlaceholderAtTop && _newRowPlaceholder != null && index == dbCount + _newItems.Count)
                         return _newRowPlaceholder;
                 }
 
-                // Перевіряємо, чи це індекс нового елементу
-                if (index >= newItemsStartIndex && index < placeholderIndex)
-                {
-                    // Це новий елемент
-                    return _newItems[index - newItemsStartIndex];
-                }
-
-                // Визначаємо, яка сторінка нам треба (для елементів з БД)
+                // Завантаження сторінки з бази
                 int pageIndex = index / _pageSize;
                 int pageOffset = index % _pageSize;
+                RequestPage(pageIndex); // Асинхронний запит, якщо сторінка відсутня
 
-                // Спробуємо отримати з кешу
-                if (_pages.ContainsKey(pageIndex))
+                if (_pages.TryGetValue(pageIndex, out var page) && page != null)
                 {
-                    var page = _pages[pageIndex];
-                    if (page == null)
-                    {
-                        // Якщо сторінка помічена як null (старий режим), повертаємо заглушку
-                        var placeholder = new PlaceholderRow();
-                        return placeholder;
-                    }
-
-                    _pageTouchTimes[pageIndex] = DateTime.Now; // Оновлюємо час доступу
-
                     if (pageOffset < page.Count)
                         return page[pageOffset];
                 }
-                else
-                {
-                    // Сторінки немає - запускаємо завантаження
-                    RequestPage(pageIndex);
-                }
 
-                // Поки вантажиться, повертаємо заглушку (унікальну для цього індексу)
-                var ph = new PlaceholderRow();
-                return ph;
+                // Placeholder на час завантаження
+                var loadingRow = new BindableRow();
+                loadingRow["__IsLoading"] = true;
+                return loadingRow;
             }
-            set => throw new NotSupportedException("Редагування через індексатор не підтримується прямо");
+            set => throw new NotSupportedException();
         }
 
         // --- Асинхронне завантаження ---
@@ -146,7 +136,7 @@ namespace FlexJournalPro.Models
         /// <param name="pageIndex">Індекс сторінки для завантаження.</param>
         private async void RequestPage(int pageIndex)
         {
-            // Щоб не запитувати ту саму сторінку сто разів, поки вона вантажиться
+            // Щоб не запитувати ту ж саму сторінку сто разів, поки вона вантажиться
             if (_pages.ContainsKey(pageIndex)) return;
 
             // Створюємо сторінку заглушок (унікальна заглушка на кожен індекс)
@@ -171,12 +161,16 @@ namespace FlexJournalPro.Models
                 _pages[pageIndex] = data;
                 _pageTouchTimes[pageIndex] = DateTime.Now;
 
+                // Враховуємо зсув індексу, якщо плейсхолдер зверху
+                bool isPlaceholderAtTop = IsSortDescending && _newRowPlaceholder != null;
+                int offset = isPlaceholderAtTop ? 1 : 0;
+
                 // Сповіщаємо UI, що дані змінилися в діапазоні цієї сторінки
                 // Замінюємо заглушки на реальні елементи без глобального Reset
                 int replaceCount = Math.Min(data.Count, oldPage.Count);
                 for (int i = 0; i < replaceCount; i++)
                 {
-                    int globalIndex = startIndex + i;
+                    int globalIndex = startIndex + i + offset;
                     var oldItem = oldPage[i];
                     var newItem = data[i];
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(
@@ -268,7 +262,12 @@ namespace FlexJournalPro.Models
             {
                 int dbCount = _count == -1 ? 0 : _count;
                 _newItems.Add(newRow);
+                
                 int newIndex = dbCount + _newItems.Count - 1;
+                if (IsSortDescending && _newRowPlaceholder != null)
+                {
+                    newIndex += 1;
+                }
 
                 OnPropertyChanged(nameof(Count));
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
@@ -284,10 +283,11 @@ namespace FlexJournalPro.Models
         /// </summary>
         public void Clear()
         {
-            _count = 0;
+            _count = -1;//0;
             _pages.Clear();
             _newItems.Clear();
-            LoadCount();
+            //LoadCount();
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         /// <summary>
@@ -309,7 +309,12 @@ namespace FlexJournalPro.Models
                 int newItemIndex = _newItems.IndexOf(row);
                 if (newItemIndex >= 0)
                 {
-                    return (_count == -1 ? 0 : _count) + newItemIndex;
+                    int index = (_count == -1 ? 0 : _count) + newItemIndex;
+                    if (IsSortDescending && _newRowPlaceholder != null)
+                    {
+                        index += 1;
+                    }
+                    return index;
                 }
             }
             return -1;
@@ -335,9 +340,15 @@ namespace FlexJournalPro.Models
                 _newItems.Remove(row);
 
                 int dbCount = _count == -1 ? 0 : _count;
+                int globalIndex = dbCount + index;
+                if (IsSortDescending && _newRowPlaceholder != null)
+                {
+                    globalIndex += 1;
+                }
+
                 OnPropertyChanged(nameof(Count));
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
-                    NotifyCollectionChangedAction.Remove, row, dbCount + index));
+                    NotifyCollectionChangedAction.Remove, row, globalIndex));
             }
         }
 
@@ -377,7 +388,7 @@ namespace FlexJournalPro.Models
 
             // Додаємо поточний рядок-заглушку до списку нових елементів
             int dbCount = _count == -1 ? 0 : _count;
-            int oldPlaceholderIndex = dbCount + _newItems.Count;
+            bool isTop = IsSortDescending;
 
             // Конвертуємо в звичайний BindableRow
             var newRow = new BindableRow();
@@ -396,12 +407,26 @@ namespace FlexJournalPro.Models
 
             // Сповіщаємо про зміни
             OnPropertyChanged(nameof(Count));
-            // Заміна старого placeholder на newRow
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(
-                NotifyCollectionChangedAction.Replace, newRow, placeholder, oldPlaceholderIndex));
-            // Додавання нового placeholder
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(
-                NotifyCollectionChangedAction.Add, _newRowPlaceholder, oldPlaceholderIndex + 1));
+            
+            if (isTop)
+            {
+                // Заміна старого placeholder на новий на індексі 0
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+                    NotifyCollectionChangedAction.Replace, _newRowPlaceholder, placeholder, 0));
+                // Додавання нового рядка в кінець
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+                    NotifyCollectionChangedAction.Add, newRow, dbCount + _newItems.Count));
+            }
+            else
+            {
+                int oldPlaceholderIndex = dbCount + _newItems.Count - 1;
+                // Заміна старого placeholder на newRow
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+                    NotifyCollectionChangedAction.Replace, newRow, placeholder, oldPlaceholderIndex));
+                // Додавання нового placeholder
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+                    NotifyCollectionChangedAction.Add, _newRowPlaceholder, oldPlaceholderIndex + 1));
+            }
 
             return newRow;
         }
@@ -423,7 +448,7 @@ namespace FlexJournalPro.Models
 
         /// <summary>
         /// Повертає перечислювач для ітерації по колекції.
-        /// Не використовується DataGrid при увімкненій віртуалізації.
+        /// Не використовуються DataGrid при увімкненій віртуалізації.
         /// </summary>
         /// <returns>Порожній перечислювач.</returns>
         public IEnumerator GetEnumerator() { yield break; } // Не використовується DataGrid при віртуалізації

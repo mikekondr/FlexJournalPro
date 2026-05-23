@@ -73,6 +73,7 @@ namespace FlexJournalPro.Views
             DynamicGrid.PreviewTextInput += DynamicGrid_PreviewTextInput;
             DynamicGrid.RowEditEnding += DynamicGrid_RowEditEnding;
             DynamicGrid.PreviewMouseWheel += DynamicGrid_PreviewMouseWheel;
+            DynamicGrid.Sorting += DynamicGrid_Sorting; // Додаємо обробник для сортування
 
             this.Loaded += DynamicTableView_Loaded;
             this.Unloaded += DynamicTableView_Unloaded;
@@ -131,6 +132,9 @@ namespace FlexJournalPro.Views
         public void SetVirtualDataSource(IDatabaseService dbService, string tableName, long startNumber = 1, bool isReadOnly = false)
         {
             _viewModel.SetVirtualDataSource(dbService, tableName, startNumber, isReadOnly);
+
+            // Після встановлення джерела даних, оновлюємо візуальні стрілки сортування
+            UpdateInitialSortDirection();
         }
 
         /// <summary>
@@ -320,6 +324,7 @@ namespace FlexJournalPro.Views
                 sortField = group.Rows[0].Items[0]?.FieldName;
             }
 
+            col.SortMemberPath = sortField;
             col.CanUserSort = !string.IsNullOrEmpty(sortField);
         }
 
@@ -331,16 +336,8 @@ namespace FlexJournalPro.Views
                 return;
             }
 
-            bool hasIdColumn = config.Any(c =>
-                !string.IsNullOrEmpty(c?.FieldName) &&
-                c.FieldName.Equals("Id", StringComparison.OrdinalIgnoreCase));
-
-            if (hasIdColumn)
-            {
-                System.Diagnostics.Debug.WriteLine("Warning: Template contains Id field configuration - system Id field is always available");
-            }
-
-            DynamicGrid.CanUserSortColumns = false;
+            // Дозволяємо сортування
+            DynamicGrid.CanUserSortColumns = true;
         }
 
         private void ClearResources()
@@ -494,6 +491,8 @@ namespace FlexJournalPro.Views
             }
         }
 
+        #endregion
+
         #region Horizontal Scroll Support
 
         private void DynamicTableView_Loaded(object sender, RoutedEventArgs e)
@@ -533,6 +532,43 @@ namespace FlexJournalPro.Views
             }
         }
 
+        private void DynamicGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        {
+            // Зупиняємо стандартне сортування колекції (оскільки ми використовуємо віртуалізацію)
+            e.Handled = true;
+
+            // Отримуємо поле для сортування (яке ми щойно задали в ConfigureSorting)
+            string fieldName = e.Column.SortMemberPath;
+
+            // За вимогою: дозволяємо зміну сортування лише за полем RegNumber
+            if (fieldName == "RegNumber")
+            {
+                if (_viewModel?.SortCommand != null && _viewModel.SortCommand.CanExecute(fieldName))
+                {
+                    _viewModel.SortCommand.Execute(fieldName);
+
+                    // Оновлюємо стрілку сортування (візуальний зворотний зв'язок)
+                    if (e.Column.SortDirection == null || e.Column.SortDirection == System.ComponentModel.ListSortDirection.Descending)
+                    {
+                        e.Column.SortDirection = System.ComponentModel.ListSortDirection.Ascending;
+                    }
+                    else
+                    {
+                        e.Column.SortDirection = System.ComponentModel.ListSortDirection.Descending;
+                    }
+
+                    // Скидаємо стрілки сортування для всіх інших колонок
+                    foreach (var col in DynamicGrid.Columns)
+                    {
+                        if (col != e.Column)
+                        {
+                            col.SortDirection = null;
+                        }
+                    }
+                }
+            }
+        }
+
         private const int WM_MOUSEHWHEEL = 0x020E;
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -564,8 +600,6 @@ namespace FlexJournalPro.Views
             }
             return IntPtr.Zero;
         }
-
-        #endregion
 
         #endregion
 
@@ -963,6 +997,26 @@ namespace FlexJournalPro.Views
         }
 
         #endregion
+
+        private void UpdateInitialSortDirection()
+        {
+            if (_viewModel?.VirtualData?.Provider is JournalDataProvider provider)
+            {
+                foreach (var col in DynamicGrid.Columns)
+                {
+                    if (col.SortMemberPath == provider.SortColumn)
+                    {
+                        col.SortDirection = provider.IsSortDescending 
+                            ? System.ComponentModel.ListSortDirection.Descending 
+                            : System.ComponentModel.ListSortDirection.Ascending;
+                    }
+                    else
+                    {
+                        col.SortDirection = null; // Скидаємо інші
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -82,6 +82,9 @@ namespace FlexJournalPro.ViewModels
         /// </summary>
         public IReadOnlyDictionary<string, object> AutoFillValues => _autoFillValues;
 
+        // Додайте властивість Command для сортування:
+        public RelayCommand SortCommand { get; }
+
         #endregion
 
         #region Events
@@ -100,6 +103,16 @@ namespace FlexJournalPro.ViewModels
         /// Виникає при зміні властивості
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
+
+        #endregion
+
+        #region Constructor
+
+        public DynamicTableViewModel()
+        {
+            // Ініціалізуємо команду сортування, вказуючи тип параметру - string (назва поля)
+            SortCommand = new RelayCommand(param => ExecuteSort(param as string));
+        }
 
         #endregion
 
@@ -618,7 +631,7 @@ namespace FlexJournalPro.ViewModels
                 // Skip if already has value (e.g. partial edit)
                 if (row.ContainsKey(col.FieldName) && row[col.FieldName] != null) continue;
 
-                object rawValue = null;
+                object? rawValue = null;
                 // ПРІОРИТЕТ 1: Беремо СИРЕ значення з автозаповнення (може містити макрос)
                 if (!string.IsNullOrEmpty(col.BindAutoFillParam) 
                     && _autoFillValues.ContainsKey(col.BindAutoFillParam)
@@ -677,7 +690,7 @@ namespace FlexJournalPro.ViewModels
             row.MarkAsSaved();
         }
 
-        private object ResolveMacroValue(object rawValue, ColumnType colType)
+        private object? ResolveMacroValue(object? rawValue, ColumnType colType)
         {
             if (rawValue == null) return null;
 
@@ -739,7 +752,7 @@ namespace FlexJournalPro.ViewModels
             return false;
         }
 
-        private object GetDefaultValueForType(ColumnType type)
+        private object? GetDefaultValueForType(ColumnType type)
         {
             return type switch
             {
@@ -836,6 +849,42 @@ namespace FlexJournalPro.ViewModels
             RowSaved?.Invoke(this, e);
         }
 
+        #endregion
+
+        #region Private Methods
+
+        private void ExecuteSort(string fieldName)
+        {
+            if (string.IsNullOrEmpty(fieldName) || VirtualData == null || VirtualData.Provider == null) return;
+            
+            var provider = VirtualData.Provider as JournalDataProvider;
+            if (provider == null) return;
+
+            // Сортування можливе лише за полем RegNumber
+            if (fieldName != "RegNumber") return;
+
+            // Змінюємо напрямок, якщо клікнули по тій же колонці, або встановлюємо DESC для нової
+            if (provider.SortColumn == fieldName)
+            {
+                provider.IsSortDescending = !provider.IsSortDescending;
+            }
+            else
+            {
+                provider.SortColumn = fieldName;
+                provider.IsSortDescending = true;
+            }
+
+            // Очищуємо віртуальну колекцію, що призведе до перезавантаження даних з новим порядком
+            VirtualData.Clear();
+            
+            // Після очищення, створюємо та ініціалізуємо новий рядок-заглушку
+            var placeholder = VirtualData.GetPlaceholder();
+            if (placeholder != null)
+            {
+                InitializeNewRow(placeholder);
+                SubscribeToRowEvents(placeholder);
+            }
+        }
         #endregion
     }
 }
