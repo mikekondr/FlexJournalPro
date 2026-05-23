@@ -152,7 +152,7 @@
                             <materialDesign:PackIcon x:Name="MaximizeIcon" Kind="WindowMaximize" Width="16" Height="16"/>
                         </Button>
 
-                        <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" ToolTip="Закрити">
+                        <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" ToolTip="Закрити" Margin="0,0,8,0">
                             <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
                         </Button>
                     </StackPanel>

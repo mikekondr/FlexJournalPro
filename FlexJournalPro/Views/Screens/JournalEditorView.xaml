@@ -8,86 +8,63 @@
              xmlns:local="clr-namespace:FlexJournalPro"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto" x:Name="ConstantsColumn"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- Main table area -->
-        <materialDesign:Card Grid.Column="0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Toolbar -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="8">
-                    <ToggleButton x:Name="ToggleConstantsButton"
-                                  Style="{StaticResource MaterialDesignActionToggleButton}"
-                                  ToolTip="Сховати/показати параметри заповнення"
-                                  Checked="ToggleConstantsButton_CheckedChanged"
-                                  Unchecked="ToggleConstantsButton_CheckedChanged">
-                        <materialDesign:PackIcon Kind="Settings"/>
-                    </ToggleButton>
-                </StackPanel>
-
-                <!-- Table with Floating Action Button -->
-                <Grid Grid.Row="1">
-                    <controls:DynamicTableView x:Name="SmartTable" 
-                                               Margin="8,0,8,8"/>
-
-                    <!-- Floating Action Button (FAB) -->
-                    <Button x:Name="BtnAddRow"
-                            Style="{StaticResource MaterialDesignFloatingActionButton}"
-                            Click="BtnAddRow_Click"
-                            ToolTip="Додати новий рядок"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom"
-                            Margin="0,0,24,24"
-                            Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=EditJournal}">
-                        <materialDesign:PackIcon Kind="PlaylistPlus" 
-                                                 Width="32" 
-                                                 Height="32"/>
-                    </Button>
-                </Grid>
-            </Grid>
-        </materialDesign:Card>
-
-        <!-- Constants panel -->
-        <materialDesign:Card x:Name="ConstantsCard"
-                             Grid.Column="1" 
-                             Margin="8,0,0,0"
-                             Width="300"
-                             Visibility="Collapsed">
-            <Grid>
+    <!-- DrawerHost оборачивает весь контент -->
+    <materialDesign:DrawerHost x:Name="MainDrawerHost" RightDrawerCornerRadius="8 0 0 8">
+        
+        <!-- Содержимое боковой панели (справа) -->
+        <materialDesign:DrawerHost.RightDrawerContent>
+            <Grid Width="300" Margin="16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Header -->
-                <TextBlock Grid.Row="0" 
-                           Text="Параметри заповнення" 
-                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
-                           Margin="16"/>
+                <TextBlock Grid.Row="0" Text="Параметри заповнення" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
 
-                <!-- Constants form -->
-                <ScrollViewer Grid.Row="1" 
-                              VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="ConstantsPanel" 
-                                Margin="16,0,16,16"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ConstantsPanel"/>
                 </ScrollViewer>
 
-                <!-- Save button -->
-                <Button Grid.Row="2" 
-                        Content="Зберегти параметри"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
-                        Margin="16"
-                        x:Name="BtnSaveConstants" Command="{Binding SaveConstantsCommand}"/>
+                <Button Grid.Row="2" Content="Зберегти параметри" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,16,0,0"
+                        x:Name="BtnSaveConstants" Command="{Binding SaveConstantsCommand}" 
+                        CommandParameter="{Binding ElementName=MainDrawerHost}"/>
             </Grid>
-        </materialDesign:Card>
-    </Grid>
+        </materialDesign:DrawerHost.RightDrawerContent>
+
+        <!-- Основной контент (Таблица) -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> 
+                <RowDefinition Height="*"/>    
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="8,8,8,4">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    
+                    <Button x:Name="BtnOpenConstants"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{x:Static materialDesign:DrawerHost.OpenDrawerCommand}"
+                            CommandParameter="{x:Static Dock.Right}"
+                            ToolTip="Налаштувати параметри автоматичного заповнення">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AutoFix" Width="18" Height="18" VerticalAlignment="Center"/>
+                            <TextBlock Text="Налаштування" Margin="8,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <controls:DynamicTableView x:Name="SmartTable" Grid.Row="1" Margin="8,4,8,8"/>
+
+            <Button x:Name="BtnAddRow" Click="BtnAddRow_Click"
+                    Grid.Row="1"
+                    Style="{StaticResource MaterialDesignFloatingActionButton}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24"
+                    Visibility="{Binding Source={x:Static local:App.CurrentUser},Converter={StaticResource ActionToVisibilityConverter},ConverterParameter=EditJournal}">
+                <materialDesign:PackIcon Kind="PlaylistPlus" Width="32" Height="32"/>
+            </Button>
+        </Grid>
+    </materialDesign:DrawerHost>
 </UserControl>

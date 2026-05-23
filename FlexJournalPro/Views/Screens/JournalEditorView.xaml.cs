@@ -52,30 +52,22 @@ namespace FlexJournalPro.Views.Screens
         {
             if (viewModel.Template?.AutoFillConfig == null || viewModel.Template.AutoFillConfig.Count == 0)
             {
-                ConstantsColumn.Width = new GridLength(0);
-                ToggleConstantsButton.Visibility = Visibility.Collapsed;
+                // Якщо немає параметрів заповнення - вимикаємо виїзну панель та ховаємо кнопку
+                MainDrawerHost.RightDrawerContent = null;
+                
+                // УВАГА: вам потрібно додати x:Name="BtnOpenConstants" до кнопки в Toolbar у файлі XAML
+                BtnOpenConstants.Visibility = Visibility.Collapsed; 
                 return;
             }
+
+            // Якщо параметри є, гарантуємо що кнопка видима
+            BtnOpenConstants.Visibility = Visibility.Visible;
 
             AutoFillConfigHelper.BuildAutoFillPanel(
                 ConstantsPanel,
                 viewModel.Template.AutoFillConfig,
                 viewModel.AutoFillValues,
                 () => SmartTable.ApplyAutoFillValues(viewModel.AutoFillValues));
-        }
-
-        private void ToggleConstantsButton_CheckedChanged(object sender, RoutedEventArgs e)
-        {
-            if (ToggleConstantsButton.IsChecked == true)
-            {
-                ConstantsColumn.Width = new GridLength(300);
-                ConstantsCard.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ConstantsColumn.Width = new GridLength(0);
-                ConstantsCard.Visibility = Visibility.Collapsed;
-            }
         }
 
         private void BtnAddRow_Click(object sender, RoutedEventArgs e)

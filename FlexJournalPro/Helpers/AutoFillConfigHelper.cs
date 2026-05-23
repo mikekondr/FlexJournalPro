@@ -154,6 +154,7 @@ namespace FlexJournalPro.Helpers
             };
 
             MaterialDesignThemes.Wpf.HintAssist.SetHint(datePicker, parameter.Label);
+            datePicker.Style = Application.Current.TryFindResource("MaterialDesignFloatingHintDatePicker") as Style;
 
             if (initialValue != null)
             {
@@ -209,6 +210,7 @@ namespace FlexJournalPro.Helpers
             };
 
             MaterialDesignThemes.Wpf.HintAssist.SetHint(comboBox, parameter.Label);
+            comboBox.Style = Application.Current.TryFindResource("MaterialDesignFloatingHintComboBox") as Style;
 
             if (initialValue != null)
             {
@@ -247,6 +249,7 @@ namespace FlexJournalPro.Helpers
         {
             var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 15) };
             MaterialDesignThemes.Wpf.HintAssist.SetHint(textBox, parameter.Label);
+            textBox.Style = Application.Current.TryFindResource("MaterialDesignFloatingHintTextBox") as Style;
 
             if (initialValue != null)
             {

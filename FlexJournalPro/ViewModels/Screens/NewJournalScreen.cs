@@ -19,6 +19,8 @@ namespace FlexJournalPro.ViewModels.Screens
         private long _startNumber = 1;
         private bool _isStartNumberEnabled = true;
 
+        private TableTemplate? _currentConfiguredTemplate;
+
         public NewJournalScreen(IDatabaseService dbService, MainViewModel mainViewModel)
         {
             _dbService = dbService;
@@ -28,7 +30,6 @@ namespace FlexJournalPro.ViewModels.Screens
             Icon = PackIconKind.BookPlus;
 
             Templates = new ObservableCollection<TemplateMetadata>();
-            AutoFillFields = new ObservableCollection<AutoFillFieldViewModel>();
             AutoFillValues = new Dictionary<string, object>();
 
             // Команди
@@ -96,11 +97,6 @@ namespace FlexJournalPro.ViewModels.Screens
         }
 
         /// <summary>
-        /// Поля параметрів заповнення для відображення
-        /// </summary>
-        public ObservableCollection<AutoFillFieldViewModel> AutoFillFields { get; }
-
-        /// <summary>
         /// Значення параметрів заповнення
         /// </summary>
         public Dictionary<string, object> AutoFillValues { get; }
@@ -108,9 +104,21 @@ namespace FlexJournalPro.ViewModels.Screens
         /// <summary>
         /// Чи є параметри заповнення для відображення
         /// </summary>
-        public bool HasAutoFillParams => AutoFillFields.Any();
+        public bool HasAutoFillParams => CurrentConfiguredTemplate?.AutoFillConfig?.Any() == true;
 
         public override string ScreenId => "NewJournal";
+
+        public TableTemplate? CurrentConfiguredTemplate
+        {
+            get => _currentConfiguredTemplate;
+            set
+            {
+                if (SetProperty(ref _currentConfiguredTemplate, value))
+                {
+                    OnPropertyChanged(nameof(HasAutoFillParams));
+                }
+            }
+        }
 
         #endregion
 
@@ -151,7 +159,6 @@ namespace FlexJournalPro.ViewModels.Screens
         {
             if (SelectedTemplate == null)
             {
-                AutoFillFields.Clear();
                 AutoFillValues.Clear();
                 OnPropertyChanged(nameof(HasAutoFillParams));
                 return;
@@ -240,43 +247,10 @@ namespace FlexJournalPro.ViewModels.Screens
             // Inject dynamic params before building
             InjectSystemAutoFillParameters(template);
 
-            AutoFillFields.Clear();
             AutoFillValues.Clear();
 
-            var parameters = template.AutoFillConfig ?? new List<AutoFillParameter>();
+            CurrentConfiguredTemplate = template;
 
-            if (parameters.Count == 0)
-            {
-                OnPropertyChanged(nameof(HasAutoFillParams));
-                return;
-            }
-
-            foreach (var parameter in parameters)
-            {
-                var fieldVm = new AutoFillFieldViewModel
-                {
-                    Key = parameter.Key,
-                    Label = parameter.Label,
-                    Value = parameter.DefaultValue?.ToString() ?? string.Empty
-                };
-
-                if (parameter.DefaultValue != null)
-                {
-                    AutoFillValues[parameter.Key] = parameter.DefaultValue.ToString() ?? string.Empty;
-                }
-
-                fieldVm.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(AutoFillFieldViewModel.Value))
-                    {
-                        AutoFillValues[fieldVm.Key] = fieldVm.Value;
-                    }
-                };
-
-                AutoFillFields.Add(fieldVm);
-            }
-
-            OnPropertyChanged(nameof(HasAutoFillParams));
         }
 
         private bool CanCreateJournal()
@@ -446,31 +420,4 @@ namespace FlexJournalPro.ViewModels.Screens
         #endregion
     }
 
-    /// <summary>
-    /// ViewModel для поля параметрів заповнення
-    /// </summary>
-    public class AutoFillFieldViewModel : ViewModelBase
-    {
-        private string _key = string.Empty;
-        private string _label = string.Empty;
-        private string _value = string.Empty;
-
-        public string Key
-        {
-            get => _key;
-            set => SetProperty(ref _key, value);
-        }
-
-        public string Label
-        {
-            get => _label;
-            set => SetProperty(ref _label, value);
-        }
-
-        public string Value
-        {
-            get => _value;
-            set => SetProperty(ref _value, value);
-        }
-    }
 }

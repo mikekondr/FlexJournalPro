@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="800">
+             d:DesignHeight="700" d:DesignWidth="800"
+             SizeChanged="UserControl_SizeChanged">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,9 +15,12 @@
         </Grid.RowDefinitions>
 
         <materialDesign:Card Grid.Row="1" Padding="24">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <!-- Єдиний ScrollViewer для всього вмісту екрану -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <StackPanel Margin="0,0,0,20">
+                    
+                    <!-- 1. Блок на повну ширину екрану -->
+                    <StackPanel Margin="0,0,0,24">
                         <TextBlock Text="Шаблон журналу" 
                                    Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
                                    Margin="0,0,0,12"/>
@@ -41,53 +45,66 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,0,20">
-                        <TextBlock Text="Налаштування журналу" 
-                                   Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
-                                   Margin="0,0,0,12"/>
-                        <TextBox Text="{Binding JournalTitle, UpdateSourceTrigger=PropertyChanged}" 
-                                 materialDesign:HintAssist.Hint="Назва" 
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                                 Margin="0,0,0,16"/>
-                        <TextBox Text="{Binding StartNumber, UpdateSourceTrigger=PropertyChanged}" 
-                                 materialDesign:HintAssist.Hint="Початковий номер" 
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                    </StackPanel>
+                    <!-- 2. Блок, який розділяється на дві колонки на великих екранах -->
+                    <Grid x:Name="SplitGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" x:Name="LeftCol"/>
+                            <ColumnDefinition Width="Auto" x:Name="SplitterCol"/>
+                            <ColumnDefinition Width="*" x:Name="RightCol"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <Separator Margin="0,0,0,20"/>
+                        <!-- Ліва панель (Налаштування) -->
+                        <StackPanel x:Name="LeftContent" Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Налаштування журналу" 
+                                       Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
+                                       Margin="0,0,0,12"/>
+                            <TextBox Text="{Binding JournalTitle, UpdateSourceTrigger=PropertyChanged}" 
+                                     materialDesign:HintAssist.Hint="Назва" 
+                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                     Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding StartNumber, UpdateSourceTrigger=PropertyChanged}" 
+                                     materialDesign:HintAssist.Hint="Початковий номер" 
+                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
 
-                    <StackPanel>
-                        <TextBlock Text="Параметри заповнення" 
-                                   Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
-                                   Margin="0,0,0,12"/>
-                        
-                        <ItemsControl ItemsSource="{Binding AutoFillFields}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
-                                             materialDesign:HintAssist.Hint="{Binding Label}" 
-                                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                                             Margin="0,0,0,16"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            <!-- Розділювач для мобільного/вузького вигляду -->
+                            <Separator Margin="0,24,0,8" x:Name="AdaptiveSeparator" Visibility="Collapsed"/>
+                        </StackPanel>
 
-                        <TextBlock Text="Оберіть шаблон для відображення параметрів" 
-                                   Foreground="Gray" 
-                                   HorizontalAlignment="Center"
-                                   Margin="20">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasAutoFillParams}" Value="False">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
+                        <!-- Вертикальний розділювач -->
+                        <GridSplitter x:Name="VerticalSplitter" Grid.Row="0" Grid.Column="1" 
+                                      Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" 
+                                      Background="LightGray"
+                                      ShowsPreview="True"/>
+
+                        <!-- Права панель (Параметри) -->
+                        <StackPanel x:Name="RightContent" Grid.Row="0" Grid.Column="2" Margin="16,0,0,0">
+                            <TextBlock Text="Параметри заповнення" 
+                                       Style="{StaticResource MaterialDesignHeadline6TextBlock}" 
+                                       Margin="0,0,0,12"/>
+
+                            <StackPanel x:Name="DynamicAutoFillPanel" Margin="0,0,0,10" />
+
+                            <TextBlock Text="Оберіть шаблон для відображення параметрів" 
+                                       Foreground="Gray" 
+                                       HorizontalAlignment="Center"
+                                       Margin="20">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAutoFillParams}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
         </materialDesign:Card>
@@ -98,7 +115,7 @@
                         Command="{Binding CancelCommand}"
                         Style="{StaticResource MaterialDesignFlatButton}" 
                         Margin="0,0,16,0"/>
-                <Button Content="Створити" 
+                <Button Content="Створити" 
                         Command="{Binding CreateJournalCommand}"
                         Style="{StaticResource MaterialDesignRaisedButton}"/>
             </StackPanel>
