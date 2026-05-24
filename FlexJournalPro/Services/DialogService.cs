@@ -44,6 +44,12 @@ namespace FlexJournalPro.Services
     public class DialogService
     {
         private static string _dialogHostIdentifier = "RootDialogHost";
+        private static ISnackbarMessageQueue? _messageQueue;
+
+        public static void SetMessageQueue(ISnackbarMessageQueue messageQueue)
+        {
+            _messageQueue = messageQueue;
+        }
 
         /// <summary>
         /// Встановлює ідентифікатор DialogHost для відображення діалогів
@@ -197,6 +203,21 @@ namespace FlexJournalPro.Services
                 MessageBoxResult.No => DialogResult.No,
                 _ => DialogResult.None
             };
+        }
+
+        public static void ShowToast(string message, bool promote = true)
+        {
+            // promote = true означає, що повідомлення з'явиться негайно (скине попереднє, якщо було)
+            _messageQueue?.Enqueue(message, null, null, null, promote, true, TimeSpan.FromSeconds(3));
+        }
+
+        public static void ShowToastWithAction(string message, string actionContent, Action actionHandler)
+        {
+            _messageQueue?.Enqueue(
+                message,
+                actionContent,
+                actionHandler,
+                promote: true);
         }
     }
 

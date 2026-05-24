@@ -155,6 +155,9 @@ namespace FlexJournalPro.Models
                 int startIndex = pageIndex * _pageSize;
 
                 var data = await Task.Run(() => _itemsProvider.FetchRange(startIndex, _pageSize));
+#if DEBUG
+                App.StopTimer("FirstRowLoaded");
+#endif
 
                 // Зберігаємо в кеш фактичні дані
                 var oldPage = _pages[pageIndex];

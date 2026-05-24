@@ -8,7 +8,7 @@
         xmlns:behaviors="clr-namespace:FlexJournalPro.Behaviors"
         xmlns:views="clr-namespace:FlexJournalPro.Views"
         xmlns:local="clr-namespace:FlexJournalPro" mc:Ignorable="d"
-        Title="Журналро - Система управління журналами" 
+        Title="ЖурналПро - Система управління журналами" 
         Height="700" 
         Width="1200"
         WindowStartupLocation="CenterScreen"
@@ -297,6 +297,13 @@
                         <materialDesign:PackIcon Kind="BookOpenPageVariant" Width="120" Height="120" HorizontalAlignment="Center"
                                                     Foreground="{DynamicResource MaterialDesign.Brush.TextBox.HoverBackground}" Opacity="0.3"/>
                     </StackPanel>
+
+                    <materialDesign:Snackbar x:Name="MainSnackbar"
+                                     Grid.Row="1"
+                                     MessageQueue="{materialDesign:MessageQueue}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Bottom"
+                                     Margin="0,0,0,16" />
                 </Grid>
 
                 <Border Grid.Column="1" Grid.Row="1"

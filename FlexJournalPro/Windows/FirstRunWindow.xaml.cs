@@ -114,14 +114,21 @@ namespace FlexJournalPro.Windows
                 return;
             }
 
-            DatabaseProvider databaseProvider = (DatabaseProvider)DbProviderComboBox.SelectedItem;
-            bool useEncryption = databaseProvider == DatabaseProvider.SQLite && UseEncryptionSwitch.IsChecked == true;
+            var res = _authService.ValidatePasswordComplexity(password);
+            if (!res.IsValid)
+            {
+                ShowMessage(res.ErrorMessage, isError: true);
+                return;
+            }
 
             if (password != passwordConfirm)
             {
                 ShowMessage("Паролі не співпадають!", isError: true);
                 return;
             }
+
+            DatabaseProvider databaseProvider = (DatabaseProvider)DbProviderComboBox.SelectedItem;
+            bool useEncryption = databaseProvider == DatabaseProvider.SQLite && UseEncryptionSwitch.IsChecked == true;
 
             // ЕТАП 1: Генерація ключа і зупинка для його збереження
             if (databaseProvider == DatabaseProvider.SQLite && useEncryption && !_isWaitingForKeyBackup)

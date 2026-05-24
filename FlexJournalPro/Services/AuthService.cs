@@ -9,6 +9,7 @@ namespace FlexJournalPro.Services
         string HashPassword(string password);
         public void UpdateUserPassword(AppUser user, string newPassword);
         bool UserCan(string actionKey);
+        (bool IsValid, string ErrorMessage) ValidatePasswordComplexity(string password);
     }
 
     public class AuthService : IAuthService
@@ -147,6 +148,42 @@ namespace FlexJournalPro.Services
 
             // Якщо дія не знайдена, за замовчуванням забороняємо доступ
             return false;
+        }
+
+        public (bool IsValid, string ErrorMessage) ValidatePasswordComplexity(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                return (false, "Пароль не може бути порожнім.");
+            }
+
+            if (password.Length < 8)
+            {
+                return (false, "Пароль повинен містити не менше 8 символів.");
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                return (false, "Пароль повинен містити хоча б одну велику літеру.");
+            }
+
+            if (!password.Any(char.IsLower))
+            {
+                return (false, "Пароль повинен містити хоча б одну малу літеру.");
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                return (false, "Пароль повинен містити хоча б одну цифру.");
+            }
+
+            // Перевірка на наявність спецсимволів (не літера і не цифра)
+            if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
+            {
+                return (false, "Пароль повинен містити хоча б один спеціальний символ (наприклад: !, @, #, $).");
+            }
+
+            return (true, string.Empty);
         }
     }
 }

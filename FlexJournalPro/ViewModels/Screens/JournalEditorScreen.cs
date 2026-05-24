@@ -23,6 +23,14 @@ namespace FlexJournalPro.ViewModels.Screens
         public ICommand SaveConstantsCommand { get; }
         public ICommand SaveRowCommand { get; }
 
+        private bool _isAutofillDrawerOpen;
+
+        public bool IsAutofillDrawerOpen
+        {
+            get => _isAutofillDrawerOpen;
+            set => SetProperty(ref _isAutofillDrawerOpen, value);
+        }
+
         public JournalEditorScreen(JournalMetadata journal,
                                    IDatabaseService dbService,
                                    IAuthService authService)
@@ -34,7 +42,7 @@ namespace FlexJournalPro.ViewModels.Screens
             Title = journal.Title;
             Icon = PackIconKind.BookEdit;
 
-            SaveConstantsCommand = new RelayCommand(SaveConstants);
+            SaveConstantsCommand = new RelayCommand(async () => await SaveConstants());
             SaveRowCommand = new RelayCommand<BindableRow>(SaveRow, _ => _authService.UserCan("EditJournal"));
 
             // Завантажуємо шаблон та дані
@@ -145,19 +153,19 @@ namespace FlexJournalPro.ViewModels.Screens
             }
         }
 
-        public void SaveConstants()
+        public async Task SaveConstants()
         {
             try
             {
                 string json = JsonSerializer.Serialize(AutoFillValues);
                 _dbService.UpdateJournalAutoFillConfig(Journal.Id, json);
 
-                // TODO: В ідеалі тут має бути _dialogService.ShowMessage(...), але поки залишимо MessageBox
-                MessageBox.Show("Параметри збережено!", "Успіх", MessageBoxButton.OK, MessageBoxImage.Information);
+                IsAutofillDrawerOpen = false;
+                DialogService.ShowToast("Параметри автозаповнення збережено!");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                MessageBox.Show($"Помилка збереження параметрів: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                await DialogService.ShowErrorAsync($"Помилка збереження параметрів: {ex.Message}");
             }
         }
 

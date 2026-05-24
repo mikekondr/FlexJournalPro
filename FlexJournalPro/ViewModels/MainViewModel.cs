@@ -187,10 +187,10 @@ namespace FlexJournalPro.ViewModels
 
         private async void ChangePassword()
         {
-            var vm = new ChangePasswordViewModel();
+            var vm = new ChangePasswordViewModel(_authService);
             var dialog = new Views.ChangePasswordDialog { DataContext = vm };
             
-            var result = await Services.DialogService.ShowCustomDialogAsync(dialog);
+            var result = await DialogService.ShowCustomDialogAsync(dialog);
 
             if (result is bool success && success)
             {
@@ -199,18 +199,20 @@ namespace FlexJournalPro.ViewModels
                 if (user != null)
                 {
                     // Перевірка старого пароля
-                    if (_authService.Authenticate(user.Login, vm.OldPassword) == null)
-                    {
-                        AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Користувач {user.Login} спробував змінити пароль, але вказав невірний старий пароль.");
-                        await DialogService.ShowErrorAsync("Старий пароль невірний");
-                        return;
-                    }
+                    //if (_authService.Authenticate(user.Login, vm.OldPassword) == null)
+                    //{
+                    //    AppLogger.LogSystemWarning(LogAction.UserLoginFailed, $"Користувач {user.Login} спробував змінити пароль, але вказав невірний старий пароль.");
+                    //    await DialogService.ShowErrorAsync("Старий пароль невірний");
+                    //    return;
+                    //}
 
-                    if (!string.IsNullOrWhiteSpace(vm.NewPassword))
-                    {
+                    //if (!string.IsNullOrWhiteSpace(vm.NewPassword))
+                    //{
                         _authService.UpdateUserPassword(user, vm.NewPassword);
                         _keyManagementService.SetOrUpdateUserKey(user.Login, vm.NewPassword);
-                    }
+                    //}
+
+                    DialogService.ShowToast("Пароль успішно змінено.");
 
                     AppLogger.LogSystemInfo(LogAction.PasswordChanged, $"Користувач {user.Login} змінив пароль.");
 

@@ -4,6 +4,9 @@ using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels;
 using FlexJournalPro.Windows;
 using Microsoft.Extensions.DependencyInjection;
+#if DEBUG
+using System.Diagnostics;
+#endif
 using System.Windows;
 
 namespace FlexJournalPro
@@ -103,5 +106,23 @@ namespace FlexJournalPro
             services.AddTransient<RecoveryWindow>();
             services.AddTransient<FirstRunWindow>();
         }
+
+#if DEBUG
+        private static Stopwatch _timer = new Stopwatch();
+
+        public static void StartTimer(string timerName)
+        { 
+            Debug.WriteLine(timerName);
+            _timer.Restart();
+        }
+
+        public static void StopTimer(string timerName)
+        {
+            if (!_timer.IsRunning) return;
+
+            _timer.Stop();
+            System.Diagnostics.Debug.WriteLine($"[TIMER] {timerName}: {_timer.ElapsedMilliseconds} ms");
+        }
+#endif
     }
 }

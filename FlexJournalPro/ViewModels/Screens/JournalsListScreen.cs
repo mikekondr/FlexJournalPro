@@ -129,6 +129,9 @@ namespace FlexJournalPro.ViewModels.Screens
                 _mainViewModel.OpenScreens.Add(editorScreen);
                 _mainViewModel.SelectedScreen = editorScreen;
                 AppLogger.LogJournalAction(SelectedJournal.TableName, LogAction.JournalOpened, $"Журнал '{SelectedJournal.Title}' відкрито для редагування.");
+#if DEBUG
+                App.StartTimer("OpenJournal");
+#endif
             }
         }
 

@@ -1,3 +1,4 @@
+using FlexJournalPro.Services;
 using FlexJournalPro.ViewModels;
 using MaterialDesignThemes.Wpf;
 using System.Windows;
@@ -15,6 +16,7 @@ namespace FlexJournalPro.Windows
             DataContext = viewModel;
             Loaded += MainWindow_Loaded;
             StateChanged += MainWindow_StateChanged;
+            DialogService.SetMessageQueue(MainSnackbar.MessageQueue);
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

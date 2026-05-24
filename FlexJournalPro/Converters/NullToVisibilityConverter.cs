@@ -11,7 +11,8 @@ namespace FlexJournalPro.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (parameter == null || (parameter is string && string.Equals((string)parameter, "false", StringComparison.OrdinalIgnoreCase)))
+            if (parameter == null 
+                || (parameter is string && string.Equals((string)parameter, "false", StringComparison.OrdinalIgnoreCase)))
             {
                 return value == null ? Visibility.Visible : Visibility.Collapsed;
             }

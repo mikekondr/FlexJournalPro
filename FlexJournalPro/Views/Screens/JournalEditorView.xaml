@@ -10,7 +10,7 @@
              d:DesignHeight="600" d:DesignWidth="1000">
 
     <!-- DrawerHost оборачивает весь контент -->
-    <materialDesign:DrawerHost x:Name="MainDrawerHost" RightDrawerCornerRadius="8 0 0 8">
+    <materialDesign:DrawerHost x:Name="MainDrawerHost" RightDrawerCornerRadius="8 0 0 8" IsRightDrawerOpen="{Binding IsAutofillDrawerOpen}">
         
         <!-- Содержимое боковой панели (справа) -->
         <materialDesign:DrawerHost.RightDrawerContent>
@@ -21,7 +21,18 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Параметри заповнення" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                    <TextBlock Grid.Row="0" Text="Параметри заповнення" Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Stretch"/>
+                    <Button x:Name="BtnCloseConstants"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            VerticalAlignment="Center" HorizontalAlignment="Right"
+                            Command="{x:Static materialDesign:DrawerHost.CloseDrawerCommand}"
+                            ToolTip="Закрити" Height="24" Width="24" Margin="16,0,0,0">
+                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                    </Button>
+                </StackPanel>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="ConstantsPanel"/>
