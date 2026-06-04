@@ -7,36 +7,38 @@ namespace FlexJournalPro.Models
 {
     /// <summary>
     /// Віртуальна колекція для асинхронного завантаження даних сторінками.
-    /// Імітує список, але завантажує дані порціями для оптимізації продуктивності.
+    /// Імітує список, але завантажує дані порціями для зменшення навантаження на UI.
     /// </summary>
     public class AsyncVirtualizingCollection : IList, INotifyCollectionChanged, INotifyPropertyChanged
     {
-        private readonly IJournalItemsProvider _itemsProvider;
-        private readonly int _pageSize = 50; // Розмір порції
-        private readonly int _loadTimeout = 3000; // Час життя сторінки в кеші (мс)
+        #region Fields
+
+        private readonly IJournalDataProvider _itemsProvider;
+        private readonly int _pageSize = 50;
+        private readonly int _loadTimeout = 3000;
 
         private int _count = -1;
 
-        public IJournalItemsProvider Provider => _itemsProvider;
+        // Кеш сторінок: номер сторінки -> (дані сторінки)
+        private readonly Dictionary<int, IList<BindableRow>> _pages = new();
+        private readonly Dictionary<int, DateTime> _pageTouchTimes = new();
 
-        public bool IsSortDescending => _itemsProvider.IsSortDescending;
-
-        // Кеш сторінок: Номер сторінки -> (Дані, Час останнього доступу)
-        private readonly Dictionary<int, IList<BindableRow>> _pages = new Dictionary<int, IList<BindableRow>>();
-        private readonly Dictionary<int, DateTime> _pageTouchTimes = new Dictionary<int, DateTime>();
-
-        // Список нових елементів (не збережених у БД)
-        private readonly List<BindableRow> _newItems = new List<BindableRow>();
+        // Нові елементи, ще не збережені в БД
+        private readonly List<BindableRow> _newItems = new();
 
         // Рядок-заглушка для введення нових даних
         private NewRowPlaceholder? _newRowPlaceholder;
+
+        #endregion
+
+        #region Constructor
 
         /// <summary>
         /// Ініціалізує нову віртуальну колекцію з вказаним провайдером даних.
         /// </summary>
         /// <param name="itemsProvider">Провайдер даних для завантаження елементів.</param>
-        /// <param name="isReadOnly">При True - тільки читання, інакше - можливість редагування.</param>
-        public AsyncVirtualizingCollection(IJournalItemsProvider itemsProvider, bool isReadOnly = false)
+        /// <param name="isReadOnly">Якщо <c>true</c>, колекція працює лише в режимі читання.</param>
+        public AsyncVirtualizingCollection(IJournalDataProvider itemsProvider, bool isReadOnly = false)
         {
             _itemsProvider = itemsProvider;
             IsReadOnly = isReadOnly;
@@ -47,68 +49,79 @@ namespace FlexJournalPro.Models
             }
         }
 
-        // --- Властивості інтерфейсів ---
+        #endregion
+
+        #region Properties
 
         /// <summary>
         /// Отримує загальну кількість елементів у колекції.
-        /// Автоматично завантажує значення з провайдера при першому зверненні.
+        /// Під час першого звернення значення підвантажується від провайдера.
         /// </summary>
         public int Count
         {
             get
             {
-                // Завантажуємо загальну кількість
-                if (_count == -1) LoadCount();
+                if (_count == -1)
+                {
+                    LoadCount();
+                }
+
                 int baseCount = _count == -1 ? 0 : _count;
-                // Враховуємо "нові збережені" + можливий placeholder
                 return baseCount + _newItems.Count + (_newRowPlaceholder != null ? 1 : 0);
             }
         }
 
         /// <summary>
         /// Отримує або встановлює елемент за вказаним індексом.
-        /// При зверненні до елементу автоматично завантажує відповідну сторінку даних.
+        /// Під час звернення автоматично ініціює завантаження відповідної сторінки.
         /// </summary>
-        /// <param name="index">Індекс елементу.</param>
+        /// <param name="index">Індекс елемента.</param>
         /// <returns>Елемент колекції або заглушка під час завантаження.</returns>
         public object this[int index]
         {
             get
             {
-                if (_count == -1) LoadCount();
+                if (_count == -1)
+                {
+                    LoadCount();
+                }
+
                 int dbCount = _count == -1 ? 0 : _count;
-                
-                bool isPlaceholderAtTop = IsSortDescending; // якщо DESC, нові записи зверху
-                
+                bool isPlaceholderAtTop = IsSortDescending;
+
                 if (isPlaceholderAtTop && _newRowPlaceholder != null)
                 {
-                    if (index == 0) return _newRowPlaceholder;
-                    index -= 1; // Зсуваємо індекс для решти елементів
+                    if (index == 0)
+                    {
+                        return _newRowPlaceholder;
+                    }
+
+                    index -= 1;
                 }
-                
-                // Перевірка, чи належить до нових елементів
+
                 if (index >= dbCount)
                 {
                     int newItemIndex = index - dbCount;
                     if (newItemIndex < _newItems.Count)
+                    {
                         return _newItems[newItemIndex];
-                    
+                    }
+
                     if (!isPlaceholderAtTop && _newRowPlaceholder != null && index == dbCount + _newItems.Count)
+                    {
                         return _newRowPlaceholder;
+                    }
                 }
 
-                // Завантаження сторінки з бази
                 int pageIndex = index / _pageSize;
                 int pageOffset = index % _pageSize;
-                RequestPage(pageIndex); // Асинхронний запит, якщо сторінка відсутня
+                RequestPage(pageIndex);
 
-                if (_pages.TryGetValue(pageIndex, out var page) && page != null)
+                if (_pages.TryGetValue(pageIndex, out var page) && page != null && pageOffset < page.Count)
                 {
-                    if (pageOffset < page.Count)
-                        return page[pageOffset];
+                    return page[pageOffset];
                 }
 
-                // Placeholder на час завантаження
                 var loadingRow = new BindableRow();
                 loadingRow["__IsLoading"] = true;
                 return loadingRow;
@@ -116,7 +129,45 @@ namespace FlexJournalPro.Models
             set => throw new NotSupportedException();
         }
 
-        // --- Асинхронне завантаження ---
+        /// <summary>
+        /// Отримує значення, що вказує, чи колекція доступна лише для читання.
+        /// </summary>
+        public bool IsReadOnly { get; set; }
+
+        public bool IsFixedSize => false;
+
+        public object SyncRoot => this;
+
+        public bool IsSynchronized => false;
+
+        public IJournalDataProvider Provider => _itemsProvider;
+
+        /// <summary>
+        /// Отримує значення сортування провайдера.
+        /// </summary>
+        public bool IsSortDescending => _itemsProvider.IsSortDescending;
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Виникає при зміні колекції.
+        /// </summary>
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+        /// <summary>
+        /// Виникає при зміні значення властивості.
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        #endregion
+
+        #region Private helpers
+
+        private void OnCollectionChanged(NotifyCollectionChangedEventArgs e) => CollectionChanged?.Invoke(this, e);
+
+        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         /// <summary>
         /// Асинхронно завантажує загальну кількість елементів з провайдера.
@@ -126,7 +177,6 @@ namespace FlexJournalPro.Models
             int dbCount = await Task.Run(() => _itemsProvider.FetchCount());
             _count = dbCount;
             OnPropertyChanged(nameof(Count));
-            // Кажемо WPF повністю перемалювати список, бо змінилася кількість
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
@@ -136,15 +186,12 @@ namespace FlexJournalPro.Models
         /// <param name="pageIndex">Індекс сторінки для завантаження.</param>
         private async void RequestPage(int pageIndex)
         {
-            // Щоб не запитувати ту ж саму сторінку сто разів, поки вона вантажиться
             if (_pages.ContainsKey(pageIndex)) return;
 
-            // Створюємо сторінку заглушок (унікальна заглушка на кожен індекс)
             var placeholderPage = new List<BindableRow>(_pageSize);
             for (int i = 0; i < _pageSize; i++)
             {
-                var ph = new PlaceholderRow();
-                placeholderPage.Add(ph);
+                placeholderPage.Add(new PlaceholderRow());
             }
 
             _pages[pageIndex] = placeholderPage;
@@ -158,51 +205,44 @@ namespace FlexJournalPro.Models
 #if DEBUG
                 App.StopTimer("FirstRowLoaded");
 #endif
-
-                // Зберігаємо в кеш фактичні дані
                 var oldPage = _pages[pageIndex];
                 _pages[pageIndex] = data;
                 _pageTouchTimes[pageIndex] = DateTime.Now;
 
-                // Враховуємо зсув індексу, якщо плейсхолдер зверху
                 bool isPlaceholderAtTop = IsSortDescending && _newRowPlaceholder != null;
                 int offset = isPlaceholderAtTop ? 1 : 0;
 
-                // Сповіщаємо UI, що дані змінилися в діапазоні цієї сторінки
-                // Замінюємо заглушки на реальні елементи без глобального Reset
                 int replaceCount = Math.Min(data.Count, oldPage.Count);
                 for (int i = 0; i < replaceCount; i++)
                 {
                     int globalIndex = startIndex + i + offset;
-                    var oldItem = oldPage[i];
-                    var newItem = data[i];
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(
-                        NotifyCollectionChangedAction.Replace, newItem, oldItem, globalIndex));
+                        NotifyCollectionChangedAction.Replace, data[i], oldPage[i], globalIndex));
                 }
 
-                // Очищення старого кешу
                 CleanUpCache();
             }
             catch
             {
-                _pages.Remove(pageIndex); // Видалити маркер завантаження при помилці
+                _pages.Remove(pageIndex);
                 _pageTouchTimes.Remove(pageIndex);
             }
         }
 
         /// <summary>
-        /// Очищає застарілі сторінки з кешу.
-        /// Видаляє сторінки, до яких не зверталися протягом заданого таймауту.
+        /// Очищає застарілі сторінки кешу.
         /// </summary>
         private void CleanUpCache()
         {
-            // Видаляємо сторінки, які не чіпали більше N секунд
             var keysToRemove = new List<int>();
             foreach (var key in _pageTouchTimes.Keys)
             {
                 if ((DateTime.Now - _pageTouchTimes[key]).TotalMilliseconds > _loadTimeout)
+                {
                     keysToRemove.Add(key);
+                }
             }
+
             foreach (var key in keysToRemove)
             {
                 _pages.Remove(key);
@@ -210,62 +250,22 @@ namespace FlexJournalPro.Models
             }
         }
 
-        // --- Реалізація решти інтерфейсів ---
+        #endregion
 
-        /// <summary>
-        /// Отримує значення, що вказує, чи колекція доступна тільки для читання.
-        /// </summary>
-        public bool IsReadOnly { get; set; }
-
-        /// <summary>
-        /// Отримує значення, що вказує, чи має колекція фіксований розмір.
-        /// </summary>
-        public bool IsFixedSize => false;
-
-        /// <summary>
-        /// Отримує об'єкт для синхронізації доступу до колекції.
-        /// </summary>
-        public object SyncRoot => this;
-
-        /// <summary>
-        /// Отримує значення, що вказує, чи синхронізований доступ до колекції.
-        /// </summary>
-        public bool IsSynchronized => false;
-
-        /// <summary>
-        /// Виникає при зміні колекції.
-        /// </summary>
-        public event NotifyCollectionChangedEventHandler CollectionChanged;
-
-        /// <summary>
-        /// Виникає при зміні значення властивості.
-        /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        /// <summary>
-        /// Викликає подію CollectionChanged.
-        /// </summary>
-        /// <param name="e">Аргументи події.</param>
-        private void OnCollectionChanged(NotifyCollectionChangedEventArgs e) => CollectionChanged?.Invoke(this, e);
-
-        /// <summary>
-        /// Викликає подію PropertyChanged.
-        /// </summary>
-        /// <param name="name">Назва властивості.</param>
-        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        #region Public methods
 
         /// <summary>
         /// Додає елемент до колекції.
         /// </summary>
         /// <param name="value">Елемент для додавання.</param>
-        /// <returns>Індекс доданого елементу.</returns>
+        /// <returns>Індекс доданого елемента.</returns>
         public int Add(object value)
         {
             if (value is BindableRow newRow)
             {
                 int dbCount = _count == -1 ? 0 : _count;
                 _newItems.Add(newRow);
-                
+
                 int newIndex = dbCount + _newItems.Count - 1;
                 if (IsSortDescending && _newRowPlaceholder != null)
                 {
@@ -278,18 +278,18 @@ namespace FlexJournalPro.Models
 
                 return newIndex;
             }
+
             throw new ArgumentException("Елемент повинен бути типу BindableRow");
         }
 
         /// <summary>
-        /// Очищає всі елементи з колекції та перезавантажує дані.
+        /// Очищає всі елементи колекції та перезавантажує дані.
         /// </summary>
         public void Clear()
         {
-            _count = -1;//0;
+            _count = -1;
             _pages.Clear();
             _newItems.Clear();
-            //LoadCount();
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
@@ -297,14 +297,14 @@ namespace FlexJournalPro.Models
         /// Визначає, чи містить колекція вказаний елемент.
         /// </summary>
         /// <param name="value">Елемент для пошуку.</param>
-        /// <returns>True, якщо елемент знайдено в нових елементах.</returns>
+        /// <returns><c>true</c>, якщо елемент знайдено серед нових елементів.</returns>
         public bool Contains(object value) => value is BindableRow row && _newItems.Contains(row);
 
         /// <summary>
-        /// Визначає індекс вказаного елементу в колекції.
+        /// Визначає індекс вказаного елемента в колекції.
         /// </summary>
         /// <param name="value">Елемент для пошуку.</param>
-        /// <returns>Індекс елементу або -1, якщо не знайдено.</returns>
+        /// <returns>Індекс елемента або -1, якщо не знайдено.</returns>
         public int IndexOf(object value)
         {
             if (value is BindableRow row)
@@ -317,22 +317,24 @@ namespace FlexJournalPro.Models
                     {
                         index += 1;
                     }
+
                     return index;
                 }
             }
+
             return -1;
         }
 
         /// <summary>
-        /// Вставляє елемент у колекцію за вказаним індексом. Операція не підтримується.
+        /// Вставляє елемент у колекцію за вказаним індексом.
+        /// Операція не підтримується для віртуальної колекції.
         /// </summary>
         /// <param name="index">Індекс вставки.</param>
         /// <param name="value">Елемент для вставки.</param>
-        /// <exception cref="NotImplementedException">Операція не підтримується для віртуальної колекції.</exception>
         public void Insert(int index, object value) => throw new NotImplementedException();
 
         /// <summary>
-        /// Видаляє перше входження вказаного елементу з колекції.
+        /// Видаляє перше входження вказаного елемента з колекції.
         /// </summary>
         /// <param name="value">Елемент для видалення.</param>
         public void Remove(object value)
@@ -356,14 +358,14 @@ namespace FlexJournalPro.Models
         }
 
         /// <summary>
-        /// Видаляє елемент за вказаним індексом. Операція не підтримується.
+        /// Видаляє елемент за вказаним індексом.
+        /// Операція не підтримується для віртуальної колекції.
         /// </summary>
-        /// <param name="index">Індекс елементу для видалення.</param>
-        /// <exception cref="NotImplementedException">Операція не підтримується для віртуальної колекції.</exception>
+        /// <param name="index">Індекс елемента для видалення.</param>
         public void RemoveAt(int index) => throw new NotImplementedException();
 
         /// <summary>
-        /// Очищає список нових елементів після їх збереження в БД та перезавантажує дані
+        /// Очищає список нових елементів після їх збереження в БД та перезавантажує дані.
         /// </summary>
         public void RefreshAfterSave()
         {
@@ -372,61 +374,48 @@ namespace FlexJournalPro.Models
             _pageTouchTimes.Clear();
             _count = -1;
 
-            // Створюємо новий рядок-заглушку
-            if (IsReadOnly)
-                _newRowPlaceholder = null;
-            else
-                _newRowPlaceholder = new NewRowPlaceholder();
-
+            _newRowPlaceholder = IsReadOnly ? null : new NewRowPlaceholder();
             LoadCount();
         }
 
         /// <summary>
-        /// Конвертує рядок-заглушку в звичайний новий рядок (викликається при початку редагування)
+        /// Конвертує рядок-заглушку в звичайний новий рядок.
+        /// Викликається при початку редагування.
         /// </summary>
         public BindableRow ConvertPlaceholderToNewRow(NewRowPlaceholder placeholder)
         {
             if (IsReadOnly) return null;
             if (placeholder != _newRowPlaceholder) return null;
 
-            // Додаємо поточний рядок-заглушку до списку нових елементів
             int dbCount = _count == -1 ? 0 : _count;
             bool isTop = IsSortDescending;
 
-            // Конвертуємо в звичайний BindableRow
             var newRow = new BindableRow();
             foreach (var key in placeholder.Keys)
             {
-                if (!key.StartsWith("__")) // Пропускаємо системні маркери
+                if (!key.StartsWith("__"))
                 {
                     newRow[key] = placeholder[key];
                 }
             }
 
             _newItems.Add(newRow);
-
-            // Створюємо новий рядок-заглушку
             _newRowPlaceholder = new NewRowPlaceholder();
 
-            // Сповіщаємо про зміни
             OnPropertyChanged(nameof(Count));
-            
+
             if (isTop)
             {
-                // Заміна старого placeholder на новий на індексі 0
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Replace, _newRowPlaceholder, placeholder, 0));
-                // Додавання нового рядка в кінець
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Add, newRow, dbCount + _newItems.Count));
             }
             else
             {
                 int oldPlaceholderIndex = dbCount + _newItems.Count - 1;
-                // Заміна старого placeholder на newRow
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Replace, newRow, placeholder, oldPlaceholderIndex));
-                // Додавання нового placeholder
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                     NotifyCollectionChangedAction.Add, _newRowPlaceholder, oldPlaceholderIndex + 1));
             }
@@ -435,25 +424,21 @@ namespace FlexJournalPro.Models
         }
 
         /// <summary>
-        /// Повертає рядок-заглушку для прокручування до нього
+        /// Повертає рядок-заглушку для прокручування до нього.
         /// </summary>
-        public NewRowPlaceholder? GetPlaceholder()
-        {
-            return _newRowPlaceholder;
-        }
+        public NewRowPlaceholder? GetPlaceholder() => _newRowPlaceholder;
 
         /// <summary>
         /// Копіює елементи колекції в масив. Операція не виконує дій для віртуальної колекції.
         /// </summary>
-        /// <param name="array">Масив призначення.</param>
-        /// <param name="index">Індекс початку копіювання.</param>
         public void CopyTo(Array array, int index) { }
 
         /// <summary>
-        /// Повертає перечислювач для ітерації по колекції.
-        /// Не використовуються DataGrid при увімкненій віртуалізації.
+        /// Повертає перерахувач для ітерації по колекції.
+        /// Не використовується DataGrid при увімкненій віртуалізації.
         /// </summary>
-        /// <returns>Порожній перечислювач.</returns>
-        public IEnumerator GetEnumerator() { yield break; } // Не використовується DataGrid при віртуалізації
+        public IEnumerator GetEnumerator() { yield break; }
+
+        #endregion
     }
 }

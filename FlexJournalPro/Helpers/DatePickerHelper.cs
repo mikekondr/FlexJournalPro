@@ -6,8 +6,19 @@ using System.Windows.Media;
 
 namespace FlexJournalPro.Helpers
 {
+    /// <summary>
+    /// Допоміжний клас для швидкого введення дати у DatePicker.
+    /// </summary>
     public static class DatePickerHelper
     {
+        #region Fields
+
+        private static bool _isUpdating;
+
+        #endregion
+
+        #region Attached property
+
         public static readonly DependencyProperty EnableFastInputProperty =
             DependencyProperty.RegisterAttached(
                 "EnableFastInput",
@@ -25,6 +36,10 @@ namespace FlexJournalPro.Helpers
             obj.SetValue(EnableFastInputProperty, value);
         }
 
+        #endregion
+
+        #region Event wiring
+
         private static void OnEnableFastInputChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is DatePicker dp)
@@ -39,25 +54,31 @@ namespace FlexJournalPro.Helpers
 
         private static void DatePicker_Loaded(object sender, RoutedEventArgs e)
         {
-            var dp = sender as DatePicker;
-            if (dp == null) return;
-
-            // Знаходимо внутрішній TextBox шаблону DatePicker
-            var tb = FindVisualChild<DatePickerTextBox>(dp);
-            if (tb != null)
+            if (sender is not DatePicker dp)
             {
-                tb.PreviewTextInput -= TextBox_PreviewTextInput;
-                tb.PreviewTextInput += TextBox_PreviewTextInput;
+                return;
+            }
 
-                tb.TextChanged -= TextBox_TextChanged;
-                tb.TextChanged += TextBox_TextChanged;
+            // Знаходимо внутрішній TextBox у шаблоні DatePicker.
+            var textBox = FindVisualChild<DatePickerTextBox>(dp);
+            if (textBox != null)
+            {
+                textBox.PreviewTextInput -= TextBox_PreviewTextInput;
+                textBox.PreviewTextInput += TextBox_PreviewTextInput;
 
-                tb.PreviewKeyDown -= TextBox_PreviewKeyDown;
-                tb.PreviewKeyDown += TextBox_PreviewKeyDown;
+                textBox.TextChanged -= TextBox_TextChanged;
+                textBox.TextChanged += TextBox_TextChanged;
+
+                textBox.PreviewKeyDown -= TextBox_PreviewKeyDown;
+                textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
             }
         }
 
-        private static T FindVisualChild<T>(DependencyObject depObj) where T : DependencyObject
+        #endregion
+
+        #region Visual tree helper
+
+        private static T? FindVisualChild<T>(DependencyObject depObj) where T : DependencyObject
         {
             if (depObj == null) return null;
 
@@ -69,12 +90,17 @@ namespace FlexJournalPro.Helpers
                 var childItem = FindVisualChild<T>(child);
                 if (childItem != null) return childItem;
             }
+
             return null;
         }
 
+        #endregion
+
+        #region Input handlers
+
         private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // Дозволяємо вводити лише цифри
+            // Дозволяємо вводити лише цифри.
             if (!e.Text.All(char.IsDigit))
             {
                 e.Handled = true;
@@ -83,62 +109,55 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Блокуємо пробіл
+            // Блокуємо пробіл.
             if (e.Key == Key.Space)
             {
                 e.Handled = true;
             }
         }
 
-        private static bool _isUpdating;
-
         private static void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (_isUpdating) return;
-
-            var tb = sender as TextBox;
-            if (tb == null) return;
+            if (sender is not TextBox tb) return;
 
             _isUpdating = true;
             try
             {
                 string originalText = tb.Text;
 
-                // Витягуємо лише цифри з поточного тексту
+                // Залишаємо лише цифри з введеного тексту.
                 string digits = new string(originalText.Where(char.IsDigit).ToArray());
 
-                // Обмежуємо довжину (ddMMyyyy = 8 цифр)
-                if (digits.Length > 8) digits = digits.Substring(0, 8);
+                // Обмежуємо довжину формату ddMMyyyy.
+                if (digits.Length > 8)
+                {
+                    digits = digits.Substring(0, 8);
+                }
 
-                string newText = "";
+                string newText = string.Empty;
 
                 if (digits.Length > 0)
                 {
-                    // День (перші 2 цифри)
                     newText += digits.Substring(0, Math.Min(2, digits.Length));
                 }
 
                 if (digits.Length > 2)
                 {
-                    // Додаємо крапку після дня
                     newText += ".";
-                    // Місяць (наступні 2 цифри)
                     newText += digits.Substring(2, Math.Min(2, digits.Length - 2));
                 }
 
                 if (digits.Length > 4)
                 {
-                    // Додаємо крапку після місяця
                     newText += ".";
-                    // Рік (решта цифр)
                     newText += digits.Substring(4, digits.Length - 4);
                 }
 
-                // Оновлюємо текст тільки якщо він змінився (щоб уникнути зациклення)
+                // Оновлюємо текст лише якщо він справді змінився, щоб уникнути циклу подій.
                 if (newText != originalText)
                 {
                     tb.Text = newText;
-                    // Переміщуємо курсор в кінець для зручного послідовного вводу
                     tb.CaretIndex = newText.Length;
                 }
             }
@@ -147,5 +166,7 @@ namespace FlexJournalPro.Helpers
                 _isUpdating = false;
             }
         }
+
+        #endregion
     }
 }

@@ -28,6 +28,31 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+	  
+	<Compile Update="Services\AppLifecycleService.cs">
+		<DependentUpon>IAppLifecycleService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\AuthService.cs">
+		<DependentUpon>IAuthService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\SqliteDatabaseService.cs">
+		<DependentUpon>IDatabaseService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\KeyManagementService.cs">
+		<DependentUpon>IKeyManagementService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\LogService.cs">
+		<DependentUpon>ILogService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\ScreenFactory.cs">
+		<DependentUpon>IScreenFactory.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\TemplateService.cs">
+		<DependentUpon>ITemplateService.cs</DependentUpon>
+	</Compile>
+	<Compile Update="Services\JournalDataProvider.cs">
+		<DependentUpon>IJournalDataProvider.cs</DependentUpon>
+	</Compile>
   </ItemGroup>
    
   <ItemGroup>

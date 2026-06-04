@@ -1,42 +1,33 @@
 namespace FlexJournalPro.Models
 {
     /// <summary>
-    /// Метадані журналу (запис у реєстрі)
+    /// Метадані журналу (запис у реєстрі журналів)
     /// </summary>
     public class JournalMetadata
     {
         public long Id { get; set; }
-        public string Title { get; set; }          // Назва журналу
-        public string TemplateId { get; set; }     // ID шаблону
-        public string TemplateName { get; set; }   // Назва шаблону
-        public int TemplateVersion { get; set; }   // Версія шаблону
-        public string TableName { get; set; }      // Фізична назва таблиці в SQLite
+        public string Title { get; set; }
+        public string TemplateId { get; set; }
+        public string TemplateName { get; set; }
+        public int TemplateVersion { get; set; }
+        public string TableName { get; set; }
         public DateTime CreatedAt { get; set; }
-
-        public string TemplateConfigJson { get; set; } // Зліпок конфігурації шаблону
-
-        // Налаштування нумерації
+        public string TemplateConfigJson { get; set; }
         public long NumberStart { get; set; }
-
-        // Збережені константи (JSON рядок)
         public string AutoFillConfigJson { get; set; }
     }
 
     /// <summary>
-    /// Метадані шаблону (зберігається в БД)
+    /// Метадані шаблону
     /// </summary>
     public class TemplateMetadata
     {
-        public string Id { get; set; }             // Унікальний ID шаблону
-        public string Name { get; set; }           // Назва шаблону
-        public string Description { get; set; }    // Опис шаблону
-
-        // Поле JsonConfig видалено для оптимізації. 
-        // Використовуйте TemplateService.GetTemplateJsonConfig(id)
-
-        public int Version { get; set; }           // Версія шаблону
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public int Version { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public bool IsActive { get; set; }         // Чи активний шаблон
+        public bool IsActive { get; set; }
     }
 }

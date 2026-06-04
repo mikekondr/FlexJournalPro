@@ -3,16 +3,28 @@ using System.Windows.Controls;
 
 namespace FlexJournalPro.Helpers
 {
+    /// <summary>
+    /// Допоміжний клас для прив'язки PasswordBox до властивості Password.
+    /// Оскільки у WPF PasswordBox не підтримує двосторонню прив'язку до властивості моделі, 
+    /// цей клас використовує прикріплені властивості для синхронізації значення пароля між PasswordBox 
+    /// та властивістю в ViewModel.
+    /// </summary>
     public static class PasswordHelper
     {
+        #region Attached properties
+
         public static readonly DependencyProperty PasswordProperty =
-            DependencyProperty.RegisterAttached("Password",
-                typeof(string), typeof(PasswordHelper),
+            DependencyProperty.RegisterAttached(
+                "Password",
+                typeof(string),
+                typeof(PasswordHelper),
                 new FrameworkPropertyMetadata(string.Empty, OnPasswordPropertyChanged));
 
         public static readonly DependencyProperty AttachProperty =
-            DependencyProperty.RegisterAttached("Attach",
-                typeof(bool), typeof(PasswordHelper),
+            DependencyProperty.RegisterAttached(
+                "Attach",
+                typeof(bool),
+                typeof(PasswordHelper),
                 new PropertyMetadata(false, Attach));
 
         public static void SetAttach(DependencyObject dp, bool value) => dp.SetValue(AttachProperty, value);
@@ -21,12 +33,23 @@ namespace FlexJournalPro.Helpers
         public static string GetPassword(DependencyObject dp) => (string)dp.GetValue(PasswordProperty);
         public static void SetPassword(DependencyObject dp, string value) => dp.SetValue(PasswordProperty, value);
 
+        #endregion
+
+        #region Event handlers
+
         private static void Attach(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is PasswordBox passwordBox)
             {
-                if ((bool)e.OldValue) passwordBox.PasswordChanged -= PasswordChanged;
-                if ((bool)e.NewValue) passwordBox.PasswordChanged += PasswordChanged;
+                if ((bool)e.OldValue)
+                {
+                    passwordBox.PasswordChanged -= PasswordChanged;
+                }
+
+                if ((bool)e.NewValue)
+                {
+                    passwordBox.PasswordChanged += PasswordChanged;
+                }
             }
         }
 
@@ -43,12 +66,17 @@ namespace FlexJournalPro.Helpers
             if (sender is PasswordBox passwordBox)
             {
                 passwordBox.PasswordChanged -= PasswordChanged;
-                if (passwordBox.Password != (string)e.NewValue)
+
+                string newPassword = e.NewValue as string ?? string.Empty;
+                if (passwordBox.Password != newPassword)
                 {
-                    passwordBox.Password = (string)e.NewValue ?? string.Empty;
+                    passwordBox.Password = newPassword;
                 }
+
                 passwordBox.PasswordChanged += PasswordChanged;
             }
         }
+
+        #endregion
     }
 }

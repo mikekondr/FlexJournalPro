@@ -1,4 +1,4 @@
-using FlexJournalPro.Services;
+using FlexJournalPro.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 

@@ -5,8 +5,19 @@ using System.Windows.Media;
 
 namespace FlexJournalPro.Helpers
 {
+    /// <summary>
+    /// Допоміжний клас для швидкого введення часу у TimePicker.
+    /// </summary>
     public static class TimePickerHelper
     {
+        #region Fields
+
+        private static bool _isUpdating;
+
+        #endregion
+
+        #region Attached property
+
         public static readonly DependencyProperty EnableFastInputProperty =
             DependencyProperty.RegisterAttached(
                 "EnableFastInput",
@@ -24,9 +35,12 @@ namespace FlexJournalPro.Helpers
             obj.SetValue(EnableFastInputProperty, value);
         }
 
+        #endregion
+
+        #region Event wiring
+
         private static void OnEnableFastInputChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            // Використовуємо FrameworkElement, щоб підтримати різні реалізації TimePicker (наприклад, MaterialDesign)
             if (d is FrameworkElement element)
             {
                 element.Loaded -= Element_Loaded;
@@ -39,25 +53,31 @@ namespace FlexJournalPro.Helpers
 
         private static void Element_Loaded(object sender, RoutedEventArgs e)
         {
-            var element = sender as FrameworkElement;
-            if (element == null) return;
-
-            // Шукаємо TextBox всередині контролу TimePicker
-            var tb = FindVisualChild<TextBox>(element);
-            if (tb != null)
+            if (sender is not FrameworkElement element)
             {
-                tb.PreviewTextInput -= TextBox_PreviewTextInput;
-                tb.PreviewTextInput += TextBox_PreviewTextInput;
+                return;
+            }
 
-                tb.TextChanged -= TextBox_TextChanged;
-                tb.TextChanged += TextBox_TextChanged;
+            // Шукаємо TextBox всередині контролу TimePicker.
+            var textBox = FindVisualChild<TextBox>(element);
+            if (textBox != null)
+            {
+                textBox.PreviewTextInput -= TextBox_PreviewTextInput;
+                textBox.PreviewTextInput += TextBox_PreviewTextInput;
 
-                tb.PreviewKeyDown -= TextBox_PreviewKeyDown;
-                tb.PreviewKeyDown += TextBox_PreviewKeyDown;
+                textBox.TextChanged -= TextBox_TextChanged;
+                textBox.TextChanged += TextBox_TextChanged;
+
+                textBox.PreviewKeyDown -= TextBox_PreviewKeyDown;
+                textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
             }
         }
 
-        private static T FindVisualChild<T>(DependencyObject depObj) where T : DependencyObject
+        #endregion
+
+        #region Visual tree helper
+
+        private static T? FindVisualChild<T>(DependencyObject depObj) where T : DependencyObject
         {
             if (depObj == null) return null;
 
@@ -69,12 +89,17 @@ namespace FlexJournalPro.Helpers
                 var childItem = FindVisualChild<T>(child);
                 if (childItem != null) return childItem;
             }
+
             return null;
         }
 
+        #endregion
+
+        #region Input handlers
+
         private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            // Дозволяємо лише цифри
+            // Дозволяємо лише цифри.
             if (!e.Text.All(char.IsDigit))
             {
                 e.Handled = true;
@@ -83,54 +108,50 @@ namespace FlexJournalPro.Helpers
 
         private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Блокуємо пробіл
+            // Блокуємо пробіл.
             if (e.Key == Key.Space)
             {
                 e.Handled = true;
             }
         }
 
-        private static bool _isUpdating;
-
         private static void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (_isUpdating) return;
-
-            var tb = sender as TextBox;
-            if (tb == null) return;
+            if (sender is not TextBox tb) return;
 
             _isUpdating = true;
             try
             {
                 string originalText = tb.Text;
 
-                // Залишаємо тільки цифри
+                // Залишаємо тільки цифри.
                 string digits = new string(originalText.Where(char.IsDigit).ToArray());
 
-                // Обмежуємо довжину (HHmm = 4 цифри)
-                if (digits.Length > 4) digits = digits.Substring(0, 4);
+                // Обмежуємо довжину формату HHmm.
+                if (digits.Length > 4)
+                {
+                    digits = digits.Substring(0, 4);
+                }
 
-                string newText = "";
+                string newText = string.Empty;
 
                 if (digits.Length > 0)
                 {
-                    // Години (перші 2 цифри)
                     newText += digits.Substring(0, Math.Min(2, digits.Length));
                 }
 
                 if (digits.Length > 2)
                 {
-                    // Додаємо двокрапку
                     newText += ":";
-                    // Хвилини (наступні 2 цифри)
                     newText += digits.Substring(2, Math.Min(2, digits.Length - 2));
                 }
 
-                // Оновлюємо текст тільки якщо він змінився
+                // Оновлюємо текст тільки якщо він змінився.
                 if (newText != originalText)
                 {
                     tb.Text = newText;
-                    tb.CaretIndex = newText.Length; // Курсор в кінець
+                    tb.CaretIndex = newText.Length;
                 }
             }
             finally
@@ -138,5 +159,7 @@ namespace FlexJournalPro.Helpers
                 _isUpdating = false;
             }
         }
+
+        #endregion
     }
 }

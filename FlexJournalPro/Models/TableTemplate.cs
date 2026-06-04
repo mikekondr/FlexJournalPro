@@ -1,8 +1,7 @@
+using System.Text.Json.Serialization;
+
 namespace FlexJournalPro.Models
 {
-    /// <summary>
-    /// Головний клас шаблону (Root Object для JSON)
-    /// </summary>
     public class TableTemplate
     {
         public string Id { get; set; }
@@ -15,9 +14,6 @@ namespace FlexJournalPro.Models
         public List<ColumnConfig> Columns { get; set; } = new List<ColumnConfig>();
     }
 
-    /// <summary>
-    /// Параметри реєстрації документа
-    /// </summary>
     public class RegistrationParams
     {
         public bool UseRegistration { get; set; }
@@ -28,9 +24,6 @@ namespace FlexJournalPro.Models
         public bool UseNumberSuffix { get; set; }
     }
 
-    /// <summary>
-    /// Опис параметра заповнення (панель праворуч)
-    /// </summary>
     public class AutoFillParameter
     {
         public string Key { get; set; }
@@ -40,18 +33,12 @@ namespace FlexJournalPro.Models
         public List<string> Options { get; set; }
     }
 
-    /// <summary>
-    /// Правило перерахунку значень (формула)
-    /// </summary>
     public class RecalculationRule
     {
         public string TargetColumn { get; set; }
         public string Expression { get; set; }
     }
 
-    /// <summary>
-    /// Налаштування однієї колонки або поля
-    /// </summary>
     public class ColumnConfig
     {
         public string FieldName { get; set; }
@@ -63,25 +50,53 @@ namespace FlexJournalPro.Models
         public object DefaultValue { get; set; }
         public List<string> Options { get; set; }
 
-        // Формула для початкового розрахунку (ReadOnly в DataTable)
         public string Expression { get; set; }
 
-        // Правила "живого" перерахунку при зміні цього поля
         public List<RecalculationRule> OnChange { get; set; }
 
         public string BindAutoFillParam { get; set; }
         public bool IsRequired { get; set; }
-        public bool IsReadOnly { get; set; } // New property
+        public bool IsReadOnly { get; set; }
         public ColumnPosition Position { get; set; } = ColumnPosition.NewColumn;
     }
 
-    /// <summary>
-    /// Налаштування заголовку колонки
-    /// </summary>
     public class ColumnHeaderConfig
     {
         public string Text { get; set; }
         public ColumnHeaderDirection Direction { get; set; }
         public double Size { get; set; }
     }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum ColumnPosition
+    {
+        NewColumn,
+        NextRow,
+        SameColumn
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum ColumnType
+    {
+        Text,
+        Number,
+        Currency,
+        Boolean,
+        Date,
+        DateTime,
+        Time,
+        Dropdown,
+        DropdownEditable,
+        SectionHeader,
+        RegNumber,
+        Lock
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum ColumnHeaderDirection
+    {
+        Normal,
+        Vertical
+    }
+
 }

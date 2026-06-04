@@ -5,6 +5,7 @@ namespace FlexJournalPro.Behaviors
 {
     /// <summary>
     /// Behavior для вимкнення автоматичного скролу до вибраного елементу в ListBox
+    /// При використанні ListBox у панелі з вкладками, автоматичний скрол може спричиняти проблеми з відображенням вкладок
     /// </summary>
     public static class ListBoxBehavior
     {

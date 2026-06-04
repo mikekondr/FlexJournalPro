@@ -1,84 +1,40 @@
 using FlexJournalPro.Models;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Text.Json;
 
 namespace FlexJournalPro.Services
 {
-    public static class AppLogger
-    {
-        private static ILogService? _internalLogger;
-
-        /// <summary>
-        /// Ініціалізація глобального логгера (викликається один раз при старті)
-        /// </summary>
-        public static void Initialize(ILogService logService)
-        {
-            _internalLogger = logService;
-        }
-
-        public static void LogSystemInfo(LogAction action, string message, string? details = null)
-        {
-            _internalLogger?.LogSystemInfo(action, message, details);
-        }
-
-        public static void LogSystemWarning(LogAction action, string message, string? details = null)
-        {
-            _internalLogger?.LogSystemWarning(action, message, details);
-        }
-
-        public static void LogSystemError(LogAction action, string message, Exception? ex = null)
-        {
-            _internalLogger?.LogSystemError(action, message, ex);
-        }
-
-        public static void LogJournalAction(string journalTableName, LogAction action, string actionMessage, string? details = null)
-        {
-            _internalLogger?.LogJournalAction(journalTableName, action, actionMessage, details);
-        }
-    }
-
-    public interface ILogService
-    {
-        // ==========================================
-        // 1. СИСТЕМНІ ПОДІЇ (Таблиця SystemLogs)
-        // ==========================================
-
-        void LogSystemInfo(LogAction action, string message, string? details = null);
-        void LogSystemWarning(LogAction action, string message, string? details = null);
-        void LogSystemError(LogAction action, string message, Exception? ex = null);
-
-        IEnumerable<LogEntry> GetAllLogs(int limit = 1000);
-        IEnumerable<LogEntry> GetSystemLogs(int limit = 1000);
-
-        // ==========================================
-        // 2. ПОДІЇ ЖУРНАЛІВ (Таблиці Journal_XXX_Audit)
-        // ==========================================
-
-        void LogJournalAction(string journalTableName, LogAction action, string actionMessage, string? details = null);
-
-        IEnumerable<LogEntry> GetJournalLogs(string journalTableName, int limit = 1000);
-
-        // ==========================================
-        // 3. ОБСЛУГОВУВАННЯ
-        // ==========================================
-
-        void FlushPendingLogsToDatabase();
-
-        void CleanupOldLogs(int daysToKeep = 30);
-    }
-
+    /// <summary>
+    /// Реалізація сервісу для логування системних подій та дій з журналами.
+    /// Підтримує буферизацію логів у тимчасовий файл, поки БД не розблокована,
+    /// та автоматичне перенесення логів після авторизації.
+    /// </summary>
     public class LogService : ILogService
     {
+        #region Fields
+
         private readonly IDatabaseService _dbService;
         private readonly string _pendingLogsFilePath;
         private readonly object _lockObj = new object();
 
-        // Прапорець, який вказує, чи можна вже писати прямо в БД
+        /// <summary>
+        /// Прапорець, який вказує, чи можна писати в БД (стає true після авторизації).
+        /// </summary>
         private bool _isDatabaseReady = false;
+
+        /// <summary>
+        /// Прапорець для оптимізації: таблиця SystemLogs вже створена.
+        /// </summary>
         private bool _isSystemTableCreated = false;
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Ініціалізує новий екземпляр класу <see cref="LogService"/>.
+        /// </summary>
+        /// <param name="dbService">Сервіс для роботи з базою даних.</param>
         public LogService(IDatabaseService dbService)
         {
             _dbService = dbService;
@@ -87,98 +43,111 @@ namespace FlexJournalPro.Services
             _pendingLogsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_audit.tmp");
         }
 
-        // ==========================================
-        // МЕТОДИ ЛОГУВАННЯ
-        // ==========================================
+        #endregion
 
+        #region Public methods - System logging
+
+        /// <summary>
+        /// Логує інформаційну системну подію.
+        /// </summary>
+        /// <param name="action">Тип дії.</param>
+        /// <param name="message">Основне повідомлення.</param>
+        /// <param name="details">Додаткові деталі (опціонально).</param>
         public void LogSystemInfo(LogAction action, string message, string? details = null) =>
             ProcessLog("SystemLogs", LogLevel.Info, action, message, details);
 
+        /// <summary>
+        /// Логує попередження системної подія.
+        /// </summary>
+        /// <param name="action">Тип дії.</param>
+        /// <param name="message">Основне повідомлення.</param>
+        /// <param name="details">Додаткові деталі (опціонально).</param>
         public void LogSystemWarning(LogAction action, string message, string? details = null) =>
             ProcessLog("SystemLogs", LogLevel.Warning, action, message, details);
 
+        /// <summary>
+        /// Логує помилку системної подія з винятком.
+        /// </summary>
+        /// <param name="action">Тип дії.</param>
+        /// <param name="message">Основне повідомлення про помилку.</param>
+        /// <param name="ex">Виняток з деталями помилки (опціонально).</param>
         public void LogSystemError(LogAction action, string message, Exception? ex = null) =>
             ProcessLog("SystemLogs", LogLevel.Error, action, message, ex?.ToString());
 
+        #endregion
+
+        #region Public methods - Journal logging
+
+        /// <summary>
+        /// Логує дію в журналі (вставка, оновлення, видалення запису).
+        /// </summary>
+        /// <param name="journalTableName">Назва таблиці журналу (без суфіксу "_audit").</param>
+        /// <param name="action">Тип дії.</param>
+        /// <param name="actionMessage">Опис дії.</param>
+        /// <param name="details">Додаткові деталі (опціонально).</param>
         public void LogJournalAction(string journalTableName, LogAction action, string actionMessage, string? details = null) =>
             ProcessLog($"{journalTableName}_audit", LogLevel.Audit, action, actionMessage, details);
 
-        // ==========================================
-        // ЯДРО ОБРОБКИ (ФАЙЛ АБО БД)
-        // ==========================================
+        #endregion
 
-        private void ProcessLog(string tableName, LogLevel level, LogAction action, string message, string? details)
+        #region Public methods - Log retrieval
+
+        /// <summary>
+        /// Отримує всі логи з усіх таблиць, відсортовані за спаданням часу.
+        /// </summary>
+        /// <param name="limit">Максимальна кількість записів для отримання (за замовчуванням 1000).</param>
+        /// <returns>Колекція логів, або порожній список, якщо БД ще не розблокована.</returns>
+        public IEnumerable<LogEntry> GetAllLogs(int limit = 1000)
         {
-            var entry = new LogEntry
-            {
-                Timestamp = DateTime.Now,
-                Level = level,
-                Action = action,
-                Message = message,
-                UserName = App.CurrentUser?.FullName ?? "System",
-                Details = details
-            };
+            if (!_isDatabaseReady)
+                return new List<LogEntry>();
 
-            lock (_lockObj)
-            {
-                if (_isDatabaseReady)
-                {
-                    // База відкрита - пишемо напряму
-                    WriteToDatabase(tableName, entry);
-                }
-                else
-                {
-                    // База ще закрита - складаємо у тимчасовий текстовий файл
-                    WriteToTempFile(entry, tableName);
-                }
-            }
-        }
-
-        private void WriteToTempFile(LogEntry entry, string targetTable)
-        {
             try
             {
-                // Створюємо анонімний об'єкт, щоб зберегти і сам лог, і таблицю призначення
-                var wrapper = new { Table = targetTable, Log = entry };
-                string json = JsonSerializer.Serialize(wrapper);
-
-                // Дописуємо один рядок у файл
-                File.AppendAllText(_pendingLogsFilePath, json + Environment.NewLine);
+                return _dbService.GetAllAggregatedLogs(limit);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Не вдалося записати в тимчасовий лог: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Помилка агрегації логів: {ex.Message}");
+                return new List<LogEntry>();
             }
         }
 
-        private void WriteToDatabase(string tableName, LogEntry entry)
+        /// <summary>
+        /// Отримує системні логи з таблиці SystemLogs.
+        /// </summary>
+        /// <param name="limit">Максимальна кількість записів для отримання (за замовчуванням 1000).</param>
+        /// <returns>Колекція системних логів, або порожній список, якщо БД ще не розблокована.</returns>
+        public IEnumerable<LogEntry> GetSystemLogs(int limit = 1000)
         {
-            try
-            {
-                // Ліниве створення таблиць
-                if (tableName == "SystemLogs" && !_isSystemTableCreated)
-                {
-                    CreateSystemTableIfNotExists();
-                    _isSystemTableCreated = true;
-                }
-                else if (tableName.StartsWith("journal_"))
-                {
-                    CreateJournalAuditTableIfNotExists(tableName);
-                }
+            if (!_isDatabaseReady)
+                return new List<LogEntry>();
 
-                // Викликаємо універсальний метод вставки
-                _dbService.InsertLogEntry(tableName, entry);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Помилка запису логу в БД: {ex.Message}");
-            }
+            return _dbService.GetLogsFromTable("SystemLogs", limit);
         }
 
-        // ==========================================
-        // ПЕРЕНЕСЕННЯ ЛОГІВ ПІСЛЯ АВТОРИЗАЦІЇ
-        // ==========================================
+        /// <summary>
+        /// Отримує логи дій з журналу.
+        /// </summary>
+        /// <param name="journalTableName">Назва таблиці журналу (без суфіксу "_audit").</param>
+        /// <param name="limit">Максимальна кількість записів для отримання (за замовчуванням 1000).</param>
+        /// <returns>Колекція логів журналу, або порожній список, якщо БД ще не розблокована.</returns>
+        public IEnumerable<LogEntry> GetJournalLogs(string journalTableName, int limit = 1000)
+        {
+            if (!_isDatabaseReady)
+                return new List<LogEntry>();
 
+            return _dbService.GetLogsFromTable($"{journalTableName}_audit", limit);
+        }
+
+        #endregion
+
+        #region Public methods - Maintenance
+
+        /// <summary>
+        /// Перенаправляє всі накопичені логи з тимчасового файлу в БД.
+        /// Викликається після успішної авторизації, коли БД розблокована.
+        /// </summary>
         public void FlushPendingLogsToDatabase()
         {
             lock (_lockObj)
@@ -195,7 +164,8 @@ namespace FlexJournalPro.Services
 
                     foreach (var line in lines)
                     {
-                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
 
                         try
                         {
@@ -226,49 +196,117 @@ namespace FlexJournalPro.Services
             }
         }
 
+        /// <summary>
+        /// Видаляє старі логи, які збережені більше вказаного часу.
+        /// </summary>
+        /// <param name="daysToKeep">Кількість днів логів, які слід зберігати (за замовчуванням 30).</param>
+        public void CleanupOldLogs(int daysToKeep = 30)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Private helpers - Core logging
+
+        /// <summary>
+        /// Основний метод обробки логування.
+        /// Записує лог до БД (якщо відкрита) або до тимчасового файлу (якщо закрита).
+        /// </summary>
+        private void ProcessLog(string tableName, LogLevel level, LogAction action, string message, string? details)
+        {
+            var entry = new LogEntry
+            {
+                Timestamp = DateTime.Now,
+                Level = level,
+                Action = action,
+                Message = message,
+                UserName = App.CurrentUser?.FullName ?? "System",
+                Details = details
+            };
+
+            lock (_lockObj)
+            {
+                if (_isDatabaseReady)
+                {
+                    // База відкрита - пишемо напряму
+                    WriteToDatabase(tableName, entry);
+                }
+                else
+                {
+                    // База ще закрита - складаємо у тимчасовий текстовий файл
+                    WriteToTempFile(entry, tableName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Записує лог до тимчасового файлу (JSON рядок на кожну лінію).
+        /// </summary>
+        private void WriteToTempFile(LogEntry entry, string targetTable)
+        {
+            try
+            {
+                // Створюємо анонімний об'єкт, щоб зберегти і сам лог, і таблицю призначення
+                var wrapper = new { Table = targetTable, Log = entry };
+                string json = JsonSerializer.Serialize(wrapper);
+
+                // Дописуємо один рядок у файл
+                File.AppendAllText(_pendingLogsFilePath, json + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Не вдалося записати в тимчасовий лог: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Записує лог до БД з ленивим створенням таблиць, якщо необхідно.
+        /// </summary>
+        private void WriteToDatabase(string tableName, LogEntry entry)
+        {
+            try
+            {
+                // Ліниве створення таблиць
+                if (tableName == "SystemLogs" && !_isSystemTableCreated)
+                {
+                    CreateSystemTableIfNotExists();
+                    _isSystemTableCreated = true;
+                }
+                else if (tableName.EndsWith("_audit"))
+                {
+                    CreateJournalAuditTableIfNotExists(tableName);
+                }
+
+                // Викликаємо універсальний метод вставки
+                _dbService.InsertLogEntry(tableName, entry);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Помилка запису логу в БД: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Private helpers - Table management
+
+        /// <summary>
+        /// Створює таблицю SystemLogs, якщо вона не існує.
+        /// </summary>
         private void CreateSystemTableIfNotExists()
         {
             _dbService.EnsureSystemLogTableExists();
         }
 
+        /// <summary>
+        /// Створює таблицю журналу аудиту, якщо вона не існує.
+        /// </summary>
         private void CreateJournalAuditTableIfNotExists(string tableName)
         {
             _dbService.EnsureJournalLogTableExists(tableName);
         }
 
-        public IEnumerable<LogEntry> GetAllLogs(int limit = 1000)
-        {
-            // Захист: якщо до БД ще немає доступу, повертаємо порожній список (або лог "Додаток стартує")
-            if (!_isDatabaseReady) return new List<LogEntry>();
-
-            try
-            {
-                // 2. Отримуємо імена всіх таблиць аудиту
-                return _dbService.GetAllAggregatedLogs(limit);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Помилка агрегації логів: {ex.Message}");
-            }
-            
-            return new List<LogEntry>();
-        }
-
-        public IEnumerable<LogEntry> GetSystemLogs(int limit = 1000)
-        {
-            if (!_isDatabaseReady) return new List<LogEntry>();
-            return _dbService.GetLogsFromTable("SystemLogs", limit);
-        }
-
-        public IEnumerable<LogEntry> GetJournalLogs(string journalTableName, int limit = 1000)
-        {
-            if (!_isDatabaseReady) return new List<LogEntry>();
-            return _dbService.GetLogsFromTable($"{journalTableName}_audit", limit);
-        }
-
-        public void CleanupOldLogs(int daysToKeep = 30)
-        {
-            throw new NotImplementedException();
-        }
+        #endregion
     }
 }

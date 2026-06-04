@@ -8,22 +8,10 @@ namespace FlexJournalPro.Models
         public event PropertyChangedEventHandler PropertyChanged;
 
         private bool _isDirty = false;
-
-        /// <summary>
-        /// Визначає, чи є цей рядок рядком-заглушкою для нового запису
-        /// </summary>
         public virtual bool IsNewRowPlaceholder => false;
-
-        /// <summary>
-        /// Визначає, чи є цей рядок тимчасовою заглушкою під час завантаження
-        /// </summary>
         public virtual bool IsPlaceholder => false;
-
         private bool _isInitialized = true;
 
-        /// <summary>
-        /// Визначає, чи рядок ініціалізований даними (має значення за замовчуванням або введені дані)
-        /// </summary>
         public virtual bool IsInitialized
         {
             get => _isInitialized;
@@ -37,9 +25,6 @@ namespace FlexJournalPro.Models
             }
         }
 
-        /// <summary>
-        /// Визначає, чи рядок був змінений але не збережений
-        /// </summary>
         public bool IsDirty
         {
             get => _isDirty;
@@ -56,16 +41,11 @@ namespace FlexJournalPro.Models
             }
         }
 
-        // Перевизначаємо індексатор, щоб додати сповіщення
         public new object this[string key]
         {
-            get
-            {
-                return this.ContainsKey(key) ? base[key] : null;
-            }
+            get => this.ContainsKey(key) ? base[key] : null;
             set
             {
-                // Отримуємо попереднє значення (зведене до null якщо DBNull)
                 object oldValue = this.ContainsKey(key) ? base[key] : null;
                 if (oldValue == DBNull.Value) oldValue = null;
 
@@ -97,9 +77,6 @@ namespace FlexJournalPro.Models
             }
         }
 
-        /// <summary>
-        /// Скидає прапорець "змінено" після збереження
-        /// </summary>
         public void MarkAsSaved()
         {
             IsDirty = false;
@@ -111,29 +88,24 @@ namespace FlexJournalPro.Models
         }
     }
 
-    // Specialized placeholder row used by virtualizing collection while loading
+    // Спеціальний тип заглушки на час завантаження даних
     public class PlaceholderRow : BindableRow
     {
         public override bool IsPlaceholder => true;
 
         public PlaceholderRow()
         {
-            // Optionally set a marker value to make inspection easier
             base["__isPlaceholder"] = true;
         }
     }
 
-    /// <summary>
-    /// Спеціальний рядок-заглушка для введення нових даних.
-    /// Завжди знаходиться в кінці таблиці і служить місцем для додавання нових рядків.
-    /// </summary>
+    // Спеціальний тип заглушки для введення нових даних.
     public class NewRowPlaceholder : BindableRow
     {
         public override bool IsNewRowPlaceholder => true;
 
         public NewRowPlaceholder()
         {
-            // Маркер для ідентифікації рядка-заглушки
             base["__isNewRowPlaceholder"] = true;
             IsInitialized = false;
         }

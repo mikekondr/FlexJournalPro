@@ -1,27 +1,33 @@
 using FlexJournalPro.Services;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexJournalPro.Converters
 {
+    /// <summary>
+    /// Конвертер для перевірки прав користувача на виконання певної дії.
+    /// Якщо користувач має право, елемент буде Visible, інакше - Collapsed.
+    /// </summary>
     public class ActionToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (parameter is string actionKey)
+            if (parameter is string action)
             {
-                // Отримуємо DI-контейнер з нашого додатку
                 var app = Application.Current as App;
-                var authService = app?.ServiceProvider.GetService<IAuthService>();
-
-                if (authService != null && authService.UserCan(actionKey))
+                if (app?.ServiceProvider != null)
                 {
-                    return Visibility.Visible;
+                    // Отримуємо DI-контейнер з нашого додатку
+                    var authService = app.ServiceProvider.GetRequiredService<IAuthService>();
+                    bool hasPermission = authService.UserCan(action);
+
+                    return hasPermission ? Visibility.Visible : Visibility.Collapsed;
                 }
             }
 
+            // Якщо параметр не є рядком або виникла помилка, приховуємо елемент
             return Visibility.Collapsed;
         }
 

@@ -1,66 +1,46 @@
+using FlexJournalPro.ViewModels;
 using MaterialDesignThemes.Wpf;
 using System.Windows;
 
 namespace FlexJournalPro.Services
 {
     /// <summary>
-    /// Тип діалогового вікна
-    /// </summary>
-    public enum DialogType
-    {
-        Information,
-        Warning,
-        Error,
-        Question,
-        Success
-    }
-
-    /// <summary>
-    /// Результат діалогу
-    /// </summary>
-    public enum DialogResult
-    {
-        None,
-        OK,
-        Cancel,
-        Yes,
-        No
-    }
-
-    /// <summary>
-    /// Кнопки діалогу
-    /// </summary>
-    public enum DialogButtons
-    {
-        OK,
-        OKCancel,
-        YesNo,
-        YesNoCancel
-    }
-
-    /// <summary>
-    /// Сервіс для відображення модальних повідомлень
+    /// Сервіс для відображення модальних діалогів і toast-повідомлень.
+    /// Підтримує як Material Design діалоги, так і fallback на стандартні MessageBox.
     /// </summary>
     public class DialogService
     {
+        #region Fields
+
         private static string _dialogHostIdentifier = "RootDialogHost";
         private static ISnackbarMessageQueue? _messageQueue;
 
+        #endregion
+
+        #region Configuration
+
+        /// <summary>
+        /// Встановлює чергу повідомлень для toast-нотифікацій.
+        /// </summary>
         public static void SetMessageQueue(ISnackbarMessageQueue messageQueue)
         {
             _messageQueue = messageQueue;
         }
 
         /// <summary>
-        /// Встановлює ідентифікатор DialogHost для відображення діалогів
+        /// Встановлює ідентифікатор DialogHost для відображення діалогів.
         /// </summary>
         public static void SetDialogHostIdentifier(string identifier)
         {
             _dialogHostIdentifier = identifier;
         }
 
+        #endregion
+
+        #region Public methods - Standard dialogs
+
         /// <summary>
-        /// Показує інформаційне повідомлення
+        /// Показує інформаційне повідомлення.
         /// </summary>
         public static async Task<DialogResult> ShowInformationAsync(string message, string title = "Інформація")
         {
@@ -68,7 +48,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Показує повідомлення про помилку
+        /// Показує повідомлення про помилку.
         /// </summary>
         public static async Task<DialogResult> ShowErrorAsync(string message, string title = "Помилка")
         {
@@ -76,7 +56,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Показує попередження
+        /// Показує попередження.
         /// </summary>
         public static async Task<DialogResult> ShowWarningAsync(string message, string title = "Попередження")
         {
@@ -84,15 +64,19 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Показує повідомлення про успіх
+        /// Показує повідомлення про успіх.
         /// </summary>
         public static async Task<DialogResult> ShowSuccessAsync(string message, string title = "Успіх")
         {
             return await ShowDialogAsync(title, message, DialogType.Success, DialogButtons.OK);
         }
 
+        #endregion
+
+        #region Public methods - Confirmation dialogs
+
         /// <summary>
-        /// Показує діалог підтвердження (Так/Ні)
+        /// Показує діалог підтвердження (Так/Ні).
         /// </summary>
         public static async Task<DialogResult> ShowConfirmationAsync(string message, string title = "Підтвердження")
         {
@@ -100,17 +84,21 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Показує діалог підтвердження з можливістю скасування
+        /// Показує діалог підтвердження з можливістю скасування.
         /// </summary>
         public static async Task<DialogResult> ShowConfirmationWithCancelAsync(string message, string title = "Підтвердження")
         {
             return await ShowDialogAsync(title, message, DialogType.Question, DialogButtons.YesNoCancel);
         }
 
+        #endregion
+
+        #region Public methods - Custom content
+
         /// <summary>
-        /// Показує діалог з кастомним вмістом
+        /// Показує діалог з довільним вмістом (UI або ViewModel).
         /// </summary>
-        public static async Task<object> ShowCustomDialogAsync(object content)
+        public static async Task<object?> ShowCustomDialogAsync(object content)
         {
             try
             {
@@ -119,15 +107,43 @@ namespace FlexJournalPro.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Dialog error: {ex.Message}");
-                // Fallback до MessageBox при помилці
                 MessageBox.Show(content?.ToString() ?? "Помилка відображення діалогу",
                     "Діалог", MessageBoxButton.OK);
                 return null;
             }
         }
 
+        #endregion
+
+        #region Public methods - Toast notifications
+
         /// <summary>
-        /// Основний метод показу діалогу
+        /// Показує toast-повідомлення на короткий час.
+        /// </summary>
+        /// <param name="message">Текст повідомлення.</param>
+        /// <param name="promote">Якщо <c>true</c>, скине попереднє повідомлення та покаже негайно.</param>
+        public static void ShowToast(string message, bool promote = true)
+        {
+            _messageQueue?.Enqueue(message, null, null, null, promote, true, TimeSpan.FromSeconds(3));
+        }
+
+        /// <summary>
+        /// Показує toast-повідомлення з однією дією.
+        /// </summary>
+        /// <param name="message">Текст повідомлення.</param>
+        /// <param name="actionContent">Текст кнопки дії.</param>
+        /// <param name="actionHandler">Обробник кліку на кнопку дії.</param>
+        public static void ShowToastWithAction(string message, string actionContent, Action actionHandler)
+        {
+            _messageQueue?.Enqueue(message, actionContent, actionHandler, promote: true);
+        }
+
+        #endregion
+
+        #region Private helpers
+
+        /// <summary>
+        /// Основний метод показу діалогу через DialogHost.
         /// </summary>
         private static async Task<DialogResult> ShowDialogAsync(
             string title,
@@ -146,17 +162,11 @@ namespace FlexJournalPro.Services
             try
             {
                 var result = await DialogHost.Show(viewModel, _dialogHostIdentifier);
-
-                if (result is DialogResult dialogResult)
-                {
-                    return dialogResult;
-                }
-
-                return DialogResult.None;
+                return result is DialogResult dialogResult ? dialogResult : DialogResult.None;
             }
             catch (InvalidOperationException)
             {
-                // DialogHost не знайдено - використовуємо MessageBox як fallback
+                // DialogHost не знайдено — fallback на MessageBox
                 return ShowMessageBoxFallback(message, title, type, buttons);
             }
             catch (Exception ex)
@@ -167,7 +177,7 @@ namespace FlexJournalPro.Services
         }
 
         /// <summary>
-        /// Fallback до стандартного MessageBox
+        /// Fallback на стандартний MessageBox при недоступності DialogHost.
         /// </summary>
         private static DialogResult ShowMessageBoxFallback(
             string message,
@@ -205,50 +215,7 @@ namespace FlexJournalPro.Services
             };
         }
 
-        public static void ShowToast(string message, bool promote = true)
-        {
-            // promote = true означає, що повідомлення з'явиться негайно (скине попереднє, якщо було)
-            _messageQueue?.Enqueue(message, null, null, null, promote, true, TimeSpan.FromSeconds(3));
-        }
-
-        public static void ShowToastWithAction(string message, string actionContent, Action actionHandler)
-        {
-            _messageQueue?.Enqueue(
-                message,
-                actionContent,
-                actionHandler,
-                promote: true);
-        }
-    }
-
-    /// <summary>
-    /// ViewModel для діалогового вікна
-    /// </summary>
-    public class DialogViewModel
-    {
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public DialogType DialogType { get; set; }
-        public DialogButtons Buttons { get; set; }
-
-        public PackIconKind Icon => DialogType switch
-        {
-            DialogType.Information => PackIconKind.Information,
-            DialogType.Warning => PackIconKind.Alert,
-            DialogType.Error => PackIconKind.AlertCircle,
-            DialogType.Question => PackIconKind.HelpCircle,
-            DialogType.Success => PackIconKind.CheckCircle,
-            _ => PackIconKind.Information
-        };
-
-        public string IconColor => DialogType switch
-        {
-            DialogType.Information => "#2196F3",
-            DialogType.Warning => "#FF9800",
-            DialogType.Error => "#F44336",
-            DialogType.Question => "#9C27B0",
-            DialogType.Success => "#4CAF50",
-            _ => "#757575"
-        };
+        #endregion
     }
 }
+

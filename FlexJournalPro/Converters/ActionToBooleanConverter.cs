@@ -6,6 +6,10 @@ using System.Windows.Data;
 
 namespace FlexJournalPro.Converters
 {
+    /// <summary>
+    /// Конвертер для перевірки прав користувача на виконання певної дії.
+    /// Використовується для встановлення властивості IsReadOnly або IsEnabled на основі прав користувача.
+    /// </summary>
     public class ActionToBooleanConverter : IValueConverter
     {
         public bool Invert { get; set; } = false;

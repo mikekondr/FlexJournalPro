@@ -9,24 +9,35 @@ using System.Windows.Controls.Primitives;
 namespace FlexJournalPro.Helpers
 {
     /// <summary>
-    /// Допоміжний клас для роботи з параметрами заповнення
+    /// Допоміжний клас для побудови елементів UI для параметрів автоматичного заповнення.
     /// </summary>
     public static class AutoFillConfigHelper
     {
-        private static readonly List<string> SystemUsers = new List<string>();
+        #region Fields
+
+        private static readonly List<string> SystemUsers = new();
+
+        #endregion
+
+        #region Static initialization
 
         static AutoFillConfigHelper()
         {
             var app = Application.Current as App;
             if (app?.ServiceProvider != null)
             {
-                var _db = app.ServiceProvider.GetRequiredService<IDatabaseService>();
-                _db.GetAllUsers().ForEach(u => SystemUsers.Add(u.FullName));
+                //для заповнення словника списку користувачів системи при розгортанні макросу %%ALL_USERS%%
+                var db = app.ServiceProvider.GetRequiredService<IDatabaseService>();
+                db.GetAllUsers().ForEach(u => SystemUsers.Add(u.FullName));
             }
         }
 
+        #endregion
+
+        #region Public methods
+
         /// <summary>
-        /// Створює UI панель для редагування параметрів заповнення
+        /// Створює UI-панель для редагування параметрів заповнення.
         /// </summary>
         public static void BuildAutoFillPanel(
             Panel panel,
@@ -36,9 +47,8 @@ namespace FlexJournalPro.Helpers
         {
             panel.Children.Clear();
 
-            // Save current values to preserve loaded data
+            // Зберігаємо поточні значення, щоб не втратити вже завантажені дані.
             var currentValues = new Dictionary<string, object>(autoFillValues);
-
             autoFillValues.Clear();
 
             if (parameters == null || parameters.Count == 0)
@@ -54,7 +64,7 @@ namespace FlexJournalPro.Helpers
 
             foreach (var parameter in parameters)
             {
-                // Determine initial value: priority to saved values
+                // Пріоритет: збережене значення, потім значення за замовчуванням.
                 object initialValue = parameter.DefaultValue;
                 if (currentValues.TryGetValue(parameter.Key, out var savedVal))
                 {
@@ -69,8 +79,12 @@ namespace FlexJournalPro.Helpers
             }
         }
 
+        #endregion
+
+        #region Control factories
+
         /// <summary>
-        /// Створює контрол для одного параметра заповнення
+        /// Створює контрол для одного параметра заповнення.
         /// </summary>
         private static Control CreateParameterControl(
             AutoFillParameter parameter,
@@ -117,11 +131,18 @@ namespace FlexJournalPro.Helpers
 
             bool initVal = false;
 
-            if (initialValue is bool b) initVal = b;
+            if (initialValue is bool b)
+            {
+                initVal = b;
+            }
             else if (initialValue is JsonElement je && (je.ValueKind == JsonValueKind.True || je.ValueKind == JsonValueKind.False))
+            {
                 initVal = je.GetBoolean();
+            }
             else if (initialValue != null)
+            {
                 bool.TryParse(initialValue.ToString(), out initVal);
+            }
 
             checkBox.IsChecked = initVal;
             autoFillValues[parameter.Key] = initVal;
@@ -169,9 +190,13 @@ namespace FlexJournalPro.Helpers
             datePicker.SelectedDateChanged += (s, e) =>
             {
                 if (datePicker.SelectedDate.HasValue)
+                {
                     autoFillValues[parameter.Key] = datePicker.SelectedDate.Value;
+                }
                 else
+                {
                     autoFillValues.Remove(parameter.Key);
+                }
 
                 onValueChanged?.Invoke();
             };
@@ -185,20 +210,17 @@ namespace FlexJournalPro.Helpers
             Action? onValueChanged,
             object initialValue)
         {
-            bool isEditable = (parameter.Type == ColumnType.DropdownEditable);
+            bool isEditable = parameter.Type == ColumnType.DropdownEditable;
 
-            // Клонуємо базові опції з шаблону
+            // Клонуємо базові опції з шаблону.
             var options = parameter.Options != null ? new List<string>(parameter.Options) : new List<string>();
 
-            // Підміна макросу %%ALL_USERS%% на реальний список користувачів
+            // Розгортаємо макрос %%ALL_USERS%% у список користувачів системи.
             if (options.Contains("%%ALL_USERS%%"))
             {
-                // Додаємо макрос для поточного користувача
                 options.Add("%%CURRENT_USER%%");
-
                 options.Remove("%%ALL_USERS%%");
-                if (SystemUsers != null) 
-                    options.AddRange(SystemUsers);
+                options.AddRange(SystemUsers);
             }
 
             var comboBox = new ComboBox
@@ -247,7 +269,11 @@ namespace FlexJournalPro.Helpers
             Action? onValueChanged,
             object initialValue)
         {
-            var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 15) };
+            var textBox = new TextBox
+            {
+                Margin = new Thickness(0, 0, 0, 15)
+            };
+
             MaterialDesignThemes.Wpf.HintAssist.SetHint(textBox, parameter.Label);
             textBox.Style = Application.Current.TryFindResource("MaterialDesignFloatingHintTextBox") as Style;
 
@@ -267,6 +293,10 @@ namespace FlexJournalPro.Helpers
             return textBox;
         }
 
+        #endregion
+
+        #region Parsing helpers
+
         private static object ParseDefaultValue(object rawValue, ColumnType targetType)
         {
             if (rawValue is JsonElement jsonElement)
@@ -278,17 +308,28 @@ namespace FlexJournalPro.Helpers
                     case ColumnType.Time:
                         string dateStr = jsonElement.ToString();
                         if (jsonElement.ValueKind == JsonValueKind.String)
+                        {
                             dateStr = jsonElement.GetString();
+                        }
 
                         if (dateStr?.ToUpper() == "NOW") return DateTime.Now;
                         if (DateTime.TryParse(dateStr, out var d)) return d;
                         return dateStr;
+
                     case ColumnType.Text:
                         string textStr = jsonElement.ToString();
                         if (jsonElement.ValueKind == JsonValueKind.String)
+                        {
                             textStr = jsonElement.GetString();
-                        if (textStr?.ToUpper() == "USERNAME") return App.CurrentUser?.FullName ?? App.CurrentUser?.Login ?? "Невідомий користувач";
+                        }
+
+                        if (textStr?.ToUpper() == "USERNAME")
+                        {
+                            return App.CurrentUser?.FullName ?? App.CurrentUser?.Login ?? "Невідомий користувач";
+                        }
+
                         return textStr;
+
                     default:
                         return jsonElement.ToString();
                 }
@@ -304,5 +345,7 @@ namespace FlexJournalPro.Helpers
 
             return rawValue;
         }
+
+        #endregion
     }
 }

@@ -28,7 +28,6 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <converters:SidebarIconConverter x:Key="SidebarIconConverter"/>
-        <converters:SelectedScreenBackgroundConverter x:Key="SelectedScreenBackgroundConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <views:ScreenDataTemplateSelector x:Key="ScreenDataTemplateSelector"/>
 

@@ -7,19 +7,25 @@ using System.Windows;
 
 namespace FlexJournalPro.Services
 {
-    public interface IAppLifecycleService
-    {
-        void Startup(string[] args);
-        void LogoutAndRestart();
-    }
-
+    /// <summary>
+    /// Реалізація сервісу для управління життєвим циклом додатку.
+    /// </summary>
     internal class AppLifecycleService : IAppLifecycleService
     {
+        #region Fields
+
         private readonly IServiceProvider _serviceProvider;
         private readonly IKeyManagementService _keyManager;
         private readonly AppConfig _config;
         private readonly ILogService _logger;
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Ініціалізує новий екземпляр класу <see cref="AppLifecycleService"/>.
+        /// </summary>
         public AppLifecycleService(IServiceProvider serviceProvider,
             IKeyManagementService keyManager,
             AppConfig config,
@@ -31,13 +37,23 @@ namespace FlexJournalPro.Services
             _logger = logService;
         }
 
+        #endregion
+
+        #region Public methods
+
+        /// <summary>
+        /// Запускає додаток, проходячи наступні етапи:
+        /// 1. Перевіряє необхідність відновлення (DPAPI помилки або -recover аргумент);
+        /// 2. Перевіряє, чи це перший запуск;
+        /// 3. Показує вікно авторизації та відкриває головне вікно.
+        /// </summary>
         public void Startup(string[] args)
         {
             AppLogger.LogSystemInfo(LogAction.SystemStarted, "Запуск додатку", args.Count() > 0 ? "Аргументи: " + string.Join(", ", args) : null);
 
             bool needsRecovery = args.Contains("-recover");
 
-            // Етап 1: Перевіряємо необхідність відновлення (виявляє помилки DPAPI)
+            // Етап 1: Перевіряємо необхідність відновлення
             if (needsRecovery || _keyManager.HasDpapiError())
             {
                 var recoveryWindow = _serviceProvider.GetRequiredService<RecoveryWindow>();
@@ -55,45 +71,49 @@ namespace FlexJournalPro.Services
                 return;
             }
 
-            // Етап 3 та 4: Запускаємо флоу авторизації та відкриття головного вікна
+            // Етап 3 та 4: Запускаємо авторизацію та головне вікно
             ShowLoginFlow();
         }
 
+        /// <summary>
+        /// Виконує вихід користувача, скидає сесію та перезапускає флоу авторизації.
+        /// </summary>
         public void LogoutAndRestart()
         {
-            // Скидаємо користувача
             App.CurrentUser = null;
-
             Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-            // Закриваємо головне вікно, якщо воно відкрите
             Application.Current.MainWindow?.Close();
 
             AppLogger.LogSystemInfo(LogAction.UserLogout, "Вихід із системи");
-
-            // Перезапускаємо процес авторизації
             ShowLoginFlow();
         }
 
+        #endregion
+
+        #region Private helpers - Login flow
+
+        /// <summary>
+        /// Показує вікно авторизації та керує логіною користувача.
+        /// При успішній авторизації: записує логи, імпортує шаблони та відкриває головне вікно.
+        /// При скасуванні: завершує роботу додатку.
+        /// </summary>
         private void ShowLoginFlow()
         {
-            // Змінюємо режим зупинки, щоб додаток не закрився між вікнами
             Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var loginWindow = _serviceProvider.GetRequiredService<LoginWindow>();
 
             if (loginWindow.ShowDialog() == true)
             {
-                // БАЗА РОЗБЛОКОВАНА! 
-                // 1. Сигналізуємо, що можна писати в БД і переносимо накопичені помилки/входи
+                // База розблокована: записуємо накопичені логи
                 _logger.FlushPendingLogsToDatabase();
 
-                // 2. Записуємо сам факт успішного входу
+                // Записуємо факт успішного входу
                 AppLogger.LogSystemInfo(LogAction.UserLogin, "Вхід в систему");
-                
-                // 3. Запускаємо імпорт шаблонів у фоні, щоб не блокувати UI
+
+                // Імпортуємо шаблони у фоні
                 var templateService = _serviceProvider.GetRequiredService<ITemplateService>();
-                Task.Run(() => 
+                Task.Run(() =>
                 {
                     try
                     {
@@ -105,7 +125,7 @@ namespace FlexJournalPro.Services
                     }
                 });
 
-                // Повертаємо стандартний режим після успішного входу
+                // Повертаємо стандартний режим та відкриваємо головне вікно
                 Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
 
                 var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
@@ -114,46 +134,59 @@ namespace FlexJournalPro.Services
             }
             else
             {
-                // Якщо закрили вікно логіну - завершуємо роботу
                 Application.Current.Shutdown();
             }
         }
 
+        #endregion
+
+        #region Private helpers - First run
+
+        /// <summary>
+        /// Перевіряє, чи це перший запуск додатку.
+        /// Якщо так, показує вікно початкового налаштування та обробляє результат.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> якщо налаштування успішне або це не перший запуск;
+        /// <c>false</c> якщо користувач скасував налаштування або потрібен перезапуск.
+        /// </returns>
         private bool HandleFirstRunIfNeeded()
         {
             string dbFilePath = _config.DatabasePath;
             string configFilePath = _config.ConfigPath;
 
-            // Якщо файли вже існують - перший запуск не потрібен
+            // Якщо файли існують, це не перший запуск
             if (File.Exists(dbFilePath) && File.Exists(configFilePath))
             {
                 return true;
             }
 
-            // Якщо файлів немає - показуємо вікно початкового налаштування
+            // Показуємо вікно початкового налаштування
             var firstRunWindow = _serviceProvider.GetRequiredService<FirstRunWindow>();
-
-            // Чекаємо, поки користувач завершить дії і вікно ПОВНІСТЮ закриється
             bool isSetupSuccessful = firstRunWindow.ShowDialog() == true;
 
-            // Якщо налаштування пройшло успішно (DialogResult == true) 
-            // І вікно просить перезапуск
+            // Якщо налаштування успішне і потрібен перезапуск
             if (isSetupSuccessful && firstRunWindow.RequiresRestart)
             {
-                // 1. Запускаємо новий екземпляр програми
-                string? exePath = Environment.ProcessPath;
-                if (!string.IsNullOrEmpty(exePath))
-                {
-                    System.Diagnostics.Process.Start(exePath);
-                }
-
-                // 2. Повертаємо FALSE, щоб перервати подальше виконання поточного (старого) процесу.
-                // Це призведе до безпечного виклику Application.Current.Shutdown() у методі Startup().
+                StartNewInstance();
                 return false;
             }
 
-            // Якщо просто закрили вікно хрестиком (false) або все добре і без перезапуску (true)
             return isSetupSuccessful;
         }
+
+        /// <summary>
+        /// Запускає новий екземпляр додатку.
+        /// </summary>
+        private void StartNewInstance()
+        {
+            string? exePath = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                System.Diagnostics.Process.Start(exePath);
+            }
+        }
+
+        #endregion
     }
 }

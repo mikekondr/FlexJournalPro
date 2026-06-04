@@ -1530,45 +1530,4 @@ namespace FlexJournalPro.Services
 
         #endregion
     }
-
-    // Интерфейс провайдера елементів для віртуалізації
-    public interface IJournalItemsProvider
-    {
-        int FetchCount();
-        IList<BindableRow> FetchRange(int startIndex, int count);
-        bool IsSortDescending { get; set; }
-        string SortColumn { get; set; }
-    }
-
-    public class JournalDataProvider : IJournalItemsProvider
-    {
-        private readonly IDatabaseService _dbService;
-        private readonly string _tableName;
-        private readonly List<ColumnConfig> _columns;
-        public bool IsSortDescending { get; set; } = true;
-        public string SortColumn { get; set; } = "Id";
-
-        public JournalDataProvider(IDatabaseService dbService, string tableName, List<ColumnConfig> columns)
-        {
-            _dbService = dbService;
-            _tableName = tableName;
-            _columns = columns;
-
-            // Якщо є поле RegNumber, будемо сортувати за ним
-            if (columns.Any(c => c.FieldName == "RegNumber"))
-            {
-                SortColumn = "RegNumber";
-            }
-        }
-
-        public int FetchCount()
-        {
-            return _dbService.GetJournalCount(_tableName);
-        }
-
-        public IList<BindableRow> FetchRange(int startIndex, int count)
-        {
-            return _dbService.FetchRange(_tableName, startIndex, count, _columns, SortColumn, IsSortDescending);
-        }
-    }
 }

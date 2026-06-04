@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:conv="clr-namespace:FlexJournalPro.Converters"
-             xmlns:services="clr-namespace:FlexJournalPro.Services"
+             xmlns:viewmodels="clr-namespace:FlexJournalPro.ViewModels"
              xmlns:views="clr-namespace:FlexJournalPro.Views">
     <Application.Resources>
         <ResourceDictionary>
@@ -11,15 +11,15 @@
                 <materialDesign:CustomColorTheme BaseTheme="Light" PrimaryColor="#0061A4" SecondaryColor="#535F70" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            
+
             <!-- Глобальні конвертери -->
             <conv:TimeSpanToNullableDateTimeConverter x:Key="TimeSpanToNullableDateTimeConverter" />
             <conv:SafeBoolConverter x:Key="SafeBoolConverter" />
             <conv:EqualToVisibilityConverter x:Key="EqualToVisibilityConverter" />
             <conv:ActionToVisibilityConverter x:Key="ActionToVisibilityConverter" />
-            
+
             <!-- DataTemplate для DialogViewModel -->
-            <DataTemplate DataType="{x:Type services:DialogViewModel}">
+            <DataTemplate DataType="{x:Type viewmodels:DialogViewModel}">
                 <views:DialogView/>
             </DataTemplate>
 
